@@ -1,0 +1,11 @@
+.next
+dist
+coverage
+playwright-report
+test-results
+node_modules
+package-lock.json
+next-env.d.ts
+src/db/migrations
+# Planning documents are hand-formatted.
+doc
