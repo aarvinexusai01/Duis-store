@@ -33,7 +33,10 @@ Duis-store/
 │   ├── rollback.sh                 # switch to a previous SHA image (no rebuild)
 │   ├── backup-now.sh / restore.sh / restore-drill.sh
 │   ├── update-cloudflare-ips.sh
-│   └── smoke-test.sh
+│   ├── smoke-test.sh
+│   ├── build-server-bundles.mjs    # esbuild: src/worker + src/db/migrate → dist/*.mjs   (Phase 0 ✓)
+│   ├── start-standalone.mjs        # `npm start`: runs .next/standalone like the image  (Phase 0 ✓)
+│   └── stubs/server-only.mjs       # `server-only` stand-in for Vitest and the bundles  (Phase 0 ✓)
 ├── public/                         # static assets only (favicons, manifest icons, og fallback)
 ├── src/                            # application code (see §2)
 ├── tests/                          # integration + e2e (unit tests are colocated, see §6)
@@ -45,8 +48,8 @@ Duis-store/
 ├── drizzle.config.ts               # schema: src/db/schema, out: src/db/migrations, schemaFilter: public
 ├── eslint.config.mjs               # flat config + import-boundary rules
 ├── next.config.ts                  # standalone output, cacheComponents, images loader, headers
-├── playwright.config.ts  vitest.config.ts  tsconfig.json  postcss.config.mjs
-├── tsup.config.ts                  # bundles src/worker/index.ts → dist/worker.mjs
+├── playwright.config.ts  vitest.config.mts  tsconfig.json  .prettierrc.json
+├── AGENTS.md                       # Next.js agent rules + project rules for coding agents
 ├── package.json  package-lock.json # npm only (lockfile committed)
 └── README.md                       # setup, commands, deploy, troubleshooting
 ```
@@ -221,6 +224,7 @@ src/server/
 │   ├── meta-capi/ · turnstile/ · storage/ (local.ts, adapter.ts)
 ├── observability/logger.ts · request-context.ts
 ├── security/rate-limit.ts · idempotency.ts · hmac.ts · csp.ts
+├── health.ts                               # readiness checks used by /api/health/ready
 └── errors.ts                               # DomainError + codes
 
 src/db/
@@ -257,7 +261,7 @@ Unit tests sit next to the code they test (`*.test.ts`).
 1. `app/**` may import from `features/*/index.ts`, `features/*/actions.ts`, `features/*/queries.ts`, `features/*/ui/**`, `components/**`, `lib/**`, `hooks/**` and `config/**`. It may **not** import `repository.ts` or `server/db`.
 2. `features/A/**` may import `features/B/index.ts` only, never B's internals.
 3. `repository.ts` files are the only code that imports `server/db` and the Drizzle tables, apart from migrations and the seed.
-4. Files with `'server-only'` are never imported by client components. The worker bundle aliases `server-only` to an empty module, because the worker runs as plain Node.
+4. Files with `'server-only'` are never imported by client components. The worker and migrate bundles (and Vitest) alias `server-only` to `scripts/stubs/server-only.mjs`, because they run as plain Node.
 5. `lib/**` has no framework or database imports, so it is fully unit-testable.
 6. `components/ui/**` is shadcn output. We edit it deliberately, and never add business logic to it.
 

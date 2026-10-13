@@ -6,7 +6,7 @@ The phases follow technical dependencies while putting the storefront first. Eac
 
 | Phase | Name | Size | Milestone at exit |
 |---|---|---|---|
-| 0 | Project setup & engineering foundation | S | Empty app builds, lints, tests and runs in Docker. CI is green. |
+| 0 | Project setup & engineering foundation | S | ✅ **Done 2026-10-13.** Empty app builds, lints, tests and runs in Docker. CI is ready to run on the first push. |
 | 1 | Backend foundation | L | Schema, auth, roles, catalogue, inventory, collections, media, jobs and demo seed all work. |
 | 2 | Storefront: browse & account | L | **M1:** a customer can browse the demo catalogue, filter, search, see variant-accurate PDPs, use the wishlist and cart, sign in and manage addresses. |
 | 3 | Checkout, payments & orders | XL | **M2:** a test-mode order is paid prepaid or partial COD (with coupon and wallet). Overselling is impossible. |
@@ -33,6 +33,17 @@ See [10-open-questions.md](10-open-questions.md).
 ## Phase 0: Project setup & engineering foundation
 
 **Goal:** a reproducible, checked skeleton that every later phase builds on.
+
+> **Status: complete (2026-10-13).** Verified locally:
+> - Lint (including the boundary-rule probes), typecheck and format check pass.
+> - 11 unit tests, 8 integration tests (roles, extensions, transactional job queueing, SMTP to Mailpit) and 6 Playwright tests (2 viewports, axe, health checks, headers) pass.
+> - `next build`, the esbuild server bundles and `docker build` (no secrets in context) succeed.
+> - The hardened container became healthy as non-root on a read-only filesystem, and its readiness check reached Postgres.
+> - The migrate and worker roles ran from the same image, with a scheduled job processed and graceful SIGTERM shutdown.
+>
+> Decisions recorded in ADR-014 to ADR-017. **Still open (need GitHub access):**
+> - The first CI run on GitHub, after the first push.
+> - Branch protection on `main` (Settings → Branches: require the four CI jobs).
 
 Tasks:
 1. **Before Phase 0, confirm the tooling.** Start Docker Desktop (it is installed but wasn't running on 2026-10-13), then run `node -v` (24.x) and `npm -v` (11.x).
@@ -86,7 +97,7 @@ Tasks:
    - Phone OTP through the `fake` SMS provider in development
    - Google OAuth
    - Database sessions and rate limiting stored in the database
-   - The `admin` plugin and access control with five roles (super_admin, store_admin, content_manager, content_editor, customer) and a permission matrix
+   - The `admin` plugin and access control with seven roles (super_admin, store_admin, content_manager, content_editor, fulfilment_staff, support_agent, customer) and a permission matrix
    - TOTP two-factor that staff must use
    - `requirePermission()` helpers and an `ActorContext`
    - `npm run admin:create`, a CLI that bootstraps the first super admin
@@ -216,6 +227,13 @@ Tasks:
    - Success page
    - Account order list and detail with the status timeline
 9. **Emails:** a template set (order placed, payment failed, order cancelled, refund issued) sent through Mailpit in development.
+10. **International checkout (ADR-018):**
+    - Country-aware address form and validation
+    - Prepaid only
+    - Live international shipping rate
+    - Duties and taxes terms (DDU/DDP) shown before payment
+    - Blocked-country list
+    - Razorpay international card payments in INR
 
 **Exit criteria (integration and end-to-end):**
 - The last-unit race: two customers check out at once, and exactly one succeeds.
@@ -264,6 +282,7 @@ Tasks:
    - Tracking webhook and sync job
    - COD remittance reconciliation, with CSV import as a fallback
    - Shipment cancellation
+   - **International shipping (ADR-018):** international courier provider, customs data (HS code, declared value, description, origin) on shipments, export documents, export lines flagged in the GST export
 10. **Customers:** list and detail (orders, addresses, wallet ledger, reviews, COD block toggle), plus goodwill wallet credit (with permission and reason).
 11. **Staff and administration:**
     - Invite staff, assign roles, enforce 2FA, revoke sessions

@@ -47,7 +47,7 @@
    - Run `npm run build:worker` and `npm run build:migrate` (tsup → `dist/`).
    - Prune to production dependencies where the worker bundle needs externals (`pg`, `sharp`, `pg-boss`).
 4. **`runtime`:**
-   - `node:24-<debian>-slim`, non-root user `app` (uid 10001).
+   - `node:24.21.0-trixie-slim`, running as the image's non-root `node` user (uid 1000). Application files stay root-owned and read-only; only `.next/cache` is writable.
    - Copy `.next/standalone`, `.next/static`, `public` and `dist`, plus `node_modules` entries needed only by the worker if they aren't bundled.
    - `HEALTHCHECK`. `USER app`. `CMD ["node","server.js"]`.
 

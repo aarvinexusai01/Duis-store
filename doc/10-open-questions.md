@@ -8,9 +8,9 @@ The 20 major decisions are settled (see [01](01-requirements-and-decisions.md#2-
 |---|---|---|---|
 | P1 | **Partial-COD advance:** fixed amount or % of the order? Which value? | Phase 3 | Fixed ₹100 |
 | P2 | Maximum order value allowed for partial COD | Phase 3 | ₹2,500 |
-| P3 | COD handling fee on top of the advance? | Phase 3 | ₹5 (no fee) |
+| P3 | COD handling fee on top of the advance? | Phase 3 | ₹5 COD fee (confirmed 2026-10-13) |
 | P4 | **If a partial-COD parcel is refused or returned to origin:** refund the advance, credit it to the wallet, or keep it to cover shipping? | Phase 3 | Keep it (covers two-way shipping), with this stated clearly at checkout and in the policy |
-| P5 | Free-shipping threshold and flat fee below it | Phase 3 | Free at or above ₹999, otherwise depend on pin-codes |
+| P5 | Free-shipping threshold and flat fee below it | Phase 3 | Free at or above ₹999; below that, the live Shiprocket rate for the PIN code and parcel weight (confirmed 2026-10-13) |
 | P6 | Reservation hold time during payment | Phase 3 | 15 minutes |
 | P7 | **Exchange window** after delivery, and categories excluded (for example innerwear, sale items) | Phase 5 | 10 days. Innerwear excluded. |
 | P8 | Exchanges allowed per item | Phase 5 | 2 |
@@ -28,11 +28,24 @@ The 20 major decisions are settled (see [01](01-requirements-and-decisions.md#2-
 | P20 | Backup targets: is RPO ≤ 5 minutes and RTO ≤ 2 hours acceptable? | Phase 7 | Yes |
 | P21 | Canonical host: `duis.<tld>` or `www.duis.<tld>`? | Phase 7 | Apex |
 
+## 1b. International shipping questions (new, from [ADR-018](adr/0018-worldwide-shipping-inr-only.md))
+
+Worldwide shipping at launch, priced in INR, was confirmed on 2026-10-13. These details are still needed:
+
+| # | Question | Needed by | Proposed default |
+|---|---|---|---|
+| I1 | Which international courier: Shiprocket X (same panel as domestic), DHL Express, FedEx or Aramex? | Phase 3 (rates), Phase 4 (shipments) | Shiprocket X: one vendor, one dashboard, API similar to domestic |
+| I2 | **Duties and import taxes:** the customer pays on delivery (DDU), or we collect them at checkout and ship DDP? | Phase 3 | DDU, clearly stated before payment |
+| I3 | Countries served: every country the courier serves, or an approved list? | Phase 3 | An approved list (for example US, UK, UAE, Canada, Australia, Singapore, EU) |
+| I4 | International shipping fee: always the live courier rate, or a free-shipping threshold abroad too? | Phase 3 | Always the live rate |
+| I5 | Exchanges for international orders: allowed (expensive reverse shipping), or damaged/wrong items only? | Phase 5 | Damaged or wrong items only, handled by admins |
+| I6 | Export tax route: ship under an **LUT** (zero-rated, no IGST paid) or pay IGST and claim a refund? Your CA decides. | Phase 3 | LUT |
+
 ## 2. Assumptions to confirm
 
 These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-confirm-or-correct).
 
-- [ ] English only, INR for india and other country , world wild shipping
+- [x] English only; INR for India and every other country; worldwide shipping at launch (confirmed 2026-10-13, ADR-018)
 - [ ] Prices include GST. The variant's MRP is the "original price".
 - [ ] No backorders or pre-orders
 - [ ] One coupon per order
@@ -75,13 +88,17 @@ These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-c
 | A14 | **GST:** your CA to confirm HSN codes per category, the slab interpretation (₹2,500 per piece, before or after tax, effect of discounts), and that tax on shipping and COD fees is handled correctly | 1 week | Phase 3 | You + CA |
 | A15 | Brand assets: logo (SVG source), any colours or fonts you want kept. Otherwise we propose a bold-streetwear identity for approval. | — | Phase 2 | You |
 | A16 | Real catalogue: product data, size charts, photography (to replace the demo seed) | Ongoing | Phase 8 | You |
+| A17 | **Razorpay international payments:** request activation of international cards for INR checkout | Days to weeks | Phase 3 | You |
+| A18 | **IEC** (Importer-Exporter Code) from DGFT, needed on export shipping documents | Days | Phase 4 | You |
+| A19 | **LUT** filed on the GST portal for zero-rated exports (with your CA) | Days | Phase 4 | You + CA |
+| A20 | International courier account (see I1) with KYC and rate card | Days | Phase 3 | You |
 
 ## 5. Items to re-check against live documentation when implementation starts (⚠ Verify)
 
-1. `create-next-app` and `shadcn init` flags (shadcn CLI 4 removed several flags; run `--help` first).
-2. Whether TypeScript 7 works with Next 16.4's type-checking; otherwise pin 5.x.
-3. Whether Drizzle 1.0 is stable yet (it was RC 4 on 2026-10-13); see the migration guide if we adopt it.
-4. pg-boss 12: enqueuing inside an existing transaction (custom database executor) versus an outbox table.
+1. ~~`create-next-app` and `shadcn init` flags~~ **Resolved in Phase 0**: Turbopack is the default, there is a `--cache-components` flag, and shadcn now defaults to Base UI (ADR-014).
+2. ~~Whether TypeScript 7 works with Next 16.4~~ **Resolved**: it works for `next build`, but `typescript-eslint` needs the JavaScript compiler API, so we stay on TypeScript 5.x (ADR-014).
+3. ~~Whether Drizzle 1.0 is stable~~ **Resolved**: still RC, so we stay on 0.45.x (ADR-014).
+4. ~~pg-boss transactional enqueue~~ **Resolved**: `fromDrizzle(tx, sql)`, tested (ADR-015).
 5. **Shiprocket: how to represent a partial-COD collectable amount** (only the balance as the COD amount), webhook URL rules, token lifetime, reverse-pickup API for exchanges.
 6. Razorpay: auto-capture configuration, current webhook event names and headers (`x-razorpay-event-id`).
 7. Better Auth 1.7: `phoneNumber`, `twoFactor`, `admin` and access-control APIs, the Drizzle schema generation command, and IP header configuration behind a proxy.

@@ -78,11 +78,12 @@ Versions are the `latest` npm tags on 2026-10-13. Phase 0 pins exact versions in
 | Runtime | Node.js LTS | 24.x (local is 24.16) | Active LTS. Move to Node 26 after it becomes LTS (expected late Oct 2026) and Next.js supports it. This is a one-line change in `.nvmrc` and the `Dockerfile`. |
 | Framework | Next.js App Router | 16.4.0 | Required by the spec. Provides Cache Components (`"use cache"`, `cacheTag`, `cacheLife`), `proxy.ts`, Turbopack and standalone output. |
 | UI library | React | 19.3 | Comes with Next 16. |
-| Language | TypeScript | the version `create-next-app` installs | **⚠ Verify** whether TypeScript 7 (the native compiler, now `latest`) works with Next's type-check step before adopting it. Otherwise pin 5.x. |
+| Language | TypeScript | 5.x | TypeScript 7 works for `next build`, but its missing JavaScript compiler API breaks `typescript-eslint` (ADR-014). |
 | Styling | Tailwind CSS | 4.3 | Required by the spec. Uses CSS-first config and design tokens as CSS variables. |
-| Components | shadcn/ui (CLI 4.x, Radix base) | 4.21 | Required by the spec. We own the copied component source. Radix is the default base. |
+| Components | shadcn/ui (CLI 4.x, Base UI, preset `base-nova`) | 4.21 | Required by the spec. We own the copied component source. Base UI is the CLI's default base (ADR-014). |
 | Database | PostgreSQL | 18 | Self-hosted. Native `uuidv7()`, JSONB, full-text search, `ltree`, `pg_trgm`. |
-| ORM and migrations | Drizzle ORM / drizzle-kit | 0.45.4 / 0.31.11 | Stable line. 1.0 is at RC 4; we reconsider at Phase 0 and upgrade once it is stable. |
+| ORM and migrations | Drizzle ORM / drizzle-kit | 0.45.4 / 0.31.11 | Stable line. 1.0 is still a release candidate; upgrade once it is stable (ADR-014). |
+| Server bundles | esbuild | 0.28 | Bundles the worker and migrate entry points into `dist/` (ADR-014). |
 | DB driver | `pg` (node-postgres) | 8.23 | One driver shared by Drizzle, Better Auth and pg-boss. |
 | Validation | Zod | 4.6 | Every boundary: forms, actions, route handlers, webhooks, CMS blocks, environment variables. |
 | Auth | Better Auth | 1.7.7 | See §4.2. |
@@ -143,7 +144,7 @@ Plain PostgreSQL with Drizzle covers everything we need: relational integrity, t
 ### 4.5 Background jobs: pg-boss in a dedicated worker
 - Jobs live in Postgres, in their own `pgboss` schema, so they are durable and included in backups.
 - pg-boss provides cron scheduling, retries with backoff, singleton keys, dead-letter queues and archive retention.
-- Jobs are queued inside the same database transaction as the business change. **⚠ Verify** pg-boss's support for a custom database executor. If it isn't supported, we use a transactional **outbox table** that the worker relays to the queue.
+- Jobs are queued inside the same database transaction as the business change, using pg-boss's `fromDrizzle(tx, sql)` adapter. No outbox table is needed; this is verified by an integration test (ADR-015).
 - No business-critical timer ever runs in memory.
 
 Job catalogue (initial):
@@ -200,7 +201,11 @@ Next.js 16 **Cache Components** are enabled (`cacheComponents: true`).
 
 The result is that published CMS changes appear within seconds, with no rebuild and no redeploy.
 
-**Fallback:** if fanning out to each replica proves fragile, we switch to a shared Next.js cache handler. That is an ADR revisit and would bring in Redis.
+**Fallback:** if fanning out to each replica proves fragile, we switch to a shared Next.js cache handler that implements `refreshTags()`. It can be backed by Postgres `LISTEN/NOTIFY`, so it needn't bring in Redis (ADR-017).
+
+**Two constraints found in Phase 0:**
+- `next build` runs `"use cache"` functions to prerender static shells, but our builds have no database. Database-backed routes therefore call `connection()` first and fill their caches at request time (ADR-016).
+- Static pages are sent with a one-year `s-maxage`, so Cloudflare must bypass HTML caching, or purge on deploy and on CMS publish (ADR-017).
 
 ## 6. Integration interfaces
 
@@ -242,4 +247,9 @@ Each provider is chosen through environment variables. Development and CI defaul
 | ADR-010 | Partial COD: advance via Razorpay, balance as the COD amount sent to Shiprocket | Accepted, **⚠ verify Shiprocket fields** |
 | ADR-011 | Postgres full-text search + `pg_trgm`; `SearchProvider` interface | Accepted |
 | ADR-012 | Build on the server; images tagged by git SHA; rollback without rebuild | Accepted (business decision) |
-| ADR-013 | Drizzle 0.45 stable at start; evaluate 1.0 when it is stable | Accepted, revisit in Phase 0 |
+| ADR-013 | Drizzle 0.45 stable at start; evaluate 1.0 when it is stable | Closed by ADR-014 (stay on 0.45) |
+| [ADR-014](adr/0014-phase-0-toolchain-baseline.md) | Toolchain: TypeScript 5, ESLint 9, Drizzle 0.45, shadcn on Base UI, esbuild for server bundles | Accepted (Phase 0) |
+| [ADR-015](adr/0015-job-queue-and-database-roles.md) | Jobs queued inside transactions via `fromDrizzle`; `pgboss` schema owned by the runtime role | Accepted, tested |
+| [ADR-016](adr/0016-no-database-at-build-time.md) | No database or secrets at build time; database-backed rendering behind `connection()` | Accepted |
+| [ADR-017](adr/0017-rolling-deploys-two-replicas.md) | Rolling deploys: deployment ID, stable Server Actions key, shared static assets, HTML bypass at Cloudflare | Accepted (Phase 7 completes it) |
+| [ADR-018](adr/0018-worldwide-shipping-inr-only.md) | Worldwide shipping at launch; INR only; international orders prepaid only | Accepted (business decision), details open |

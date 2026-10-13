@@ -9,7 +9,9 @@ These flows decide whether money and stock stay correct, so they are designed be
 1. **Line prices.** For each line: variant `price_paise` × quantity. The MRP (`compare_at_price_paise`) is kept for display only.
 2. **Automatic discounts.** Product, variant, category and collection promotions that are active now. The best eligible one is chosen per line, by priority and then by largest saving. These are line-level discounts.
 3. **Coupon.** At most one. Validation checks: active window, minimum order value, total and per-customer usage limits, eligibility rules (for example, first order only or phone verified), the target scope, and whether it can combine with the line discounts already applied. Cart-level amounts are spread **pro rata** across eligible lines, and the rounding remainder goes to the largest line. This keeps per-line tax and exchange valuation exact.
-4. **Shipping fee.** Zero if the discounted subtotal is at or above the free-shipping threshold, otherwise the flat fee (both set in admin).
+4. **Shipping fee.**
+   - India: zero if the discounted subtotal is at or above the free-shipping threshold (₹999, set in admin). Otherwise the **live Shiprocket rate** for the delivery PIN code and total parcel weight, cached per (PIN code, weight band, COD flag) for a short time. If no rate is available, the quote fails with "delivery not available"; it never falls back to a made-up number.
+   - International: the live rate from the international courier for the destination country and weight. Fee rules are still open (doc/10 §1b).
 5. **COD fee.** If partial COD is chosen and a COD fee is configured, it is added (shown as its own line before payment; no drip pricing).
 6. **GST breakdown.** Prices already include GST. For each line, the per-piece net price selects the GST slab from `tax_rules` (HSN + price threshold + effective date). Then `taxable = net ÷ (1 + rate)`. The split is CGST + SGST when the warehouse state equals the delivery state, otherwise IGST. Shipping and COD fees are taxed using the configured rule. **⚠ Verify** the slab interpretation with your CA (whether the ₹2,500 threshold is measured before or after tax, and how discounts affect it).
 7. **Wallet.** `min(walletBalance, requestedAmount, grandTotal − minimumOnlineAmount)`.
@@ -33,7 +35,7 @@ The `inventory_levels` table holds one row per (variant, location), with `on_han
 | Admin adjustment | `on_hand += delta`, which is rejected if the result would go below `reserved`. Movement row with reason and actor. |
 
 - All lines in an order are reserved in **one transaction**, in **variant-ID order** so concurrent transactions can't deadlock. If any line fails, everything rolls back.
-- Reservations are created **when payment starts** (when the Razorpay order is created), not when an item is added to the cart. TTL is 20 minutes, configurable.
+- Reservations are created **when payment starts** (when the Razorpay order is created), not when an item is added to the cart. TTL is 15 minutes, configurable.
 - `inventory_reservations` rows record each reservation's status (`active → committed | released | expired`), and every status change is idempotent.
 - The guarantee comes from the conditional UPDATE combined with the CHECK constraints. Two customers buying the last unit at the same time can't both succeed. An integration test with N parallel checkouts verifies this.
 
@@ -79,8 +81,9 @@ Customer            web (service)                  Postgres                   Ra
 This flow is the same as prepaid, with these differences:
 
 1. **Eligibility check**, run while quoting:
+   - The delivery address is in India. International orders are prepaid only.
    - Shiprocket serviceability returns `cod = true` for the PIN code (cached per PIN code for 24 hours).
-   - The order total is at or below the partial-COD cap.
+   - The order total is at or below the partial-COD cap (₹2,500). The advance is ₹100 and the COD fee ₹5.
    - The customer's phone is verified.
    - The customer and PIN code are not on the COD blocklist.
    - If any check fails, only Prepaid is offered, with a clear reason.

@@ -10,7 +10,7 @@ A production-ready, self-hosted e-commerce platform for **Duis**, a single-merch
   1. **Storefront**: the public shopping site. This is the top priority.
   2. **Admin portal** (`/admin`): products, inventory, pricing, collections, orders, customers, discounts, shipping, exchanges, refunds, staff.
   3. **CMS portal** (`/admin/cms`): homepage, banners, featured collections, landing pages, blog, media, navigation, SEO, publishing.
-- **Non-goals:** POS, multi-vendor marketplace, international selling, multiple currencies.
+- **Non-goals:** POS, multi-vendor marketplace, multiple currencies. International customers are served at launch, but they pay in INR (decision 22).
 
 ## 2. Business decisions (answered 2026-10-13)
 
@@ -18,7 +18,7 @@ A production-ready, self-hosted e-commerce platform for **Duis**, a single-merch
 |---|---|---|---|
 | 1 | CMS | **Custom CMS inside the app** | Built on the shared Drizzle schema with Tiptap (rich text) and dnd-kit (drag and drop). One login and role system. CMS blocks reference products, collections and media through real foreign keys. |
 | 2 | Fulfilment | **Own stock, one warehouse** | Inventory is tracked per SKU per location, starting with one default location. Shiprocket picks up from one address. The schema still supports more locations later. |
-| 3 | Payment modes | **Prepaid + partial COD** | Customers either pay in full through Razorpay, or pay an advance through Razorpay and the balance in cash to the courier. Needs a payment plan per order, COD eligibility checks, an advance-only Razorpay charge, a COD-balance amount sent to Shiprocket, and COD remittance reconciliation. |
+| 3 | Payment modes | **Prepaid + partial COD** (India only) | Customers either pay in full through Razorpay, or pay a **₹100 advance** through Razorpay and the balance in cash to the courier. Partial COD applies to orders up to **₹2,500**, with a **₹5 COD fee**. Needs a payment plan per order, COD eligibility checks, an advance-only Razorpay charge, a COD-balance amount sent to Shiprocket, and COD remittance reconciliation. |
 | 4 | Mobile apps | **Web only for now** | Mobile-first responsive site, PWA-friendly. Business logic stays in services that are independent of HTTP, so a REST API can be added later without a rewrite. |
 | 5 | Sign-in | **Email + password, phone OTP (SMS), Google** | Better Auth with the email/password, phone-number (OTP) and Google providers. An SMS provider with Indian DLT registration is needed. |
 | 6 | Guest checkout | **Not offered** | An account is required to check out (phone OTP keeps this fast). Carts work before login and merge into the account at login. |
@@ -26,7 +26,7 @@ A production-ready, self-hosted e-commerce platform for **Duis**, a single-merch
 | 8 | Notifications | **Email + WhatsApp** | A notification service with email (SMTP) and WhatsApp (BSP adapter) channels. SMS is used only for login OTPs. |
 | 9 | Extra v1 scope | **Reviews and ratings, back-in-stock alerts, store credit wallet, abandoned-cart emails** | Four extra modules, each with admin controls. The wallet is a closed-loop ledger and also serves as a payment method at checkout. |
 | 10 | GST invoices | **Issued by an external tool** (Zoho Books, Tally or Shiprocket) | The platform still calculates and saves GST per order line (HSN, rate, taxable value, CGST/SGST/IGST) and provides CSV exports. It does not number or print invoices. |
-| 11 | Shipping fee | **Free above a threshold, flat fee below** | Both amounts can be edited in admin. The courier cost is a business expense, and the courier price is never shown to customers. |
+| 11 | Shipping fee | **Free at or above ₹999; below that, the live courier rate for the PIN code** | The threshold can be edited in admin. Below it, the customer pays the rate Shiprocket quotes for that PIN code and parcel weight, so product weights must be accurate. If no rate can be fetched, checkout says so; it never invents a rate. International shipping fees are open (doc/10 §1b). |
 | 12 | Catalogue data | **None yet, so demo data** | A deterministic seed creates realistic demo products, variants, stock, collections and CMS content with generated placeholder images. CSV import is deferred. |
 | 13 | Scale | **Medium**: 500–5,000 products, 100–1,000 orders a day | One server with two web replicas (no downtime during deploys, uses more CPU cores) and PostgreSQL full-text search. No Redis. Load tested before launch. |
 | 14 | Server | **Cloud VPS in an Indian region** | Recommended size is about 8 vCPU, 16 GB RAM and 160 GB+ SSD, running Ubuntu LTS. |
@@ -36,6 +36,14 @@ A production-ready, self-hosted e-commerce platform for **Duis**, a single-merch
 | 18 | Brand | **"Duis"**; domain still to be decided | The brand name, logo and domain come from configuration and CMS site settings, never hard-coded. |
 | 19 | Design | **Bold streetwear** | High contrast, graphic-led and energetic, in the spirit of The Souled Store and Bewakoof without copying their designs, branding or imagery. |
 | 20 | Tracking and monitoring | **GA4, Meta Pixel and Conversions API; lean monitoring plus error tracking** | A consent banner is required, plus Google Consent Mode, server-side Meta events with deduplication, structured logs, health checks, external uptime checks, and Sentry-compatible error tracking. |
+
+### Follow-up decisions (after plan review, 2026-10-13)
+
+| # | Topic | Decision | What it means for the build |
+|---|---|---|---|
+| 21 | Policy values | Answered in [10 §1](10-open-questions.md#1-policy-questions-needed-before-the-phase-shown) | Stored as admin settings: partial-COD advance ₹100 and cap ₹2,500, COD fee ₹5, advance kept on RTO, reservation hold 15 minutes, exchange window 10 days (innerwear excluded), up to 2 exchanges per item, free reverse pickup, no wallet expiry. |
+| 22 | Currency and markets | **INR everywhere; worldwide shipping at launch** | One INR price list. International customers pay by international card through Razorpay. International orders are prepaid only. Addresses, shipping and tax become country-aware from Phase 1 ([ADR-018](adr/0018-worldwide-shipping-inr-only.md)). |
+| 23 | Staff roles | **Seven roles** | The five from the spec plus **Fulfilment staff** (packing and shipping, no revenue visibility) and **Support agent** (orders and exchanges). |
 
 ## 3. Requirements that follow from these decisions
 
@@ -55,14 +63,14 @@ These follow from the decisions and from Indian rules. They are planned and cost
 
 These are defaults we will build on unless you say otherwise. Each one is also listed in [10-open-questions.md](10-open-questions.md).
 
-- English only. INR only. Shipping only within India.
+- English only. INR only. Shipping across India and worldwide from launch (decision 22).
 - Displayed prices **include GST** (legally required for consumer prices). The variant's original price is its MRP.
 - No backorders and no pre-orders. A size with zero available stock can't be bought, but customers can subscribe to a back-in-stock alert.
 - At most **one coupon per order**. Automatic discounts can stack with a coupon only if both are marked combinable.
 - Wishlist requires login, matching the account-required checkout.
 - Reviews are **moderated before they are published**, and only verified buyers can review.
 - Staff accounts (all admin and CMS roles) must use **two-factor authentication** (TOTP).
-- Roles and their permissions are **defined in code**. Super Admins assign roles to staff in the admin portal, but can't create new permission sets from the UI.
+- Roles and their permissions are **defined in code**: the seven roles in decision 23. Super Admins assign roles to staff in the admin portal, but can't create new permission sets from the UI.
 - An order number looks like `DUIS-100001`.
 - Search uses PostgreSQL full-text search with trigram fuzzy matching. We will reconsider Meilisearch only if relevance testing shows it is needed.
 

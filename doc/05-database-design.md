@@ -29,10 +29,10 @@ No two migration systems ever modify the same objects.
 
 | Table | Key columns / notes |
 |---|---|
-| `user` *(Better Auth)* | `email` (unique), `email_verified`, `name`, `image`, `phone_number` (unique), `phone_number_verified`, `role` (admin plugin; one or more of `super_admin, store_admin, content_manager, content_editor, customer`), `banned`, `ban_reason`, `ban_expires`, `two_factor_enabled` |
+| `user` *(Better Auth)* | `email` (unique), `email_verified`, `name`, `image`, `phone_number` (unique), `phone_number_verified`, `role` (admin plugin; one or more of `super_admin, store_admin, content_manager, content_editor, fulfilment_staff, support_agent, customer`), `banned`, `ban_reason`, `ban_expires`, `two_factor_enabled` |
 | `session`, `account`, `verification`, `two_factor`, `rate_limit` *(Better Auth)* | Sessions stored in the DB (revocable). `account` links the Google and credential providers. `rate_limit` uses database storage, which works across replicas. |
 | `customer_profiles` | `user_id` (PK, FK), `marketing_email_consent_at`, `marketing_whatsapp_consent_at`, `cod_blocked` + reason, `deletion_requested_at` |
-| `addresses` | `user_id`, `full_name`, `phone`, `line1`, `line2`, `landmark`, `city`, `state_code` (ISO 3166-2:IN), `pincode` (`CHECK ~ '^[1-9][0-9]{5}$'`), `type` (home/work/other), `is_default`. Partial unique index on (`user_id`) where `is_default`. |
+| `addresses` | `user_id`, `full_name`, `phone` (E.164), `line1`, `line2`, `landmark`, `city`, `region` (state/province), `state_code` (ISO 3166-2, required for India), `postal_code`, `country_code` (ISO 3166-1 alpha-2, default `IN`), `type` (home/work/other), `is_default`. CHECK: when `country_code = 'IN'`, `postal_code ~ '^[1-9][0-9]{5}$'` and `state_code` is set. Partial unique index on (`user_id`) where `is_default`. |
 
 Roles and permissions are defined **in code** (Better Auth access control, ADR-003), so there are no `roles`, `permissions` or `user_roles` tables. Role changes are audited.
 
@@ -85,7 +85,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 
 | Table | Key columns / notes |
 |---|---|
-| `orders` | `order_number` (unique, from a sequence: `DUIS-100001`), `user_id`, `status`, `payment_status`, `fulfillment_status`, `payment_mode` (`prepaid`, `partial_cod`), `subtotal_paise`, `discount_paise`, `shipping_fee_paise`, `cod_fee_paise`, `tax_total_paise`, `total_paise`, `wallet_applied_paise`, `online_amount_paise`, `cod_due_paise`, `cod_collected_at`, `coupon_code`, `shipping_address jsonb` (snapshot), `customer_email`, `customer_phone`, `place_idempotency_key` (unique), `placed_at`, `confirmed_at`, `cancelled_at`, `cancel_reason`, `reservation_expires_at`, `quote jsonb` (full pricing snapshot). Indexes: (`user_id`, `placed_at desc`), (`status`, `placed_at`). |
+| `orders` | `order_number` (unique, from a sequence: `DUIS-100001`), `user_id`, `status`, `payment_status`, `fulfillment_status`, `payment_mode` (`prepaid`, `partial_cod`), `currency` (always `INR`, ADR-018), `destination_country`, `is_export` (true when shipping outside India), `subtotal_paise`, `discount_paise`, `shipping_fee_paise`, `cod_fee_paise`, `tax_total_paise`, `total_paise`, `wallet_applied_paise`, `online_amount_paise`, `cod_due_paise`, `cod_collected_at`, `coupon_code`, `shipping_address jsonb` (snapshot), `customer_email`, `customer_phone`, `place_idempotency_key` (unique), `placed_at`, `confirmed_at`, `cancelled_at`, `cancel_reason`, `reservation_expires_at`, `quote jsonb` (full pricing snapshot). Indexes: (`user_id`, `placed_at desc`), (`status`, `placed_at`). |
 | `order_items` | `order_id`, `variant_id` (FK, `on delete set null`), `product_id`, `sku`, `title`, `variant_label`, `image_url`, `hsn_code`, `unit_price_paise`, `unit_mrp_paise`, `quantity`, `discount_paise`, `line_total_paise`, `tax_rate_bp`, `taxable_value_paise`, `cgst_paise`, `sgst_paise`, `igst_paise`, `exchanged_quantity` |
 | `order_discounts` | `order_id`, `discount_id`, `coupon_id`, `amount_paise`, `allocation jsonb` (amount per line) |
 | `order_status_history` *(append-only)* | `order_id`, `field` (`status`, `payment_status`, `fulfillment_status`), `from`, `to`, `actor_user_id` / `system`, `reason`, `created_at` |
@@ -99,7 +99,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 
 | Table | Key columns / notes |
 |---|---|
-| `shipments` | `order_id`, `exchange_id` (nullable), `direction` (`forward`, `reverse`, `replacement`), `provider`, `provider_order_id`, `provider_shipment_id`, `awb` (unique, nullable), `courier_name`, `status` (normalised), `cod_amount_paise`, `label_file_key`, `pickup_scheduled_at`, `shipped_at`, `delivered_at`, `edd`, `weight_grams`, `last_synced_at`, `step_state jsonb` (resumable creation steps) |
+| `shipments` | `order_id`, `exchange_id` (nullable), `direction` (`forward`, `reverse`, `replacement`), `provider`, `provider_order_id`, `provider_shipment_id`, `awb` (unique, nullable), `courier_name`, `status` (normalised), `cod_amount_paise`, `label_file_key`, `pickup_scheduled_at`, `shipped_at`, `delivered_at`, `edd`, `weight_grams`, `last_synced_at`, `step_state jsonb` (resumable creation steps), `customs jsonb` (international only: HS codes, declared values, descriptions, country of origin, duties terms DDU/DDP) |
 | `shipment_items` | `shipment_id`, `order_item_id`, `quantity` |
 | `shipment_tracking_events` | `shipment_id`, `provider_status`, `status`, `location`, `occurred_at`, `raw jsonb`. Unique (`shipment_id`, `provider_status`, `occurred_at`). |
 | `pincode_serviceability` | `pincode` (PK), `prepaid_available`, `cod_available`, `edd_min_days`, `edd_max_days`, `checked_at` (24-hour TTL) |
@@ -145,7 +145,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 
 | Table | Key columns / notes |
 |---|---|
-| `store_settings` | Singleton, versioned: `free_shipping_threshold_paise`, `flat_shipping_fee_paise`, `partial_cod_enabled`, `cod_advance_type` / `cod_advance_value`, `cod_max_order_paise`, `cod_fee_paise`, `exchange_window_days`, `max_exchanges_per_item`, `reservation_ttl_minutes`, `gstin`, `legal_name`, `registered_state_code`, `rto_advance_policy` |
+| `store_settings` | Singleton, versioned: `free_shipping_threshold_paise`, `flat_shipping_fee_paise`, `partial_cod_enabled`, `cod_advance_type` / `cod_advance_value`, `cod_max_order_paise`, `cod_fee_paise`, `exchange_window_days`, `max_exchanges_per_item`, `reservation_ttl_minutes`, `gstin`, `legal_name`, `registered_state_code`, `rto_advance_policy`, `iec_code` and `lut_reference` (exports, ADR-018), `blocked_country_codes` |
 | `tax_rules` | `hsn_prefix`, `price_threshold_paise`, `rate_below_bp`, `rate_above_bp`, `effective_from`, `effective_to` |
 
 ## 12. Operations
