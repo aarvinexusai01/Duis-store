@@ -23,11 +23,21 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   cacheComponents: true,
   partialPrefetching: true,
+  // Crawlers that get metadata in <head> before the body streams. This is
+  // Next.js's default list plus Googlebot: by default Next streams metadata to
+  // Googlebot, which leaves rel=canonical in <body>, where Google ignores it
+  // (ADR-020).
+  htmlLimitedBots:
+    /Googlebot|[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight/i,
   // Media is pre-rendered into fixed widths at upload, so next/image never
   // resizes at request time (see doc/02-architecture.md §4.4).
   images: {
     loader: "custom",
     loaderFile: "./src/lib/image-loader.ts",
+    // The stored renditions (MEDIA_WIDTHS in the loader). Next's defaults
+    // would list 16 widths per srcset that map onto these same five files.
+    deviceSizes: [320, 640, 960, 1280, 1920],
+    imageSizes: [],
   },
   // Bundled separately for the worker; keep it as a runtime require on the
   // server so web and worker share one pg-boss build.

@@ -15,6 +15,13 @@
       "when": 1792048732079,
       "tag": "0001_append_only_history",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792054445904,
+      "tag": "0002_storefront",
+      "breakpoints": true
     }
   ]
 }

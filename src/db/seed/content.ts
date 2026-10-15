@@ -247,7 +247,7 @@ export function siteSettings(): SiteSettingsData {
     announcement: {
       enabled: true,
       text: "Free shipping on orders above ₹999 · Easy 10-day size exchanges",
-      href: "/pages/shipping-policy",
+      href: "/policies/shipping-policy",
     },
     contact: {
       email: "hello@duis.example",
@@ -342,7 +342,7 @@ export const FAQ = [
   {
     question: "When will my order arrive?",
     answer:
-      "Metro cities usually take 2–4 working days and the rest of India 4–7. You'll see the estimate for your PIN code before you pay.",
+      "It depends on your PIN code. Enter it on any product page to see the courier's estimate before you order.",
   },
   {
     question: "Can I exchange for a different size?",

@@ -146,6 +146,11 @@ src/app/
     └── exports/[id]/route.ts          # permission-checked private file download
 ```
 
+**As built in Phase 2 (ADR-020):**
+- Route groups `(storefront)` and `(auth)` exist; `src/app/auth/complete/route.ts` finishes every sign-in (merges the guest bag) and `api/test/otp` serves end-to-end tests only.
+- Widgets that combine several features sit next to their route (`products/[slug]/_components/`), and shared storefront UI is in `src/components/` (`brand/`, `layout/`, `product/`, `rich-text.tsx`, `newsletter-form.tsx`).
+- New modules: `cart`, `wishlist`, `customers`, `marketing` (newsletter), `shipping` (serviceability provider); `auth/` holds the sign-in forms and session guards. Listings and search stay in `catalog/storefront.ts` until a search engine is added.
+
 Mutations use **Server Actions** in `features/*/actions.ts` by default. Route handlers are used only for webhooks, file streaming, auth, health checks, internal calls and cacheable GET endpoints.
 
 ## 4. `src/features/`: domain modules

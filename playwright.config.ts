@@ -31,7 +31,14 @@ export default defineConfig({
     ? undefined
     : {
         command: "npm run start",
-        env: { PORT: String(PORT) },
+        // The browser origin must match APP_URL (Better Auth origin checks),
+        // and APP_ENV=test enables the fake-OTP endpoint used to sign in.
+        env: {
+          PORT: String(PORT),
+          APP_URL: baseURL,
+          APP_ENV: "test",
+          INTERNAL_REVALIDATE_URLS: baseURL,
+        },
         url: `${baseURL}/api/health`,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

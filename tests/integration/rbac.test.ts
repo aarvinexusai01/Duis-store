@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest"
 
 // Importing the modules registers their operations.
+import "@/features/cart"
 import "@/features/catalog"
 import "@/features/cms"
 import "@/features/collections"
+import "@/features/customers"
 import "@/features/inventory"
+import "@/features/marketing"
 import "@/features/media"
+import "@/features/shipping"
+import "@/features/wishlist"
 import type { Actor } from "@/server/auth/actor"
 import { rolesAllow } from "@/server/auth/permissions"
 import { ROLES, type RoleName } from "@/server/auth/roles"

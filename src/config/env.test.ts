@@ -30,6 +30,7 @@ describe("parseServerEnv", () => {
     expect(env.DATABASE_POOL_MAX).toBe(10)
     expect(env.SMTP_SECURE).toBe(false)
     expect(env.SMS_PROVIDER).toBe("fake")
+    expect(env.SHIPPING_PROVIDER).toBe("fake")
     expect(env.MEDIA_ROOT).toBe("./storage/media")
   })
 
@@ -70,7 +71,8 @@ describe("parseServerEnv", () => {
   it("enforces production rules", () => {
     const message = errorMessage({ ...valid, APP_ENV: "production" })
     expect(message).toMatch(/https in production/)
-    expect(message).toMatch(/cannot be fake in production/)
+    expect(message).toMatch(/SMS_PROVIDER cannot be fake in production/)
+    expect(message).toMatch(/SHIPPING_PROVIDER cannot be fake in production/)
   })
 
   it("never includes secret values in the error message", () => {

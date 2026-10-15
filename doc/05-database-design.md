@@ -77,9 +77,9 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 
 | Table | Key columns / notes |
 |---|---|
-| `carts` | `user_id` (nullable, unique while active), `anonymous_token_hash` (from a signed cookie), `status` (`active`, `merged`, `converted`), `coupon_code`, `last_activity_at`. Merged into the user's cart at login. |
-| `cart_items` | `cart_id`, `variant_id`, `quantity` (1–10), `added_at`. Unique (`cart_id`, `variant_id`). |
-| `wishlist_items` | (`user_id`, `product_id`) PK, `variant_id` (optional), `created_at` |
+| `carts` | `user_id` (nullable, unique while active), `anonymous_token_hash` (SHA-256 of a random cookie token; cleared when an account adopts the cart), `status` (`active`, `merged`, `converted`), `last_activity_at`. Merged into the user's cart at login (ADR-020). `coupon_code` arrives with discounts in Phase 3. |
+| `cart_items` | (`cart_id`, `variant_id`) PK, `quantity` (1–10, CHECK), `created_at`. No stored price: carts always show the live variant price. |
+| `wishlist_items` | (`user_id`, `product_id`) PK, `created_at`. Product-level only (Phase 2); a saved variant can be added with back-in-stock alerts. |
 
 ## 7. Orders, payments, wallet
 
@@ -102,7 +102,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | `shipments` | `order_id`, `exchange_id` (nullable), `direction` (`forward`, `reverse`, `replacement`), `provider`, `provider_order_id`, `provider_shipment_id`, `awb` (unique, nullable), `courier_name`, `status` (normalised), `cod_amount_paise`, `label_file_key`, `pickup_scheduled_at`, `shipped_at`, `delivered_at`, `edd`, `weight_grams`, `last_synced_at`, `step_state jsonb` (resumable creation steps), `customs jsonb` (international only: HS codes, declared values, descriptions, country of origin, duties terms DDU/DDP) |
 | `shipment_items` | `shipment_id`, `order_item_id`, `quantity` |
 | `shipment_tracking_events` | `shipment_id`, `provider_status`, `status`, `location`, `occurred_at`, `raw jsonb`. Unique (`shipment_id`, `provider_status`, `occurred_at`). |
-| `pincode_serviceability` | `pincode` (PK), `prepaid_available`, `cod_available`, `edd_min_days`, `edd_max_days`, `checked_at` (24-hour TTL) |
+| `pincode_serviceability` | `pincode` (PK, 6-digit CHECK), `serviceable`, `prepaid_available`, `cod_available`, `edd_min_days`, `edd_max_days`, `provider`, `checked_at` (24-hour TTL) |
 | `exchange_requests` | `exchange_number` (sequence), `order_id`, `order_item_id`, `quantity`, `requested_variant_id`, `reason`, `customer_note`, `status` (see the flows document), `price_difference_paise` (signed), `reverse_shipment_id`, `replacement_shipment_id`, `decided_by`, `decided_at`, `qc_note` |
 | `exchange_request_media` | `exchange_request_id`, `media_id` (customer photos) |
 
@@ -124,7 +124,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | `product_rating_stats` | `product_id` (PK), `average`, `count`, `distribution jsonb` |
 | `stock_alert_subscriptions` | `user_id`, `variant_id`, `channel` (`email`, `whatsapp`), `status` (`active`, `notified`, `cancelled`). Partial unique index on (`user_id`, `variant_id`) where active. |
 | `cart_reminders` | `cart_id`, `sequence_no`, `channel`, `sent_at`. Unique (`cart_id`, `sequence_no`). |
-| `newsletter_subscribers` | `email` (citext, unique), `status` (`pending`, `confirmed`, `unsubscribed`), `confirm_token_hash`, `consent_at`, `source` |
+| `newsletter_subscribers` | `email` (citext, unique), `status` (`pending`, `confirmed`, `unsubscribed`), `confirm_token_hash`, `consent_at`, `confirmed_at`, `unsubscribed_at`, `source` |
 | `contact_messages` | `name`, `email`, `phone`, `subject`, `message`, `status` (`new`, `handled`), `handled_by` |
 
 ## 11. CMS

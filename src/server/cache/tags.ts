@@ -10,6 +10,7 @@ export const cacheTags = {
   collection: (id: string) => `collection:${id}`,
   collectionsList: "collections:list",
   cmsPage: (slug: string) => `cms:page:${slug}`,
+  cmsPagesList: "cms:pages",
   cmsNavigation: "cms:nav",
   cmsSettings: "cms:settings",
   media: (id: string) => `media:${id}`,

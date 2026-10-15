@@ -19,6 +19,10 @@ export const emailTemplates = {
     props: linkProps,
     subject: () => "Reset your Duis password",
   },
+  "newsletter-confirm": {
+    props: z.object({ url: z.url({ protocol: /^https?$/ }) }),
+    subject: () => "Confirm your Duis subscription",
+  },
 } as const
 
 export type EmailTemplateName = keyof typeof emailTemplates

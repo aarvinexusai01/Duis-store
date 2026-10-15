@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { slugSchema } from "@/lib/slug"
+import { slugSchema } from "@/lib/slug-schema"
 
 import { blockSchema, safeHref } from "./blocks"
 

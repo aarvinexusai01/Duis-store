@@ -321,7 +321,7 @@ export const publishRevision = defineOperation({
             publishedAt: now,
           })
           .where(eq(cmsPages.id, page.id))
-        tags = [cacheTags.cmsPage(page.slug)]
+        tags = [cacheTags.cmsPage(page.slug), cacheTags.cmsPagesList]
       } else if (revision.entityType === "navigation") {
         navigationDataSchema.parse(revision.data)
         const [menu] = await tx
@@ -437,4 +437,22 @@ export async function loadPublishedSiteSettings(): Promise<SiteSettingsData | nu
     )
     .where(eq(siteSettings.id, 1))
   return row ? siteSettingsDataSchema.parse(row.data) : null
+}
+
+/** Published, indexable pages for the sitemap (the homepage is listed as "/"). */
+export async function loadPublishedPageList(): Promise<
+  { slug: string; publishedAt: Date | null }[]
+> {
+  const rows = await getDb()
+    .select({
+      slug: cmsPages.slug,
+      publishedAt: cmsPages.publishedAt,
+      data: cmsRevisions.data,
+    })
+    .from(cmsPages)
+    .innerJoin(cmsRevisions, eq(cmsRevisions.id, cmsPages.publishedRevisionId))
+    .where(eq(cmsPages.status, "published"))
+  return rows
+    .filter((row) => !pageDataSchema.safeParse(row.data).data?.seo.noindex)
+    .map(({ slug, publishedAt }) => ({ slug, publishedAt }))
 }

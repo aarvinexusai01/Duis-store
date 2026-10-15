@@ -56,3 +56,8 @@ export function describeActor(actor: Actor) {
       }
   }
 }
+
+/** For public reads where who is asking does not matter (e.g. stock levels). */
+export function anonymousActor(): Actor {
+  return { kind: "anonymous", requestId: crypto.randomUUID(), ip: null }
+}

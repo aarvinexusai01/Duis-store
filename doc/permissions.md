@@ -16,7 +16,7 @@ Who can do what, as enforced in code. Roles and their permissions are defined in
 
 Every staff role must have **two-factor authentication** enabled before any staff permission applies. Order, exchange, discount and customer operations arrive in Phases 3–5; the role definitions above already include them.
 
-## Operations (Phase 1)
+## Operations (Phase 1, staff)
 
 ✓ allowed · refused. "Customer" also stands for anyone signed in; public operations need no account.
 
@@ -55,5 +55,22 @@ Every staff role must have **two-factor authentication** enabled before any staf
 | `media.uploadImage` | ✓ | ✓ | ✓ | ✓ | · | · | · |
 
 `inventory.getAvailability` is public: live stock is shown on product pages.
+
+## Operations (Phase 2, storefront)
+
+None of these is a staff permission, so the role makes no difference: every role column matches the "Customer" column.
+
+| Operation | Access | Scope |
+|---|---|---|
+| `cart.get`, `cart.addItem`, `cart.updateItem` | Public | The caller's own cart: the account's when signed in, otherwise the one matching the hashed guest-cookie token |
+| `cart.mergeGuest` | Signed in | Moves the caller's guest cart into their own account |
+| `customers.getOverview`, `customers.updateProfile` | Signed in | Own account only |
+| `customers.setMarketingConsent`, `customers.setDeletionRequest` | Signed in | Own account only |
+| `customers.listAddresses`, `customers.saveAddress`, `customers.deleteAddress` | Signed in | Own addresses only (another customer's id answers `NOT_FOUND`) |
+| `wishlist.add`, `wishlist.remove`, `wishlist.list` | Signed in | Own wishlist only |
+| `marketing.subscribeNewsletter`, `marketing.confirmNewsletter` | Public | Same response for every address; confirmation needs the emailed token |
+| `shipping.checkServiceability` | Public | Rate limited at `/api/serviceability` |
+
+Ownership is enforced inside each operation (by the actor's user id), and integration tests in `tests/integration/storefront-customer.test.ts` cover it.
 
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

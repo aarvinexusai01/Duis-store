@@ -5,8 +5,11 @@ test("home page renders without serious accessibility violations", async ({
   page,
 }) => {
   await page.goto("/")
+  await expect(page.getByRole("heading", { level: 1 })).toBeAttached()
   await expect(
-    page.getByRole("heading", { level: 1, name: "Duis" }),
+    page
+      .getByRole("navigation", { name: "Main" })
+      .or(page.getByRole("button", { name: "Open menu" })),
   ).toBeVisible()
 
   const results = await new AxeBuilder({ page })

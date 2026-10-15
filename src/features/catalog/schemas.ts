@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { richTextSchema } from "@/lib/rich-text"
 import { seoSchema } from "@/lib/seo"
-import { slugSchema } from "@/lib/slug"
+import { slugSchema } from "@/lib/slug-schema"
 
 const id = z.uuid()
 const name = z.string().trim().min(1).max(120)

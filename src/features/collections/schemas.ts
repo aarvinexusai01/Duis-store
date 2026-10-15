@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { seoSchema } from "@/lib/seo"
-import { slugSchema } from "@/lib/slug"
+import { slugSchema } from "@/lib/slug-schema"
 
 const id = z.uuid()
 

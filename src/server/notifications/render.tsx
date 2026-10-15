@@ -7,6 +7,10 @@ import {
   VerifyEmail,
   verifyEmailText,
 } from "@/emails/account"
+import {
+  NewsletterConfirmEmail,
+  newsletterConfirmText,
+} from "@/emails/marketing"
 
 import {
   emailTemplates,
@@ -29,6 +33,10 @@ const views: {
     html: (props) => <ResetPasswordEmail {...props} />,
     text: resetPasswordText,
   },
+  "newsletter-confirm": {
+    html: (props) => <NewsletterConfirmEmail {...props} />,
+    text: newsletterConfirmText,
+  },
 }
 
 export type RenderedEmail = { subject: string; html: string; text: string }
@@ -38,7 +46,11 @@ export function renderEmail(
   rawProps: unknown,
 ): RenderedEmail {
   const props = emailTemplates[name].props.parse(rawProps)
-  const view = views[name]
+  // `props` was parsed by this template's own schema, so it matches its view.
+  const view = views[name] as {
+    html(props: unknown): ReactElement
+    text(props: unknown): string
+  }
   return {
     subject: emailTemplates[name].subject(),
     html: `<!DOCTYPE html>${renderToStaticMarkup(view.html(props))}`,

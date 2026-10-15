@@ -21,3 +21,10 @@ export {
   type PageData,
   type SiteSettingsData,
 } from "./schemas"
+export {
+  pageHref,
+  resolveNavigation,
+  resolvePageBlocks,
+  type ResolvedBlock,
+  type ResolvedNavItem,
+} from "./resolve"

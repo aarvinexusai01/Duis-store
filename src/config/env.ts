@@ -52,6 +52,9 @@ export const serverEnvSchema = z
     // "fake" records messages in memory and the log; real providers arrive
     // with DLT registration (doc/10 A2).
     SMS_PROVIDER: z.enum(["fake"]).default("fake"),
+    // Courier serviceability and rates. "fake" answers from fixed rules for
+    // development; Shiprocket arrives in Phase 3 (doc/03 §6).
+    SHIPPING_PROVIDER: z.enum(["fake"]).default("fake"),
 
     MEDIA_ROOT: z.string().min(1).default("./storage/media"),
     MEDIA_MAX_UPLOAD_BYTES: z.coerce
@@ -86,6 +89,14 @@ export const serverEnvSchema = z
           code: "custom",
           path: ["SMS_PROVIDER"],
           message: "SMS_PROVIDER cannot be fake in production",
+        })
+      }
+      if (env.SHIPPING_PROVIDER === "fake") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["SHIPPING_PROVIDER"],
+          message:
+            "SHIPPING_PROVIDER cannot be fake in production (it invents delivery estimates)",
         })
       }
       // The standalone server changes directory on start (scripts/start-standalone.mjs).

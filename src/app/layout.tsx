@@ -1,28 +1,43 @@
-import type { Metadata } from "next"
-import { Geist } from "next/font/google"
+import type { Metadata, Viewport } from "next"
+import { Anton, Geist } from "next/font/google"
 
+import { Toaster } from "@/components/ui/sonner"
+import { SITE } from "@/config/site"
 import { cn } from "@/lib/utils"
 
 import "./globals.css"
 
-// Placeholder typeface from the shadcn preset; the Phase 2 design system
-// replaces it with the Duis display/body pairing.
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
+const display = Anton({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-display",
+  display: "swap",
+})
+const body = Geist({ subsets: ["latin"], variable: "--font-body" })
 
 export const metadata: Metadata = {
-  title: {
-    default: "Duis — Men's Streetwear",
-    template: "%s | Duis",
-  },
-  description:
-    "Oversized tees, graphic tees, shirts, hoodies and denim for men. Shipping across India and worldwide.",
+  // The build has no environment (ADR-016), so this falls back to localhost
+  // there. Every indexable page resolves its metadata per request, in the
+  // server process, where APP_URL is the real origin.
+  metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
+  title: { default: SITE.defaultTitle, template: `%s | ${SITE.name}` },
+  description: SITE.defaultDescription,
+  applicationName: SITE.name,
+  formatDetection: { telephone: false, email: false, address: false },
+  openGraph: { siteName: SITE.name, locale: "en_IN", type: "website" },
+}
+
+export const viewport: Viewport = {
+  themeColor: "#111111",
+  colorScheme: "light",
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={cn("font-sans", geist.variable)}>
-      <body className="bg-background text-foreground antialiased">
+    <html lang="en-IN" className={cn(display.variable, body.variable)}>
+      <body className="flex min-h-dvh flex-col bg-background font-sans text-foreground antialiased">
         {children}
+        <Toaster position="top-center" />
       </body>
     </html>
   )

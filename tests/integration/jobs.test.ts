@@ -2,10 +2,10 @@ import { sql } from "drizzle-orm"
 import { fromDrizzle, type PgBoss } from "pg-boss"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
+import { scheduleCollectionRefresh } from "@/features/collections"
 import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
 import { createBoss } from "@/server/jobs/boss"
-import { enqueue } from "@/server/jobs/enqueue"
 import { QUEUES } from "@/server/jobs/queues"
 
 import { closeConnectionsAfterAll } from "../helpers/cleanup"
@@ -44,7 +44,9 @@ describe("job queue", () => {
   })
 
   it("coalesces a burst of collection refreshes into one queued job", async () => {
-    for (let i = 0; i < 5; i++) await enqueue(QUEUES.refreshAutoCollections, {})
+    // Through the real entry point: its singletonKey is what other test files
+    // (and production) use, so concurrent refreshes share one slot.
+    for (let i = 0; i < 5; i++) await scheduleCollectionRefresh()
     const queued = await getDb().execute<{ count: number }>(sql`
       select count(*)::int as count from pgboss.job
       where name = ${QUEUES.refreshAutoCollections} and state = 'created'

@@ -9,3 +9,10 @@ export {
   updateCollection,
 } from "./service"
 export { collectionRuleSchema, type CollectionRuleInput } from "./schemas"
+export {
+  loadCollectionBySlug,
+  loadCollectionProductIds,
+  loadCollectionsByIds,
+  loadPublishedCollections,
+  type CollectionSummary,
+} from "./storefront"

@@ -1,5 +1,6 @@
 import "server-only"
 import { headers } from "next/headers"
+import { cache } from "react"
 
 import type { Actor } from "./actor"
 import { getAuth } from "./auth"
@@ -29,7 +30,10 @@ export async function actorFromHeaders(
   }
 }
 
-/** For Server Components, Server Actions and route handlers. */
-export async function getActor(): Promise<Actor> {
+/**
+ * For Server Components, Server Actions and route handlers. Memoised per
+ * request, so the header, page and islands share one session lookup.
+ */
+export const getActor = cache(async (): Promise<Actor> => {
   return actorFromHeaders(await headers())
-}
+})

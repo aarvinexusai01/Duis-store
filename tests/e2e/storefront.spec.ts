@@ -1,0 +1,160 @@
+import AxeBuilder from "@axe-core/playwright"
+import { expect, test, type Page } from "@playwright/test"
+import pg from "pg"
+
+type Target = {
+  slug: string
+  title: string
+  colour: string
+  size: string
+  price_paise: number
+  available: number
+}
+
+/** A product with two or more colours and a variant in stock (seeded data). */
+async function findTarget(): Promise<Target | undefined> {
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
+  await client.connect()
+  try {
+    const { rows } = await client.query<Target>(`
+      select p.slug::text, p.title, c.label as colour, s.label as size, v.price_paise,
+             (select coalesce(sum(l.on_hand - l.reserved), 0)::int from inventory_levels l where l.variant_id = v.id) as available
+      from product_variants v
+      join products p on p.id = v.product_id and p.status = 'active'
+      join variant_attribute_values vc on vc.variant_id = v.id
+      join attributes ac on ac.id = vc.attribute_id and ac.code = 'color'
+      join attribute_values c on c.id = vc.attribute_value_id
+      join variant_attribute_values vs on vs.variant_id = v.id
+      join attributes asz on asz.id = vs.attribute_id and asz.code = 'size'
+      join attribute_values s on s.id = vs.attribute_value_id
+      where v.status = 'active'
+        and (select count(distinct x.attribute_value_id) from variant_attribute_values x
+             join product_variants pv on pv.id = x.variant_id
+             where pv.product_id = p.id and x.attribute_id = ac.id) > 1
+        and c.position > (select min(av.position) from attribute_values av
+             join variant_attribute_values x on x.attribute_value_id = av.id
+             join product_variants pv on pv.id = x.variant_id
+             where pv.product_id = p.id and av.attribute_id = ac.id)
+        and (select coalesce(sum(l.on_hand - l.reserved), 0) from inventory_levels l where l.variant_id = v.id) > 0
+      order by p.slug, c.position, s.position
+      limit 1`)
+    return rows[0]
+  } finally {
+    await client.end()
+  }
+}
+
+const rupees = (paise: number) =>
+  `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
+
+async function expectNoSeriousA11yIssues(page: Page) {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze()
+  const blocking = results.violations.filter(
+    (v) => v.impact === "serious" || v.impact === "critical",
+  )
+  expect(blocking.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([])
+}
+
+test("browse → filter → variant → bag → OTP sign-in keeps the bag", async ({
+  page,
+}) => {
+  const target = await findTarget()
+  test.skip(!target, "no seeded catalogue — run `npm run db:seed` first")
+
+  // Browse and filter: every filter is a URL.
+  await page.goto("/shop")
+  const inStockOnly = page.getByRole("link", { name: /In stock only/ })
+  if (await inStockOnly.first().isVisible()) {
+    await inStockOnly.first().click()
+  } else {
+    // Phones keep the facets in a drawer; follow the same filter URL.
+    const href = await page
+      .locator("a", { hasText: "In stock only" })
+      .first()
+      .getAttribute("href")
+    await page.goto(href!)
+  }
+  await expect(page).toHaveURL(/available=1/)
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Shop all" }),
+  ).toBeVisible()
+
+  // Product page: switch colour, pick a size; price and stock follow.
+  await page.goto(`/products/${target!.slug}`)
+  await page
+    .getByRole("radio", { name: new RegExp(`^${target!.colour}`) })
+    .check({ force: true })
+  await expect(page).toHaveURL(new RegExp(`color=`))
+  await page
+    .getByRole("radio", { name: new RegExp(`^${target!.size}$`, "i") })
+    .check({ force: true })
+  await expect(
+    page.getByText(rupees(target!.price_paise)).first(),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("status").filter({ hasText: /In stock|Only \d+ left/ }),
+  ).toHaveText(
+    target!.available <= 5 ? `Only ${target!.available} left` : "In stock",
+  )
+
+  await page.getByRole("button", { name: "Add to bag" }).click()
+  await expect(
+    page.getByRole("dialog").getByRole("link", { name: target!.title }),
+  ).toBeVisible()
+  await page.keyboard.press("Escape")
+
+  // Sign in with a phone OTP (fake provider), landing back on the bag.
+  const digits = `9${String(Date.now()).slice(-9)}`
+  await page.goto("/login?next=/cart")
+  await page.getByLabel("Mobile number").fill(digits)
+  await page.getByRole("button", { name: "Send code" }).click()
+  await expect(page.getByText(`+91${digits}`)).toBeVisible()
+  const otp = await page.request.get(
+    `/api/test/otp?phone=${encodeURIComponent(`+91${digits}`)}`,
+  )
+  expect(otp.ok()).toBe(true)
+  const { code } = (await otp.json()) as { code: string }
+  await page.getByRole("textbox", { name: /One-time code/ }).fill(code)
+  await page.getByRole("button", { name: "Verify and continue" }).click()
+
+  await expect(page).toHaveURL(/\/cart$/)
+  await expect(
+    page.getByRole("link", { name: target!.title }).first(),
+  ).toBeVisible()
+})
+
+test("listing and product pages pass axe", async ({ page }) => {
+  const target = await findTarget()
+  test.skip(!target, "no seeded catalogue")
+  await page.goto("/shop/men")
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
+  await expectNoSeriousA11yIssues(page)
+  await page.goto(`/products/${target!.slug}`)
+  await expect(page.getByRole("button", { name: "Add to bag" })).toBeVisible()
+  await expectNoSeriousA11yIssues(page)
+})
+
+test("filtered listings are noindex with a clean canonical", async ({
+  page,
+}) => {
+  await page.goto("/shop/men?size=m")
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    /noindex/,
+  )
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    /\/shop\/men$/,
+  )
+})
+
+test("unknown products get a noindex not-found page", async ({ page }) => {
+  await page.goto("/products/this-does-not-exist")
+  await expect(page.getByRole("heading", { name: "404" })).toBeVisible()
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
+    "content",
+    /noindex/,
+  )
+})
