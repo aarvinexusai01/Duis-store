@@ -49,11 +49,11 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | `product_categories` | (`product_id`, `category_id`) PK, `is_primary`. Partial unique index: one primary per product. |
 | `product_attributes` | (`product_id`, `attribute_id`) PK, `position`: which attributes act as variant axes for this product, and in what order |
 | `product_attribute_values` | (`product_id`, `attribute_value_id`): non-axis descriptive attributes (fit, sleeve…) used for filters |
-| `product_variants` | `product_id`, `sku` (unique, citext), `barcode`, `price_paise` (> 0), `compare_at_price_paise` (MRP, `>= price_paise`), `status` (`active`, `inactive`), `position`, `weight_grams_override`, `option_signature` (for example `color=black;size=l`). **Unique (`product_id`, `option_signature`)** blocks duplicate combinations. |
+| `product_variants` | `product_id`, `sku` (unique, citext), `barcode`, `price_paise` (> 0), `mrp_paise` (MRP inclusive of taxes, `>= price_paise`), `status` (`active`, `inactive`), `position`, `weight_grams_override`, `option_signature` (for example `color=black;size=l`). **Unique (`product_id`, `option_signature`)** blocks duplicate combinations. |
 | `variant_attribute_values` | (`variant_id`, `attribute_id`) PK, `attribute_value_id`. Index on (`attribute_value_id`, `variant_id`) for facet filtering. |
 | `product_media` | `product_id`, `media_id`, `position`, `color_value_id` (nullable: images specific to a colour), `alt_override`. A variant shows its colour's images, falling back to the product's general images. |
 
-**Listing performance:** `product_listing_cache` is a table maintained by triggers and jobs, with one row per product. It holds the minimum and maximum price, `in_stock`, available colour and size value IDs (`uuid[]`, GIN-indexed), the primary image and the sales rank. It powers fast filtering, sorting and pagination without large joins. It is rebuilt incrementally when variants, stock or prices change.
+**Listing performance:** `product_listing_cache` has one row per product: minimum and maximum price, best discount %, `in_stock`, `filter_value_ids` (every filterable value), `in_stock_value_ids` (axis values with stock now), `color_value_ids` (swatches in display order) and the primary/hover images, all GIN-indexed where filtered. The catalogue and inventory services rebuild a product's row in the same transaction as any change to its variants, prices, stock, attributes or media (`features/catalog/derived.ts`).
 
 ## 4. Inventory
 
@@ -69,7 +69,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | Table | Key columns / notes |
 |---|---|
 | `collections` | `slug` (unique), `title`, `description`, `image_media_id`, `banner_media_id`, `type` (`manual`, `automatic`), `status` (`draft`, `published`, `archived`), `sort_mode` (`manual`, `best_selling`, `newest`, `price_asc`, `price_desc`), `published_at`, SEO fields |
-| `collection_rules` | `collection_id`, `field` (`price`, `category`, `tag`, `created_within_days`, `sales_rank`, `attribute_value`), `operator`, `value jsonb`. Rules combine with `match` = all or any (stored on the collection). |
+| `collections.rules` | Rules are stored as JSONB on the collection (validated by `collectionRuleSchema`: `price` lte/gte, `category` subtree, `tag`, `created_within_days`, `attribute_value`, `best_selling`), combined with `rule_match` = `all` or `any` (ADR-0019). |
 | `collection_products` | (`collection_id`, `product_id`) PK, `position`, `source` (`manual`, `rule`). Rule rows are rebuilt by the `catalog.refresh-auto-collections` job, so every listing uses the same query path. |
 | `product_sales_stats` | `product_id`, `units_7d`, `units_30d`, `revenue_30d_paise`, `rank_best_selling`, `rank_trending`, `refreshed_at` |
 
@@ -132,13 +132,13 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | Table | Key columns / notes |
 |---|---|
 | `media_assets` | `storage_key` (unique), `kind` (`image`), `mime`, `bytes`, `width`, `height`, `sha256` (unique, for deduplication), `renditions jsonb` (width → key), `alt_text`, `caption`, `focal_x`, `focal_y`, `uploaded_by`, `deleted_at` |
-| `cms_pages` | `type` (`home`, `landing`, `static`, `policy`), `slug` (unique), `title`, `draft_revision_id`, `published_revision_id`, `scheduled_revision_id`, `scheduled_at`, `status`, `noindex` |
+| `cms_pages` | `type` (`home`, `landing`, `static`, `policy`), `slug` (unique), `title`, `status`, `draft_revision_id`, `published_revision_id`, `published_at`. Scheduling (Phase 6) uses `cms_revisions.scheduled_for`. |
 | `cms_revisions` | `entity_type` (`page`, `blog_post`, `navigation`, `site_settings`), `entity_id`, `version` (unique per entity), `data jsonb` (Zod-validated: blocks, SEO, body), `workflow_status` (`draft`, `in_review`, `approved`, `scheduled`, `published`, `archived`), `created_by`, `reviewed_by`, `published_by`, `published_at`, `note` |
 | `cms_revision_refs` | `revision_id` plus **one nullable FK column per target**: `product_id`, `collection_id`, `category_id`, `media_id`, `blog_post_id`. CHECK that exactly one is set. FKs use `ON DELETE RESTRICT`, so a referenced item can be archived but not hard-deleted while it is in use. |
 | `blog_posts` | `slug` (unique), `title`, `excerpt`, `cover_media_id`, `author_id`, `category_id`, `draft_revision_id`, `published_revision_id`, `scheduled_at`, `published_at`, `status` |
 | `blog_authors` · `blog_categories` · `blog_tags` · `blog_post_tags` | Standard blog taxonomy. Authors are optionally linked to a `user`. |
 | `navigation_menus` | `key` (unique: `header`, `footer`, `mobile`, `social`), `draft_revision_id`, `published_revision_id`. Items (label, link type and target, badge, promo image, children) are stored in the revision data and their targets indexed in `cms_revision_refs`. |
-| `site_settings` | Singleton row with `draft_revision_id` / `published_revision_id`: brand name, logo, favicon, contact details, social links, announcement bar, default SEO, grievance officer details |
+| `site_settings` | Singleton row (`id = 1`, CHECK) with an `entity_id` for its revisions and `draft_revision_id` / `published_revision_id`: brand name, logo, contact details, social links, announcement bar, default SEO, grievance officer details |
 | `redirects` | `from_path` (unique), `to_path`, `status_code` (301, 302), `hits`, `created_by` |
 
 **Commerce settings** (free-shipping threshold, flat fee, partial-COD rules, exchange window, GSTIN and warehouse state) live in `store_settings` and `tax_rules`. These belong to the admin portal, not the CMS:

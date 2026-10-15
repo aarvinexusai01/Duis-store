@@ -253,3 +253,4 @@ Each provider is chosen through environment variables. Development and CI defaul
 | [ADR-016](adr/0016-no-database-at-build-time.md) | No database or secrets at build time; database-backed rendering behind `connection()` | Accepted |
 | [ADR-017](adr/0017-rolling-deploys-two-replicas.md) | Rolling deploys: deployment ID, stable Server Actions key, shared static assets, HTML bypass at Cloudflare | Accepted (Phase 7 completes it) |
 | [ADR-018](adr/0018-worldwide-shipping-inr-only.md) | Worldwide shipping at launch; INR only; international orders prepaid only | Accepted (business decision), details open |
+| [ADR-019](adr/0019-phase-1-implementation-decisions.md) | Phase 1: operation wrapper and registry, worker-only email rendering (no React Email), `expire: 0` revalidation, `stately` refresh queue, media layout, catalogue model, test database per run | Accepted (Phase 1) |

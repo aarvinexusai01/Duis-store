@@ -1,4 +1,8 @@
+import { loadEnvConfig } from "@next/env"
 import { defineConfig, devices } from "@playwright/test"
+
+// Tests read the same .env as the server (secrets for signed requests, DB).
+loadEnvConfig(process.cwd())
 
 // A dedicated port, so a stray server on 3000 is never mistaken for the app.
 const PORT = Number(process.env.E2E_PORT ?? 3100)

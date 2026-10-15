@@ -60,6 +60,8 @@ jobs:
       - run: npm ci
       - run: cp .env.example .env
       - run: npm run db:up
+      - run: npm run db:migrate
+      - run: npm run db:seed
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
@@ -84,6 +86,10 @@ jobs:
             --cap-drop ALL --security-opt no-new-privileges \
             -e APP_URL=http://localhost:3000 \
             -e DATABASE_URL=postgres://ci:ci@127.0.0.1:5432/ci \
+            -e BETTER_AUTH_SECRET=ci-only-secret-0123456789abcdefghijklmn \
+            -e SMTP_HOST=127.0.0.1 -e SMTP_PORT=1025 -e "SMTP_FROM=Duis <ci@duis.test>" \
+            -e INTERNAL_REVALIDATE_SECRET=ci-only-secret-0123456789abcdefghijklmn \
+            -e INTERNAL_REVALIDATE_URLS=http://127.0.0.1:3000 \
             duis-web:ci
       - name: Wait for the health check
         run: |

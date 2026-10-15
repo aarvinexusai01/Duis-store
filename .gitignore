@@ -29,3 +29,6 @@ npm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local media storage (MEDIA_ROOT in development)
+/storage/

@@ -1,3 +1,9 @@
-// Drizzle schema entry point. One file per domain is added here from Phase 1
-// (see doc/05-database-design.md); drizzle-kit reads this module.
-export {}
+// Drizzle schema entry point (doc/05-database-design.md). drizzle-kit reads
+// this module; the app imports tables from here.
+export * from "./auth"
+export * from "./media"
+export * from "./catalog"
+export * from "./inventory"
+export * from "./collections"
+export * from "./cms"
+export * from "./ops"

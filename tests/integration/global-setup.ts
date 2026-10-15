@@ -1,26 +1,101 @@
-import { Client } from "pg"
+import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
 
-/** Fails fast with a clear message when the local database is not running. */
-export default async function setup(): Promise<void> {
-  const connectionString = process.env.DATABASE_URL
-  if (!connectionString) {
+import { drizzle } from "drizzle-orm/node-postgres"
+import { migrate } from "drizzle-orm/node-postgres/migrator"
+import { Client, Pool } from "pg"
+import { PgBoss } from "pg-boss"
+
+import { ensureQueues } from "@/server/jobs/queues"
+
+/**
+ * Builds a throwaway database for every run — proving the migrations apply to
+ * an empty database — and points the test workers at it:
+ * 1. drop and recreate TEST_DATABASE_NAME as the superuser;
+ * 2. apply docker/postgres/initdb/02-database.sql (roles, schemas, extensions);
+ * 3. run every migration as duis_owner;
+ * 4. install pg-boss and the queues as duis_app.
+ */
+function withDatabase(url: string, database: string): string {
+  const parsed = new URL(url)
+  parsed.pathname = `/${database}`
+  return parsed.toString()
+}
+
+function required(name: string): string {
+  const value = process.env[name]
+  if (!value)
     throw new Error(
-      "DATABASE_URL is not set. Copy .env.example to .env (see README.md).",
+      `${name} is not set. Copy .env.example to .env (see README.md).`,
+    )
+  return value
+}
+
+export default async function setup() {
+  const adminUrl = required("TEST_ADMIN_DATABASE_URL")
+  const database = process.env.TEST_DATABASE_NAME ?? "duis_test"
+  if (!/^[a-z_][a-z0-9_]*_test$/.test(database)) {
+    throw new Error(
+      "TEST_DATABASE_NAME must end in _test — it is dropped on every run.",
     )
   }
 
-  const client = new Client({
-    connectionString,
+  const admin = new Client({
+    connectionString: adminUrl,
     connectionTimeoutMillis: 5_000,
   })
   try {
-    await client.connect()
-    await client.query("select 1")
+    await admin.connect()
   } catch (err) {
     throw new Error(
-      `Cannot reach PostgreSQL at DATABASE_URL — start it with "npm run db:up". (${(err as Error).message})`,
+      `Cannot reach PostgreSQL — start it with "npm run db:up". (${(err as Error).message})`,
     )
-  } finally {
-    await client.end().catch(() => {})
+  }
+  await admin.query(`drop database if exists "${database}" with (force)`)
+  await admin.query(`create database "${database}"`)
+  await admin.end()
+
+  const setupSql = await readFile(
+    path.resolve("docker/postgres/initdb/02-database.sql"),
+    "utf8",
+  )
+  const testAdmin = new Client({
+    connectionString: withDatabase(adminUrl, database),
+  })
+  await testAdmin.connect()
+  await testAdmin.query(setupSql)
+  await testAdmin.end()
+
+  const ownerUrl = withDatabase(required("MIGRATION_DATABASE_URL"), database)
+  const ownerPool = new Pool({ connectionString: ownerUrl, max: 1 })
+  await migrate(drizzle({ client: ownerPool }), {
+    migrationsFolder: path.resolve("src/db/migrations"),
+    migrationsSchema: "drizzle",
+    migrationsTable: "__drizzle_migrations",
+  })
+  await ownerPool.end()
+
+  const appUrl = withDatabase(required("DATABASE_URL"), database)
+  const boss = new PgBoss({
+    connectionString: appUrl,
+    schema: "pgboss",
+    createSchema: false,
+  })
+  await boss.start()
+  await ensureQueues(boss)
+  await boss.stop({ graceful: false })
+
+  const mediaRoot = await mkdtemp(path.join(tmpdir(), "duis-test-media-"))
+
+  // Inherited by the test workers, which start after this function returns.
+  process.env.DATABASE_URL = appUrl
+  process.env.MIGRATION_DATABASE_URL = ownerUrl
+  process.env.APP_ENV = "test"
+  process.env.MEDIA_ROOT = mediaRoot
+  process.env.LOG_LEVEL ??= "warn"
+
+  return async () => {
+    await rm(mediaRoot, { recursive: true, force: true })
   }
 }

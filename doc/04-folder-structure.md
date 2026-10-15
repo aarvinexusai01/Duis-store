@@ -208,24 +208,29 @@ Blocks are registered in `blocks/registry.ts`. Initial block types: `hero_banner
 ## 5. `src/server/`, `src/db/`, `src/worker/`
 
 ```
-src/server/
-├── db/client.ts · db/transaction.ts        # pg Pool, drizzle instance, withTransaction()
+src/server/                                  (✓ = built in Phase 1)
+├── operation.ts                            # ✓ defineOperation(): authorize → validate → handle; registry
+├── errors.ts · http.ts                     # ✓ DomainError + codes; route-handler error responses
+├── audit.ts                                # ✓ writeAudit() inside the business transaction
+├── health.ts                               # ✓ readiness checks used by /api/health/ready
+├── db/client.ts · transaction.ts · sql.ts  # ✓ pool, drizzle, withTransaction(), array params
 ├── auth/
-│   ├── auth.ts                             # betterAuth({...}) config + plugins
-│   ├── permissions.ts                      # createAccessControl statements + roles
-│   ├── session.ts                          # getSession(), getActor()
-│   └── require.ts                          # requireUser(), requireStaff(), requirePermission()
-├── jobs/boss.ts · jobs/queues.ts · jobs/enqueue.ts
-├── cache/tags.ts · cache/revalidate.ts     # tag builders, fan-out client
-├── integrations/
-│   ├── razorpay/ (client.ts, gateway.ts, signatures.ts, fake.ts)
-│   ├── shiprocket/ (client.ts, provider.ts, status-map.ts, token-store.ts, fake.ts)
-│   ├── email/ (smtp.ts, render.ts) · whatsapp/ (provider.ts, fake.ts) · sms/ (provider.ts, fake.ts)
-│   ├── meta-capi/ · turnstile/ · storage/ (local.ts, adapter.ts)
-├── observability/logger.ts · request-context.ts
-├── security/rate-limit.ts · idempotency.ts · hmac.ts · csp.ts
-├── health.ts                               # readiness checks used by /api/health/ready
-└── errors.ts                               # DomainError + codes
+│   ├── options.ts                          # ✓ Better Auth options (pure; shared with the CLI)
+│   ├── auth.ts · cli-config.ts             # ✓ lazy getAuth(); entry for `npm run auth:generate`
+│   ├── roles.ts · permissions.ts           # ✓ 7 roles; access-control statements
+│   └── actor.ts · session.ts               # ✓ Actor type; actorFromHeaders()/getActor()
+├── jobs/boss.ts · queues.ts · enqueue.ts   # ✓ pg-boss roles, queue policies, transactional enqueue
+├── cache/tags.ts · revalidate.ts           # ✓ tag builders, fan-out to every replica
+├── notifications/
+│   ├── templates.ts · email.ts · sms.ts    # ✓ web-safe: props/subjects, queueEmail, OTP SMS
+│   └── render.tsx · delivery.ts            # ✓ worker-only: react-dom/server rendering, SMTP send
+├── storage/local.ts                        # ✓ media StorageAdapter (local volume)
+├── security/hmac.ts                        # ✓ signed internal requests
+├── observability/logger.ts                 # ✓ pino
+└── integrations/                           # Phase 3+: razorpay/, shiprocket/, whatsapp/, meta-capi/, turnstile/
+
+src/emails/          # ✓ email templates as React components (inline styles)
+src/cli/             # ✓ create-super-admin.ts (bundled to dist/)
 
 src/db/
 ├── schema/          # one file per domain: auth.ts, customers.ts, catalog.ts, inventory.ts,
@@ -235,12 +240,11 @@ src/db/
 │   └── index.ts     # re-exports all tables + relations
 ├── migrations/      # drizzle-kit generated SQL + snapshots (committed, reviewed in PRs)
 ├── migrate.ts       # programmatic migrator used by the `migrate` container
-└── seed/            # deterministic demo data: catalog, stock, collections, CMS, staff users
-    └── assets/      # generated placeholder product images (no proprietary imagery)
+└── seed/            # ✓ deterministic demo data (data.ts, images.ts SVG silhouettes, content.ts CMS)
 
 src/worker/
-├── index.ts         # start pg-boss, register handlers, schedules, graceful shutdown
-└── handlers/        # one file per queue → calls feature services (no business logic here)
+├── index.ts         # ✓ start pg-boss, ensure queues, heartbeat, graceful shutdown
+└── handlers.ts      # ✓ queue → handler map and schedules (handlers call services only)
 ```
 
 ## 6. `tests/`
@@ -260,7 +264,7 @@ Unit tests sit next to the code they test (`*.test.ts`).
 
 1. `app/**` may import from `features/*/index.ts`, `features/*/actions.ts`, `features/*/queries.ts`, `features/*/ui/**`, `components/**`, `lib/**`, `hooks/**` and `config/**`. It may **not** import `repository.ts` or `server/db`.
 2. `features/A/**` may import `features/B/index.ts` only, never B's internals.
-3. `repository.ts` files are the only code that imports `server/db` and the Drizzle tables, apart from migrations and the seed.
+3. Database access stays inside `features/**` (services, and `repository.ts`/`derived.ts` for shared or complex SQL), `server/**`, migrations and the seed. Routes, components and `lib` never touch it (ADR-0019).
 4. Files with `'server-only'` are never imported by client components. The worker and migrate bundles (and Vitest) alias `server-only` to `scripts/stubs/server-only.mjs`, because they run as plain Node.
 5. `lib/**` has no framework or database imports, so it is fully unit-testable.
 6. `components/ui/**` is shadcn output. We edit it deliberately, and never add business logic to it.

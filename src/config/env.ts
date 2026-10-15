@@ -2,6 +2,17 @@ import "server-only"
 import { z } from "zod"
 
 const postgresUrl = z.url({ protocol: /^postgres(ql)?$/ })
+const httpUrl = z.url({ protocol: /^https?$/ })
+
+const urlList = z
+  .string()
+  .transform((value) =>
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  )
+  .pipe(z.array(httpUrl).min(1))
 
 /**
  * Runtime configuration for the web and worker processes.
@@ -19,7 +30,7 @@ export const serverEnvSchema = z
     APP_ENV: z
       .enum(["development", "test", "staging", "production"])
       .default("development"),
-    APP_URL: z.url({ protocol: /^https?$/ }),
+    APP_URL: httpUrl,
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
@@ -27,30 +38,64 @@ export const serverEnvSchema = z
     DATABASE_URL: postgresUrl,
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
 
-    // Email is wired in Phase 1; until then SMTP is optional, but it must be
-    // complete if any of it is set.
-    SMTP_HOST: z.string().min(1).optional(),
-    SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+    BETTER_AUTH_SECRET: z.string().min(32),
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+
+    SMTP_HOST: z.string().min(1),
+    SMTP_PORT: z.coerce.number().int().min(1).max(65535),
     SMTP_SECURE: z.stringbool().default(false),
     SMTP_USER: z.string().min(1).optional(),
     SMTP_PASSWORD: z.string().min(1).optional(),
-    SMTP_FROM: z.string().min(3).optional(),
+    SMTP_FROM: z.string().min(3),
+
+    // "fake" records messages in memory and the log; real providers arrive
+    // with DLT registration (doc/10 A2).
+    SMS_PROVIDER: z.enum(["fake"]).default("fake"),
+
+    MEDIA_ROOT: z.string().min(1).default("./storage/media"),
+    MEDIA_MAX_UPLOAD_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .default(15 * 1024 * 1024),
+
+    // Cache invalidation fan-out to every web replica (ADR-008, ADR-017).
+    INTERNAL_REVALIDATE_SECRET: z.string().min(32),
+    INTERNAL_REVALIDATE_URLS: urlList,
   })
   .superRefine((env, ctx) => {
-    const smtp = [env.SMTP_HOST, env.SMTP_PORT, env.SMTP_FROM]
-    if (smtp.some(Boolean) && !smtp.every(Boolean)) {
+    if (Boolean(env.GOOGLE_CLIENT_ID) !== Boolean(env.GOOGLE_CLIENT_SECRET)) {
       ctx.addIssue({
         code: "custom",
-        path: ["SMTP_HOST"],
-        message: "SMTP_HOST, SMTP_PORT and SMTP_FROM must be set together",
+        path: ["GOOGLE_CLIENT_ID"],
+        message:
+          "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together",
       })
     }
-    if (env.APP_ENV === "production" && !env.APP_URL.startsWith("https://")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["APP_URL"],
-        message: "APP_URL must use https in production",
-      })
+    if (env.APP_ENV === "production") {
+      if (!env.APP_URL.startsWith("https://")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["APP_URL"],
+          message: "APP_URL must use https in production",
+        })
+      }
+      if (env.SMS_PROVIDER === "fake") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["SMS_PROVIDER"],
+          message: "SMS_PROVIDER cannot be fake in production",
+        })
+      }
+      // The standalone server changes directory on start (scripts/start-standalone.mjs).
+      if (!env.MEDIA_ROOT.startsWith("/")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["MEDIA_ROOT"],
+          message: "MEDIA_ROOT must be an absolute path in production",
+        })
+      }
     }
   })
 

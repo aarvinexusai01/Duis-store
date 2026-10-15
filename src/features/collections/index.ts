@@ -1,0 +1,11 @@
+// Public surface of the collections module (doc/04 §7, rule 2).
+export {
+  archiveCollection,
+  createCollection,
+  publishCollection,
+  refreshAutomaticCollections,
+  scheduleCollectionRefresh,
+  setCollectionProducts,
+  updateCollection,
+} from "./service"
+export { collectionRuleSchema, type CollectionRuleInput } from "./schemas"

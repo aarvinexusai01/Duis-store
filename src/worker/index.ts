@@ -3,12 +3,15 @@ import { writeFile } from "node:fs/promises"
 import { getServerEnv } from "@/config/env"
 import { closeDb } from "@/server/db/client"
 import { createBoss } from "@/server/jobs/boss"
-import { QUEUES } from "@/server/jobs/queues"
+import { stopSender } from "@/server/jobs/enqueue"
+import { ensureQueues } from "@/server/jobs/queues"
 import { logger } from "@/server/observability/logger"
+
+import { registerHandlers } from "./handlers"
 
 /**
  * Background worker: one process per container, same image as the web app.
- * Handlers stay thin and call feature services; no business logic lives here.
+ * Handlers live in ./handlers and call feature services.
  */
 
 const HEARTBEAT_FILE =
@@ -27,14 +30,8 @@ async function main(): Promise<void> {
 
   const boss = createBoss("worker")
   await boss.start()
-
-  await boss.createQueue(QUEUES.systemHeartbeat)
-  await boss.schedule(QUEUES.systemHeartbeat, "* * * * *", null, {
-    tz: "Asia/Kolkata",
-  })
-  await boss.work(QUEUES.systemHeartbeat, async ([job]) => {
-    logger.debug({ jobId: job?.id }, "heartbeat job processed")
-  })
+  await ensureQueues(boss, (message) => logger.warn(message))
+  await registerHandlers(boss)
 
   await touchHeartbeat()
   const heartbeat = setInterval(() => {
@@ -54,6 +51,7 @@ async function main(): Promise<void> {
     try {
       // Let in-flight jobs finish; anything unfinished is retried later.
       await boss.stop({ graceful: true, timeout: SHUTDOWN_TIMEOUT_MS })
+      await stopSender()
       await closeDb()
       logger.info("worker stopped")
       process.exit(0)

@@ -4,8 +4,17 @@
 //   npm run build && npm start
 import { spawn } from "node:child_process"
 import { cpSync, existsSync } from "node:fs"
+import path from "node:path"
 
 const ROOT = ".next/standalone"
+
+// server.js changes into its own directory on start, so relative paths from
+// .env (MEDIA_ROOT) must be made absolute here. Existing variables win.
+if (existsSync(".env")) process.loadEnvFile(".env")
+const env = {
+  ...process.env,
+  MEDIA_ROOT: path.resolve(process.env.MEDIA_ROOT ?? "storage/media"),
+}
 
 if (!existsSync(`${ROOT}/server.js`)) {
   console.error("No standalone build found. Run `npm run build` first.")
@@ -15,11 +24,10 @@ if (!existsSync(`${ROOT}/server.js`)) {
 cpSync("public", `${ROOT}/public`, { recursive: true })
 cpSync(".next/static", `${ROOT}/.next/static`, { recursive: true })
 
-const server = spawn(
-  process.execPath,
-  ["--env-file-if-exists=.env", `${ROOT}/server.js`],
-  { stdio: "inherit" },
-)
+const server = spawn(process.execPath, [`${ROOT}/server.js`], {
+  stdio: "inherit",
+  env,
+})
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => server.kill(signal))

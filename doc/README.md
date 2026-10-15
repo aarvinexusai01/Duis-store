@@ -1,10 +1,10 @@
 # Duis — Platform Plan
 
-Planning documents for **Duis**, a self-hosted men's fashion e-commerce platform for India (INR, Razorpay, Shiprocket), designed to add women's fashion and other departments later.
+Planning documents for **Duis**, a self-hosted men's fashion e-commerce platform selling across India and worldwide (prices in INR; Razorpay, Shiprocket), designed to add women's fashion and other departments later.
 
-**Status:** Phase 0 (engineering foundation) complete on 2026-10-13. Next is Phase 1, the backend foundation.
+**Status:** Phase 1 (backend foundation) complete on 2026-10-15. Next is Phase 2, the storefront.
 **Plan date:** 2026-10-13. Library versions were checked against the npm registry on that date.
-**Repository:** `github.com/aarvinexusai01/Duis-store` (branch `main`, no commits yet)
+**Repository:** `github.com/aarvinexusai01/Duis-store` (branch `main`; CI on GitHub Actions)
 
 ## How to read this plan
 
@@ -22,6 +22,7 @@ Read in order. Each document stands alone, but later ones assume the decisions i
 | 08 | [Security & compliance](08-security-compliance.md) | Security controls and Indian legal requirements that shape the product |
 | 09 | [Testing strategy](09-testing-strategy.md) | Test layers, the critical scenarios, and how they are verified |
 | 10 | [Open questions & activation checklist](10-open-questions.md) | What still needs a decision and which external accounts are needed |
+| — | [Permissions](permissions.md) | Roles and the generated role × operation matrix |
 
 ## The plan in one paragraph
 

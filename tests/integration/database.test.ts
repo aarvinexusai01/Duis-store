@@ -1,11 +1,11 @@
-import { afterAll, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 
-import { closeDb, getPool } from "@/server/db/client"
+import { getPool } from "@/server/db/client"
 import { checkReadiness } from "@/server/health"
 
-afterAll(async () => {
-  await closeDb()
-})
+import { closeConnectionsAfterAll } from "../helpers/cleanup"
+
+closeConnectionsAfterAll()
 
 describe("database as the runtime role", () => {
   it("connects as the least-privileged app role", async () => {
@@ -34,6 +34,15 @@ describe("database as the runtime role", () => {
   it("cannot run DDL in the public schema", async () => {
     await expect(
       getPool().query("create table phase0_must_fail (id integer)"),
+    ).rejects.toThrow(/permission denied/)
+  })
+
+  it("can only append to audit and inventory history", async () => {
+    await expect(getPool().query("delete from audit_logs")).rejects.toThrow(
+      /permission denied/,
+    )
+    await expect(
+      getPool().query("update inventory_movements set note = 'x'"),
     ).rejects.toThrow(/permission denied/)
   })
 

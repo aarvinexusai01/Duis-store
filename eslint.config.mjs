@@ -106,6 +106,11 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // Email templates are full HTML documents rendered outside Next.js.
+    files: ["src/emails/**/*.tsx"],
+    rules: { "@next/next/no-head-element": "off" },
+  },
   // Must stay last: turns off stylistic rules that Prettier owns.
   prettier,
   globalIgnores([

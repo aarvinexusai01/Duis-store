@@ -7,7 +7,7 @@ The phases follow technical dependencies while putting the storefront first. Eac
 | Phase | Name | Size | Milestone at exit |
 |---|---|---|---|
 | 0 | Project setup & engineering foundation | S | ✅ **Done 2026-10-13.** Empty app builds, lints, tests and runs in Docker. CI is ready to run on the first push. |
-| 1 | Backend foundation | L | Schema, auth, roles, catalogue, inventory, collections, media, jobs and demo seed all work. |
+| 1 | Backend foundation | L | ✅ **Done 2026-10-15.** Schema, auth, roles, catalogue, inventory, collections, media, jobs and demo seed all work. |
 | 2 | Storefront: browse & account | L | **M1:** a customer can browse the demo catalogue, filter, search, see variant-accurate PDPs, use the wishlist and cart, sign in and manage addresses. |
 | 3 | Checkout, payments & orders | XL | **M2:** a test-mode order is paid prepaid or partial COD (with coupon and wallet). Overselling is impossible. |
 | 4 | Admin portal & operations | XL | **M3:** staff manage the catalogue, stock, discounts and orders, and fulfil through Shiprocket (fake or real). |
@@ -86,6 +86,18 @@ Tasks:
 ## Phase 1: Backend foundation
 
 **Goal:** the core domain model and the infrastructure every feature depends on.
+
+> **Status: complete (2026-10-15).** Every exit criterion was verified:
+> - **Migrations apply to an empty database:** each integration run builds a fresh `duis_test` (35 tables, append-only history enforced by grants).
+> - **The demo seed runs:** 65 products, 736 variants, 179 images, 9 collections, published CMS pages, menus and settings, one account per role.
+> - **RBAC matrix:** 31 operations × 7 roles, plus anonymous and missing-2FA cases ([permissions](permissions.md)).
+> - **No overselling:** 20 concurrent checkouts for the last unit produce exactly one reservation.
+> - **Media:** uploads are re-encoded with metadata stripped, every width is written, and SVG, non-images, tiny images and oversized files are rejected. Images are served from the container.
+> - **Jobs:** a failing job retries and completes. The worker container delivered queued emails through SMTP.
+>
+> Totals: 272 integration tests, 21 unit tests and 14 browser tests pass. The production build, the server bundles and the Docker image build. Decisions are in [ADR-0019](adr/0019-phase-1-implementation-decisions.md).
+>
+> **Moved to later phases:** CMS homepage renderers (Phase 2, with the design system), review and scheduling workflow (Phase 6), CSV import (later).
 
 Tasks:
 1. **Database foundations:**

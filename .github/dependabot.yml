@@ -10,6 +10,17 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # Held back on purpose (doc/adr/0014-phase-0-toolchain-baseline.md):
+    ignore:
+      # typescript-eslint needs the JS compiler API that TypeScript 7 lacks.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # eslint-config-next's bundled plugins do not support ESLint 10 yet.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      # Types must match the Node.js major we run (24 LTS).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /

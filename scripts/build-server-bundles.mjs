@@ -24,6 +24,8 @@ await build({
   entryPoints: {
     worker: "src/worker/index.ts",
     migrate: "src/db/migrate.ts",
+    seed: "src/db/seed/index.ts",
+    "create-super-admin": "src/cli/create-super-admin.ts",
   },
   outdir: OUT_DIR,
   outExtension: { ".js": ".mjs" },
@@ -33,8 +35,9 @@ await build({
   target: "node24",
   format: "esm",
   sourcemap: true,
-  // pg loads pg-native lazily and only when explicitly requested.
-  external: ["pg-native"],
+  // pg loads pg-native lazily and only when explicitly requested. sharp is a
+  // native module: it stays in node_modules (the standalone build traces it).
+  external: ["pg-native", "sharp"],
   alias: { "server-only": "./scripts/stubs/server-only.mjs" },
   banner: { js: commonJsShim },
   legalComments: "none",
