@@ -87,4 +87,26 @@ Ownership is enforced inside each operation (by the actor's user id), and integr
 
 Payment settlement, expiry, reconciliation and refunds run as the system (jobs and the verified webhook), never on a customer's behalf.
 
+## Operations (Phase 4a, admin)
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `catalog.adminGetProduct` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | · |
+| `catalog.adminListProducts` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | · |
+| `catalog.adminListSizeCharts` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | · |
+| `catalog.adminOptions` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | · |
+| `catalog.duplicateProduct` | ✓ | ✓ | · | · | · | · | · |
+| `catalog.updateAttributeValue` | ✓ | ✓ | · | · | · | · | · |
+| `catalog.updateSizeChart` | ✓ | ✓ | · | · | · | · | · |
+| `collections.adminGet` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `collections.adminList` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `collections.previewRules` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `inventory.adminListMovements` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `inventory.adminListStock` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `inventory.setCountedStock` | ✓ | ✓ | · | · | · | · | · |
+| `reports.operationsSummary` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `reports.salesSummary` | ✓ | ✓ | · | · | · | · | · |
+
+`/admin` returns 404 to anyone who isn't staff. Staff without 2FA are sent to `/admin/two-factor` first. The sidebar hides what a role can't use, but each operation still checks on the server.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

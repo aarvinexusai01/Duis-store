@@ -16,3 +16,10 @@ export {
   loadPublishedCollections,
   type CollectionSummary,
 } from "./storefront"
+export {
+  adminGetCollection,
+  adminListCollections,
+  previewCollectionRules,
+  type AdminCollection,
+  type AdminCollectionRow,
+} from "./admin"

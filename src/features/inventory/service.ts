@@ -65,7 +65,7 @@ async function productIdsForVariants(
 }
 
 /** Keeps listings in step with stock that crossed zero. */
-async function stockChanged(tx: Transaction, variantIds: string[]) {
+export async function stockChanged(tx: Transaction, variantIds: string[]) {
   const productIds = await productIdsForVariants(tx, variantIds)
   await refreshListingCache(tx, productIds)
   await requestRevalidation(

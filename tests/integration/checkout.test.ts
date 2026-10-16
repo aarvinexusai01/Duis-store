@@ -289,8 +289,12 @@ describe("concurrency", () => {
         ),
       ),
     )
-    expect(outcomes.filter((o) => o === "ok")).toHaveLength(1)
-    expect(outcomes.filter((o) => o === "OUT_OF_STOCK")).toHaveLength(3)
+    expect(outcomes.toSorted()).toEqual([
+      "OUT_OF_STOCK",
+      "OUT_OF_STOCK",
+      "OUT_OF_STOCK",
+      "ok",
+    ])
     expect(await stock(blackL)).toMatchObject({ reserved: 1 })
   })
 

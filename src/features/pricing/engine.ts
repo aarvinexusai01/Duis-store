@@ -101,6 +101,7 @@ export type QuoteDiscount = {
 export type QuoteIssue = {
   code:
     | "EMPTY"
+    | "UNAVAILABLE"
     | "DELIVERY_UNAVAILABLE"
     | "COD_UNAVAILABLE"
     | "COUPON_NOT_APPLICABLE"

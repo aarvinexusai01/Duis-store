@@ -44,6 +44,17 @@ By default `PAYMENT_PROVIDER=fake`: checkout shows a **Simulated payment** windo
 3. Restart `npm run dev` and `npm run worker`, then check out and pay with a [Razorpay test card or UPI id](https://razorpay.com/docs/payments/payments/test-card-details/).
 4. Webhooks (optional locally): expose the app with a tunnel and add `https://<tunnel>/api/webhooks/razorpay` in Razorpay → Webhooks with the same secret, for `payment.captured`, `payment.failed`, `order.paid`, `refund.processed` and `refund.failed`. Without a webhook, the browser callback and the 5-minute reconciler still confirm orders.
 
+## Admin
+
+Staff work at `/admin` (doc/permissions.md has the roles and what each can do).
+
+1. To make a staff account in development, register normally, then set the role in the database:
+   ```sql
+   update users set role = 'store_admin' where email = 'you@example.com';
+   ```
+2. The first visit to `/admin` asks for your password, then shows a QR code for an authenticator app. Enter a 6-digit code and **save the backup codes**: they are shown only once.
+3. People who aren't staff get a 404 at `/admin`.
+
 ## Commands
 
 | Command                                      | What it does                                                                                             |

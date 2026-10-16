@@ -22,7 +22,7 @@ import {
 } from "./schemas"
 
 /** SQL condition on `p` (products) and `lc` (product_listing_cache). */
-function ruleCondition(rule: CollectionRuleInput): SQL {
+export function ruleCondition(rule: CollectionRuleInput): SQL {
   switch (rule.field) {
     case "price":
       return rule.operator === "lte"

@@ -19,6 +19,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  // A cold production server under parallel workers can take a few seconds
+  // to answer its first requests.
+  expect: { timeout: 10_000 },
   use: {
     baseURL,
     trace: "on-first-retry",
@@ -37,6 +40,8 @@ export default defineConfig({
           PORT: String(PORT),
           APP_URL: baseURL,
           APP_ENV: "test",
+          // Never real payments in automated tests, whatever .env says.
+          PAYMENT_PROVIDER: "fake",
           INTERNAL_REVALIDATE_URLS: baseURL,
         },
         url: `${baseURL}/api/health`,

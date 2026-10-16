@@ -191,9 +191,14 @@ export const placeOrder = defineOperation({
     const ctx = await buildCheckoutContext(user, input)
     const blocking = ctx.quote.issues.filter((i) => i.blocking)
     if (blocking.length > 0) {
-      throw new DomainError("CONFLICT", blocking[0]!.message, {
-        quote: view(ctx),
-      })
+      // Another checkout may have taken the last unit since the quote: report
+      // it the same way as a failed reservation.
+      const issue = blocking[0]!
+      throw new DomainError(
+        issue.code === "UNAVAILABLE" ? "OUT_OF_STOCK" : "CONFLICT",
+        issue.message,
+        { quote: view(ctx) },
+      )
     }
     // The customer must have seen exactly these amounts.
     if (ctx.hash !== input.quoteHash) {

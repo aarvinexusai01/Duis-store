@@ -293,6 +293,19 @@ Tasks:
 
 **Goal:** the business can run day-to-day operations from `/admin`.
 
+> **Status: in progress, in three slices with a review stop after each** ([ADR-022](adr/0022-phase-4a-admin-decisions.md)).
+> - **4a, built 2026-10-16:**
+>   - Shell: sidebar filtered by permission, server tables, status badges.
+>   - Staff 2FA enrolment.
+>   - Dashboard.
+>   - Products: details, Tiptap description, photos by colour, variant generator and grid, publish, archive, duplicate, SEO.
+>   - Categories (up/down ordering), attributes, size charts.
+>   - Collections: picker, rule builder with a live preview.
+>   - Inventory: stock table, receive, adjust and count, movement history, thresholds.
+> - **4b, next:** orders, shipping (fake courier plus an unverified Shiprocket and Shiprocket X client), customers, discounts.
+> - **4c:** settings, staff and the audit log, the system page, reports (including the generic GST CSV).
+> - **Moved from 4a to 4c:** the command palette, column visibility, CSV export and the daily low-stock email.
+
 Tasks:
 1. **Shell:** sidebar, breadcrumbs, command palette search, a shared `DataTable` (server pagination, filters, column visibility, bulk actions, CSV export), status badges, confirmation dialogs. Every page and action has permission checks.
 2. **Dashboard:** revenue, orders and AOV over time, fulfilment backlog, recent transactions, low-stock list, best sellers, pending exchanges, COD balance pending.

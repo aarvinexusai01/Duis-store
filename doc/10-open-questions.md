@@ -34,7 +34,7 @@ Worldwide shipping at launch, priced in INR, was confirmed on 2026-10-13. These 
 
 | # | Question | Needed by | Proposed default |
 |---|---|---|---|
-| I1 | Which international courier: Shiprocket X (same panel as domestic), DHL Express, FedEx or Aramex? | Phase 3 (rates), Phase 4 (shipments) | Shiprocket X: one vendor, one dashboard, API similar to domestic |
+| I1 | Which international courier: Shiprocket X (same panel as domestic), DHL Express, FedEx or Aramex? | Phase 3 (rates), Phase 4 (shipments) | Shiprocket X: one vendor, one dashboard, API similar to domestic (confirmed 2026-10-15). **2026-10-16:** no courier account yet; Phase 4 builds against a fake courier, and the Shiprocket client stays unverified until one real test shipment. |
 | I2 | **Duties and import taxes:** the customer pays on delivery (DDU), or we collect them at checkout and ship DDP? | Phase 3 | DDU, clearly stated before payment (confirmed 2026-10-15) |
 | I3 | Countries served: every country the courier serves, or an approved list? | Phase 3 | An approved list: US, UK, UAE, Canada, Australia, Singapore and the EU countries (confirmed 2026-10-15) |
 | I4 | International shipping fee: always the live courier rate, or a free-shipping threshold abroad too? | Phase 3 | Always the live rate (confirmed 2026-10-15) |
@@ -66,7 +66,7 @@ These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-c
 | External uptime monitor | UptimeRobot, Better Stack, Uptime Kuma on another host | Any free tier. It must run **off** the production server. |
 | VPS provider | AWS Lightsail/EC2 Mumbai, DigitalOcean Bangalore, E2E Networks, Linode/Akamai Mumbai | Choose on price for 8 vCPU / 16 GB, snapshot support and a firewall API |
 | Backup bucket | Backblaze B2, Cloudflare R2, AWS S3 | B2 or R2 (low cost, S3 API, object lock or versioning) |
-| External GST invoicing tool | Zoho Books, Tally, Shiprocket invoices | Tell us which one, so the export columns match its import format (Phase 4) |
+| External GST invoicing tool | Zoho Books, Tally, Shiprocket invoices | **Not decided (2026-10-16):** Phase 4 ships a generic per-line GST CSV that can be mapped to any tool later. |
 
 ## 4. External activation checklist (start early, since some take weeks)
 

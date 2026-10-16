@@ -12,3 +12,11 @@ export {
   type ReservationHolder,
   type ReservationLine,
 } from "./service"
+export {
+  adminListMovements,
+  adminListStock,
+  setCountedStock,
+  STOCK_PAGE_SIZE,
+  type MovementRow,
+  type StockRow,
+} from "./admin"

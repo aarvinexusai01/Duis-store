@@ -92,6 +92,10 @@ export default async function setup() {
   process.env.DATABASE_URL = appUrl
   process.env.MIGRATION_DATABASE_URL = ownerUrl
   process.env.APP_ENV = "test"
+  // Tests never reach real providers, whatever the developer's .env says.
+  process.env.PAYMENT_PROVIDER = "fake"
+  process.env.SHIPPING_PROVIDER = "fake"
+  process.env.SMS_PROVIDER = "fake"
   process.env.MEDIA_ROOT = mediaRoot
   process.env.LOG_LEVEL ??= "warn"
 

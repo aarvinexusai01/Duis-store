@@ -287,7 +287,7 @@ export async function buildCheckoutContext(
     })
   }
   for (const problem of cart.problems) {
-    extraIssues.push({ code: "EMPTY", message: problem, blocking: true })
+    extraIssues.push({ code: "UNAVAILABLE", message: problem, blocking: true })
   }
 
   // Partial COD eligibility (doc/03 §4): India, courier COD, verified phone, not blocked.

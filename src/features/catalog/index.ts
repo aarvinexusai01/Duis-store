@@ -43,3 +43,18 @@ export {
   type ShopLocation,
   type Suggestions,
 } from "./storefront"
+export {
+  ADMIN_PAGE_SIZE,
+  adminCatalogOptions,
+  adminGetProduct,
+  adminListProducts,
+  adminListSizeCharts,
+  duplicateProduct,
+  updateAttributeValue,
+  updateSizeChart,
+  type AdminProduct,
+  type AdminProductRow,
+  type CatalogOptions,
+  type SizeChartRow,
+} from "./admin"
+export * as catalogSchemas from "./schemas"
