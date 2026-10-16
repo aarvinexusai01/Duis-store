@@ -9,7 +9,7 @@ import { adminListStock } from "@/features/inventory"
 import { operationsSummary, salesSummary } from "@/features/reports"
 import { can, requireStaff } from "@/features/staff"
 import { formatPaise } from "@/lib/money"
-import { ORDER_STATUS_LABEL } from "@/lib/order-status"
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/order-status"
 
 export const metadata: Metadata = { title: "Dashboard" }
 
@@ -83,9 +83,19 @@ async function Dashboard() {
             value={formatPaise(sales.averageOrderPaise)}
           />
         )}
-        {ops && <Card label="To fulfil" value={String(ops.toFulfil)} />}
+        {ops && (
+          <Card
+            label="To fulfil"
+            value={String(ops.toFulfil)}
+            href="/admin/orders?view=to_ship"
+          />
+        )}
         {sales && (
-          <Card label="COD to collect" value={formatPaise(sales.codDuePaise)} />
+          <Card
+            label="COD to collect"
+            value={formatPaise(sales.codDuePaise)}
+            href="/admin/orders/cod"
+          />
         )}
         {low && (
           <Card
@@ -114,17 +124,23 @@ async function Dashboard() {
                   className="flex items-center justify-between gap-3 py-2"
                 >
                   <span className="min-w-0">
-                    <span className="font-medium">{order.orderNumber}</span>
+                    <Link
+                      href={`/admin/orders/${order.orderNumber}` as Route}
+                      className="font-medium hover:underline"
+                    >
+                      {order.orderNumber}
+                    </Link>
                     <span className="block truncate text-xs text-muted-foreground">
                       {order.customer} ·{" "}
                       {order.placedAt.toLocaleString("en-IN", {
                         dateStyle: "medium",
                         timeStyle: "short",
+                        timeZone: "Asia/Kolkata",
                       })}
                     </span>
                   </span>
                   <span className="flex items-center gap-2">
-                    <StatusBadge>
+                    <StatusBadge tone={ORDER_STATUS_TONE[order.status]}>
                       {ORDER_STATUS_LABEL[order.status] ?? order.status}
                     </StatusBadge>
                     {order.totalPaise !== null && (

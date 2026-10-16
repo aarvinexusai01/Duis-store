@@ -86,10 +86,14 @@ export async function findUsableCoupon(
       coupon_id: string
       code: string
       times_used: number
+      code_limit: number | null
+      discount_used: number
       live: boolean
     }
   >(sql`
-    select c.id as coupon_id, c.code::text as code, c.times_used, (${LIVE}) as live, x.*
+    select c.id as coupon_id, c.code::text as code, c.times_used, c.usage_limit as code_limit,
+           (select coalesce(sum(times_used), 0)::int from coupons where discount_id = c.discount_id) as discount_used,
+           (${LIVE}) as live, x.*
     from coupons c
     join lateral (${SELECT_DISCOUNT} where d.id = c.discount_id and d.kind = 'coupon') x on true
     join discounts d on d.id = c.discount_id
@@ -98,15 +102,17 @@ export async function findUsableCoupon(
   if (!row || !row.live)
     return { error: "That coupon code isn't valid or has expired." }
   if (
-    row.usage_limit_total !== null &&
-    row.times_used >= row.usage_limit_total
+    (row.usage_limit_total !== null &&
+      row.discount_used >= row.usage_limit_total) ||
+    (row.code_limit !== null && row.times_used >= row.code_limit)
   ) {
     return { error: "This coupon has been fully used." }
   }
   if (row.usage_limit_per_customer !== null) {
+    // Per customer across all of the discount's codes.
     const used = await db.execute<{ n: number }>(sql`
-      select count(*)::int as n from coupon_redemptions
-      where coupon_id = ${row.coupon_id} and user_id = ${userId} and status = 'active'`)
+      select count(*)::int as n from coupon_redemptions r join coupons c on c.id = r.coupon_id
+      where c.discount_id = ${row.id} and r.user_id = ${userId} and r.status = 'active'`)
     if (used.rows[0]!.n >= row.usage_limit_per_customer) {
       return { error: "You've already used this coupon." }
     }
@@ -144,21 +150,32 @@ export async function redeemCoupon(
     amountPaise: number
   },
 ): Promise<void> {
+  // The discount row is locked too: its total limit spans all its codes.
   const locked = await tx.execute<{
     times_used: number
+    code_limit: number | null
+    discount_id: string
     usage_limit_total: number | null
     usage_limit_per_customer: number | null
   }>(sql`
-    select c.times_used, d.usage_limit_total, d.usage_limit_per_customer
+    select c.times_used, c.usage_limit as code_limit, c.discount_id, d.usage_limit_total, d.usage_limit_per_customer
     from coupons c join discounts d on d.id = c.discount_id
     where c.id = ${input.couponId}
-    for update of c`)
+    for update of c, d`)
   const row = locked.rows[0]
   if (!row)
     throw new DomainError("CONFLICT", "That coupon is no longer available.")
+  const discountUsed =
+    row.usage_limit_total === null
+      ? 0
+      : (
+          await tx.execute<{ n: number }>(
+            sql`select coalesce(sum(times_used), 0)::int as n from coupons where discount_id = ${row.discount_id}`,
+          )
+        ).rows[0]!.n
   if (
-    row.usage_limit_total !== null &&
-    row.times_used >= row.usage_limit_total
+    (row.usage_limit_total !== null && discountUsed >= row.usage_limit_total) ||
+    (row.code_limit !== null && row.times_used >= row.code_limit)
   ) {
     throw new DomainError(
       "CONFLICT",
@@ -167,8 +184,8 @@ export async function redeemCoupon(
   }
   if (row.usage_limit_per_customer !== null) {
     const used = await tx.execute<{ n: number }>(sql`
-      select count(*)::int as n from coupon_redemptions
-      where coupon_id = ${input.couponId} and user_id = ${input.userId} and status = 'active'`)
+      select count(*)::int as n from coupon_redemptions r join coupons c on c.id = r.coupon_id
+      where c.discount_id = ${row.discount_id} and r.user_id = ${input.userId} and r.status = 'active'`)
     if (used.rows[0]!.n >= row.usage_limit_per_customer) {
       throw new DomainError("CONFLICT", "You've already used this coupon.")
     }
@@ -200,41 +217,45 @@ export async function reverseCouponRedemption(
 
 // --- Staff operations (the admin UI arrives in Phase 4) ----------------------------
 
-export const createDiscountSchema = z
-  .object({
-    name: z.string().trim().min(2).max(100),
+/** The editable fields of a discount (create and update share them). */
+export const discountFieldsSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  valueType: z.enum(["percentage", "fixed"]),
+  value: z.number().int().positive(),
+  maxDiscountPaise: z.number().int().positive().nullable().default(null),
+  minOrderPaise: z.number().int().min(0).default(0),
+  targets: z
+    .array(
+      z.object({
+        type: z.enum(["product", "variant", "category", "collection"]),
+        id: z.uuid(),
+      }),
+    )
+    .max(500)
+    .default([]),
+  eligibility: z
+    .object({
+      firstOrderOnly: z.boolean().optional(),
+      phoneVerifiedOnly: z.boolean().optional(),
+      userIds: z.array(z.uuid()).max(1000).optional(),
+    })
+    .default({}),
+  combinable: z.boolean().default(false),
+  priority: z.number().int().min(0).max(1000).default(0),
+  startsAt: z.coerce.date().optional(),
+  endsAt: z.coerce.date().nullable().default(null),
+  usageLimitTotal: z.number().int().positive().nullable().default(null),
+  usageLimitPerCustomer: z.number().int().positive().nullable().default(null),
+})
+
+export const createDiscountSchema = discountFieldsSchema
+  .extend({
     kind: z.enum(["automatic", "coupon"]),
     code: z
       .string()
       .trim()
       .regex(/^[A-Za-z0-9_-]{3,32}$/)
       .optional(),
-    valueType: z.enum(["percentage", "fixed"]),
-    value: z.number().int().positive(),
-    maxDiscountPaise: z.number().int().positive().nullable().default(null),
-    minOrderPaise: z.number().int().min(0).default(0),
-    targets: z
-      .array(
-        z.object({
-          type: z.enum(["product", "variant", "category", "collection"]),
-          id: z.uuid(),
-        }),
-      )
-      .max(500)
-      .default([]),
-    eligibility: z
-      .object({
-        firstOrderOnly: z.boolean().optional(),
-        phoneVerifiedOnly: z.boolean().optional(),
-        userIds: z.array(z.uuid()).max(1000).optional(),
-      })
-      .default({}),
-    combinable: z.boolean().default(false),
-    priority: z.number().int().min(0).max(1000).default(0),
-    startsAt: z.coerce.date().optional(),
-    endsAt: z.coerce.date().nullable().default(null),
-    usageLimitTotal: z.number().int().positive().nullable().default(null),
-    usageLimitPerCustomer: z.number().int().positive().nullable().default(null),
   })
   .refine((d) => d.valueType !== "percentage" || d.value <= 10_000, {
     path: ["value"],

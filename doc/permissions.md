@@ -109,4 +109,34 @@ Payment settlement, expiry, reconciliation and refunds run as the system (jobs a
 
 `/admin` returns 404 to anyone who isn't staff. Staff without 2FA are sent to `/admin/two-factor` first. The sidebar hides what a role can't use, but each operation still checks on the server.
 
+## Operations (Phase 4b, orders, customers and discounts)
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `customers.adminGet` | ✓ | ✓ | · | · | · | ✓ | · |
+| `customers.adminList` | ✓ | ✓ | · | · | · | ✓ | · |
+| `customers.setCodBlock` | ✓ | ✓ | · | · | · | ✓ | · |
+| `discounts.adminGet` | ✓ | ✓ | · | · | · | · | · |
+| `discounts.adminList` | ✓ | ✓ | · | · | · | · | · |
+| `discounts.archive` | ✓ | ✓ | · | · | · | · | · |
+| `discounts.generateCoupons` | ✓ | ✓ | · | · | · | · | · |
+| `discounts.setActive` | ✓ | ✓ | · | · | · | · | · |
+| `discounts.update` | ✓ | ✓ | · | · | · | · | · |
+| `orders.addNote` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `orders.adminGet` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `orders.adminList` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `orders.cancelShipment` | ✓ | ✓ | · | · | ✓ | · | · |
+| `orders.createShipments` | ✓ | ✓ | · | · | ✓ | · | · |
+| `orders.getShipmentLabel` | ✓ | ✓ | · | · | ✓ | · | · |
+| `orders.importCodRemittances` | ✓ | ✓ | · | · | · | · | · |
+| `orders.listCodOutstanding` | ✓ | ✓ | · | · | · | · | · |
+| `orders.refund` | ✓ | ✓ | · | · | · | · | · |
+| `orders.retryShipment` | ✓ | ✓ | · | · | ✓ | · | · |
+| `orders.simulateTracking` | ✓ | ✓ | · | · | ✓ | · | · |
+| `orders.staffCancel` | ✓ | ✓ | · | · | · | ✓ | · |
+| `orders.startProcessing` | ✓ | ✓ | · | · | ✓ | · | · |
+| `orders.updateShippingAddress` | ✓ | ✓ | · | · | · | ✓ | · |
+
+Amounts (order totals, payments, refunds and customer spend) are returned only to roles with `order: read_financials`. `orders.simulateTracking` also needs the fake courier outside production. Courier tracking webhooks are checked against the shared token, and processed as the system.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

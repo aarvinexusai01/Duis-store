@@ -1,13 +1,17 @@
 "use client"
 
 import {
+  BadgePercentIcon,
+  BanknoteIcon,
   BoxesIcon,
   FolderTreeIcon,
   LayoutDashboardIcon,
   LayersIcon,
+  PackageIcon,
   RulerIcon,
   ShirtIcon,
   TagsIcon,
+  UsersIcon,
 } from "lucide-react"
 import type { Route } from "next"
 import Link from "next/link"
@@ -24,6 +28,10 @@ const ICONS: Record<AdminNavItem["icon"], typeof ShirtIcon> = {
   sizeCharts: RulerIcon,
   collections: LayersIcon,
   inventory: BoxesIcon,
+  orders: PackageIcon,
+  cod: BanknoteIcon,
+  customers: UsersIcon,
+  discounts: BadgePercentIcon,
 }
 
 export function AdminNavLinks({
@@ -34,8 +42,12 @@ export function AdminNavLinks({
   onNavigate?: () => void
 }) {
   const pathname = usePathname()
-  const active = (href: string) =>
-    href === "/admin" ? pathname === href : pathname.startsWith(href)
+  // The most specific link wins (/admin/orders/cod over /admin/orders).
+  const current = groups
+    .flatMap((group) => group.items.map((item) => item.href))
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0]
+  const active = (href: string) => href === current
   return (
     <nav aria-label="Admin" className="flex flex-col gap-5">
       {groups.map((group) => (

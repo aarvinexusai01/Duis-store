@@ -20,6 +20,7 @@ export const walletReason = pgEnum("wallet_reason", [
   "exchange_credit",
   "goodwill",
   "rto_advance_credit",
+  "order_refund",
   "expiry",
   "adjustment",
 ])

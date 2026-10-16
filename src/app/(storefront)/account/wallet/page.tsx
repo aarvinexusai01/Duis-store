@@ -5,19 +5,9 @@ import { PageSkeleton } from "@/components/page-skeleton"
 import { requireUser } from "@/features/auth/session-guard"
 import { getWalletSummary } from "@/features/wallet"
 import { formatPaise } from "@/lib/money"
+import { WALLET_REASON_LABEL as REASON } from "@/lib/wallet-reasons"
 
 export const metadata: Metadata = { title: "Wallet" }
-
-const REASON: Record<string, string> = {
-  order_payment: "Used on an order",
-  order_reversal: "Returned (order not completed)",
-  cancellation_refund: "Refund for a cancelled order",
-  exchange_credit: "Exchange credit",
-  goodwill: "Credit from Duis",
-  rto_advance_credit: "Advance credited back",
-  expiry: "Expired promotional credit",
-  adjustment: "Adjustment",
-}
 
 export default function WalletPage() {
   return (
@@ -31,7 +21,10 @@ async function Wallet() {
   const actor = await requireUser("/account/wallet")
   const wallet = await getWalletSummary(actor, {})
   const date = (d: Date) =>
-    d.toLocaleDateString("en-IN", { dateStyle: "medium" })
+    d.toLocaleDateString("en-IN", {
+      dateStyle: "medium",
+      timeZone: "Asia/Kolkata",
+    })
   return (
     <section className="flex flex-col gap-6">
       <div className="border bg-card p-6">

@@ -11,6 +11,10 @@ export type AdminNavItem = {
     | "sizeCharts"
     | "collections"
     | "inventory"
+    | "orders"
+    | "cod"
+    | "customers"
+    | "discounts"
   permission?: PermissionRequest
 }
 
@@ -21,6 +25,35 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: "Overview",
     items: [{ href: "/admin", label: "Dashboard", icon: "dashboard" }],
+  },
+  {
+    label: "Sales",
+    items: [
+      {
+        href: "/admin/orders",
+        label: "Orders",
+        icon: "orders",
+        permission: { order: ["read"] },
+      },
+      {
+        href: "/admin/orders/cod",
+        label: "COD remittances",
+        icon: "cod",
+        permission: { order: ["read_financials"] },
+      },
+      {
+        href: "/admin/customers",
+        label: "Customers",
+        icon: "customers",
+        permission: { customer: ["read"] },
+      },
+      {
+        href: "/admin/discounts",
+        label: "Discounts",
+        icon: "discounts",
+        permission: { discount: ["read"] },
+      },
+    ],
   },
   {
     label: "Catalogue",

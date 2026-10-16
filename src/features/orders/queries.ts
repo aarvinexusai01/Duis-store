@@ -86,6 +86,8 @@ export type OrderDetail = {
   isExport: boolean
   canCancel: boolean
   canPay: boolean
+  /** The live parcel, once booked. */
+  parcel: { courier: string | null; awb: string; status: string } | null
   items: {
     title: string
     variantLabel: string
@@ -157,6 +159,14 @@ export const getMyOrder = defineOperation({
         .where(eq(refunds.orderId, o.id))
         .orderBy(asc(refunds.createdAt)),
     ])
+    const parcels = await db.execute<{
+      courier_name: string | null
+      awb: string | null
+      status: string
+    }>(sql`
+      select courier_name, awb, status from shipments
+      where order_id = ${o.id} and status <> 'cancelled' order by created_at desc limit 1`)
+    const parcel = parcels.rows[0]
     return {
       id: o.id,
       orderNumber: o.orderNumber,
@@ -180,14 +190,23 @@ export const getMyOrder = defineOperation({
       codDuePaise: o.codDuePaise,
       couponCode: o.couponCode,
       isExport: o.isExport,
+      // Once a parcel is booked, only staff can cancel (with the courier).
       canCancel:
         ["confirmed", "processing"].includes(o.status) &&
-        o.fulfillmentStatus === "unfulfilled",
+        o.fulfillmentStatus === "unfulfilled" &&
+        !parcel,
       canPay:
         o.status === "pending_payment" &&
         o.onlineAmountPaise > 0 &&
         o.reservationExpiresAt !== null &&
         o.reservationExpiresAt.getTime() > Date.now(),
+      parcel: parcel?.awb
+        ? {
+            courier: parcel.courier_name,
+            awb: parcel.awb,
+            status: parcel.status,
+          }
+        : null,
       items,
       history,
       refunds: refundRows,

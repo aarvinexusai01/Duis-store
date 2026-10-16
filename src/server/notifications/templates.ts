@@ -54,8 +54,20 @@ export const emailTemplates = {
       orderNumber: z.string(),
       url: z.url({ protocol: /^https?$/ }),
       amount: z.string(),
+      toWallet: z.boolean().optional(),
     }),
     subject: () => "Your Duis refund is on its way",
+  },
+  "order-shipped": {
+    props: z.object({
+      name: z.string().min(1).max(200),
+      orderNumber: z.string(),
+      url: z.url({ protocol: /^https?$/ }),
+      courier: z.string().max(100),
+      awb: z.string().max(40),
+      codDue: z.string().optional(),
+    }),
+    subject: () => "Your Duis order has shipped",
   },
   "order-not-completed": {
     props: z.object({

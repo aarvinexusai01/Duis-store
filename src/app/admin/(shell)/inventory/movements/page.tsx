@@ -56,6 +56,7 @@ async function Movements({
         r.at.toLocaleString("en-IN", {
           dateStyle: "medium",
           timeStyle: "short",
+          timeZone: "Asia/Kolkata",
         }),
     },
     {

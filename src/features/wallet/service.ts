@@ -25,6 +25,7 @@ export type WalletReason =
   | "exchange_credit"
   | "goodwill"
   | "rto_advance_credit"
+  | "order_refund"
   | "expiry"
   | "adjustment"
 

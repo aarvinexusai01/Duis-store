@@ -113,7 +113,10 @@ async function Products({
       header: "Updated",
       className: "whitespace-nowrap text-muted-foreground",
       cell: (row) =>
-        row.updatedAt.toLocaleDateString("en-IN", { dateStyle: "medium" }),
+        row.updatedAt.toLocaleDateString("en-IN", {
+          dateStyle: "medium",
+          timeZone: "Asia/Kolkata",
+        }),
     },
   ]
 

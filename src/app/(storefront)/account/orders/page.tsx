@@ -47,6 +47,7 @@ async function Orders() {
                   <span className="text-sm text-muted-foreground">
                     {order.placedAt.toLocaleDateString("en-IN", {
                       dateStyle: "medium",
+                      timeZone: "Asia/Kolkata",
                     })}{" "}
                     · {order.itemCount}{" "}
                     {order.itemCount === 1 ? "item" : "items"}

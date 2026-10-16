@@ -52,9 +52,20 @@ export const serverEnvSchema = z
     // "fake" records messages in memory and the log; real providers arrive
     // with DLT registration (doc/10 A2).
     SMS_PROVIDER: z.enum(["fake"]).default("fake"),
-    // Courier serviceability and rates. "fake" answers from fixed rules for
-    // development; Shiprocket arrives in Phase 3 (doc/03 §6).
-    SHIPPING_PROVIDER: z.enum(["fake"]).default("fake"),
+    // Courier rates, shipments and tracking (doc/03 §6). "fake" answers from
+    // fixed rules for development; "shiprocket" uses the account below and is
+    // unverified until one real test shipment (doc/10 A5).
+    SHIPPING_PROVIDER: z.enum(["fake", "shiprocket"]).default("fake"),
+    SHIPROCKET_API_EMAIL: z.email().optional(),
+    SHIPROCKET_API_PASSWORD: z.string().min(1).optional(),
+    // Sent by Shiprocket in the x-api-key header of tracking webhooks.
+    SHIPROCKET_WEBHOOK_TOKEN: z.string().min(16).optional(),
+    // The pickup address's nickname in the Shiprocket panel, and its PIN code.
+    SHIPROCKET_PICKUP_LOCATION: z.string().min(1).optional(),
+    SHIPROCKET_PICKUP_PINCODE: z
+      .string()
+      .regex(/^[1-9][0-9]{5}$/)
+      .optional(),
     // "fake" simulates payments for development and tests; "razorpay" uses
     // the keys below (test keys until launch). Never committed.
     PAYMENT_PROVIDER: z.enum(["fake", "razorpay"]).default("fake"),
@@ -66,6 +77,8 @@ export const serverEnvSchema = z
     RAZORPAY_WEBHOOK_SECRET: z.string().min(10).optional(),
 
     MEDIA_ROOT: z.string().min(1).default("./storage/media"),
+    // Files that are never public, such as shipping labels.
+    STORAGE_PRIVATE_ROOT: z.string().min(1).default("./storage/private"),
     MEDIA_MAX_UPLOAD_BYTES: z.coerce
       .number()
       .int()
@@ -98,6 +111,23 @@ export const serverEnvSchema = z
         path: ["PAYMENT_PROVIDER"],
         message:
           "PAYMENT_PROVIDER=razorpay needs RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET",
+      })
+    }
+    if (
+      env.SHIPPING_PROVIDER === "shiprocket" &&
+      !(
+        env.SHIPROCKET_API_EMAIL &&
+        env.SHIPROCKET_API_PASSWORD &&
+        env.SHIPROCKET_WEBHOOK_TOKEN &&
+        env.SHIPROCKET_PICKUP_LOCATION &&
+        env.SHIPROCKET_PICKUP_PINCODE
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["SHIPPING_PROVIDER"],
+        message:
+          "SHIPPING_PROVIDER=shiprocket needs SHIPROCKET_API_EMAIL, SHIPROCKET_API_PASSWORD, SHIPROCKET_WEBHOOK_TOKEN, SHIPROCKET_PICKUP_LOCATION and SHIPROCKET_PICKUP_PINCODE",
       })
     }
     if (env.APP_ENV === "production") {
@@ -136,6 +166,14 @@ export const serverEnvSchema = z
           code: "custom",
           path: ["MEDIA_ROOT"],
           message: "MEDIA_ROOT must be an absolute path in production",
+        })
+      }
+      if (!env.STORAGE_PRIVATE_ROOT.startsWith("/")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["STORAGE_PRIVATE_ROOT"],
+          message:
+            "STORAGE_PRIVATE_ROOT must be an absolute path in production",
         })
       }
     }

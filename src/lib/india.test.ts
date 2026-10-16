@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { INDIAN_STATE_CODES, suggestStateForPincode } from "./india"
+import { INDIAN_STATE_CODES, stateName, suggestStateForPincode } from "./india"
+
+describe("stateName", () => {
+  it("names a state code", () => {
+    expect(stateName("IN-UP")).toBe("Uttar Pradesh")
+    expect(stateName("IN-XX")).toBeNull()
+  })
+})
 
 describe("suggestStateForPincode", () => {
   it.each([

@@ -302,9 +302,66 @@ Tasks:
 >   - Categories (up/down ordering), attributes, size charts.
 >   - Collections: picker, rule builder with a live preview.
 >   - Inventory: stock table, receive, adjust and count, movement history, thresholds.
-> - **4b, next:** orders, shipping (fake courier plus an unverified Shiprocket and Shiprocket X client), customers, discounts.
+> - **4b, built 2026-10-16** ([ADR-023](adr/0023-phase-4b-orders-shipping-decisions.md)):
+>   - **Orders:** list with views (to ship, in transit, COD to collect, returns), detail with tax lines, payments, refunds, wallet, parcels, notes and history.
+>   - **Order actions:** start packing, book a parcel (single or bulk), label download, cancel parcel, staff cancel and refund, address correction.
+>   - **Courier:** fake provider with demo scans; Shiprocket client (unverified).
+>   - **Tracking:** webhook at `/api/webhooks/logistics`, plus a polling job.
+>   - **Returns:** RTO restock.
+>   - **COD:** remittance CSV import.
+>   - **Customers:** COD block and goodwill credit.
+>   - **Discounts:** edit, pause, archive, single-use bulk codes, usage report.
+>   - **Still to do (owner):** the Shiprocket account and one real test shipment (doc/10 A5).
 > - **4c:** settings, staff and the audit log, the system page, reports (including the generic GST CSV).
 > - **Moved from 4a to 4c:** the command palette, column visibility, CSV export and the daily low-stock email.
+
+**Slice 4b plan (orders, shipping, customers, discounts):**
+1. **Schema (migration 0005):**
+   - `shipments`, `shipment_items` and `shipment_tracking_events` (doc/05 §8);
+   - `cod_remittances`;
+   - `order_notes` (internal staff notes);
+   - `provider_tokens` (the courier API token cache).
+2. **Courier provider:**
+   - The `ShippingProvider` interface gains: create order, assign AWB, label, pickup, cancel, tracking.
+   - The **fake** provider issues deterministic AWBs and a generated label PDF. A development-only control moves a fake shipment through tracking.
+   - The **Shiprocket / Shiprocket X client** has a token store, is selected with `SHIPPING_PROVIDER=shiprocket`, and is marked unverified until one real test shipment (doc/10 I1, A5).
+3. **Shipments:**
+   - The `shipments.create` job saves each step, so a retry resumes where it stopped.
+   - Labels are copied to private storage.
+   - The tracking webhook is `/api/webhooks/logistics`: token header, deduplication, a status mapping table, and statuses never move backwards. A `shipments.sync` polling fallback covers shipments with no update for six hours.
+   - Order status follows the shipment: shipped → out for delivery → delivered, or RTO, which restocks when the parcel is received back.
+   - Export shipments carry customs data.
+4. **Orders admin:**
+   - List with filters: status, payment mode, date, search.
+   - Detail: items with tax lines, payments, refunds, wallet use, status history, shipments, notes.
+   - Actions: start processing, create shipment (single and bulk "ready to ship"), download label, cancel shipment, cancel order (restock and refund), staff refund, add note, edit address before AWB.
+5. **COD remittance:** CSV import, matched to orders, which marks the COD balance paid. Mismatches are listed for review.
+6. **Customers admin:**
+   - List and search.
+   - Detail: orders, addresses, wallet ledger, COD block with a reason, goodwill credit.
+7. **Discounts admin:**
+   - Automatic discounts and coupons: create, edit, schedule, limits, eligibility, stacking.
+   - Bulk code generation, deactivation, usage report.
+8. **Tests:**
+   - Integration:
+     - shipment creation resumes after a failed step;
+     - a duplicate or out-of-order tracking event is a no-op;
+     - shipment cancellation;
+     - remittance matching;
+     - refund limits;
+     - a Fulfilment user sees no amounts, and permissions are checked for every new operation.
+   - End-to-end: the Administrator Definition of Done against the fake courier, i.e. order → ship → deliver → reconcile COD.
+
+**Owner decisions for 4b (2026-10-16):**
+- **One parcel per order:** no split shipments; the schema still allows them later.
+- **Staff refunds** may be partial or full, up to the amount collected. Staff send the money to the original payment or the wallet. A reason is required, and the refund is audited.
+- **Staff can cancel after an AWB, before pickup.** The courier cancellation must succeed first; only then is the order cancelled, restocked and refunded. Customers still can't cancel once an AWB exists.
+- **COD remittances** come in by a generic CSV import. The Shiprocket remittance API is added after the account is verified.
+
+**Assumptions for 4b** (low impact; tell me if any is wrong):
+- **Invoices** stay with the external tool (decision 10). 4b numbers and prints none.
+- **Address edits** are allowed only before an AWB, and only to a serviceable address in the same state. A different state would change the GST split, and that needs a cancel and a new order.
+- **Pickup:** Shiprocket keeps the pickup address in its panel. The app needs only its nickname and PIN code, as `SHIPROCKET_PICKUP_LOCATION` and `SHIPROCKET_PICKUP_PINCODE` (changed while building 4b: environment values rather than a 4c setting).
 
 Tasks:
 1. **Shell:** sidebar, breadcrumbs, command palette search, a shared `DataTable` (server pagination, filters, column visibility, bulk actions, CSV export), status badges, confirmation dialogs. Every page and action has permission checks.

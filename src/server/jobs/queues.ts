@@ -18,6 +18,9 @@ export const QUEUES = {
   reconcilePayments: "payments.reconcile",
   issueRefund: "payments.refund",
   expireWalletCredits: "wallet.expire-credits",
+  createShipment: "shipping.create-shipment",
+  processTracking: "shipping.process-tracking",
+  syncTracking: "shipping.sync-tracking",
 } as const
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES]
@@ -39,6 +42,9 @@ export type JobPayloads = {
   "payments.reconcile": null
   "payments.refund": { refundId: string }
   "wallet.expire-credits": null
+  "shipping.create-shipment": { shipmentId: string }
+  "shipping.process-tracking": { webhookEventId: string }
+  "shipping.sync-tracking": null
 }
 
 type QueuePolicy = Parameters<PgBoss["createQueue"]>[1]
@@ -115,6 +121,29 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
     retryLimit: 2,
     retryDelay: 300,
     expireInSeconds: 600,
+    deadLetter,
+  },
+  // Each attempt resumes from the last finished step (doc/03 §6).
+  "shipping.create-shipment": {
+    retryLimit: 8,
+    retryDelay: 60,
+    retryBackoff: true,
+    expireInSeconds: 180,
+    deadLetter,
+  },
+  "shipping.process-tracking": {
+    retryLimit: 8,
+    retryDelay: 15,
+    retryBackoff: true,
+    expireInSeconds: 120,
+    deadLetter,
+  },
+  // Polls shipments with no courier update for six hours.
+  "shipping.sync-tracking": {
+    policy: "stately",
+    retryLimit: 1,
+    retryDelay: 60,
+    expireInSeconds: 900,
     deadLetter,
   },
 }

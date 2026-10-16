@@ -55,6 +55,36 @@ Staff work at `/admin` (doc/permissions.md has the roles and what each can do).
 2. The first visit to `/admin` asks for your password, then shows a QR code for an authenticator app. Enter a 6-digit code and **save the backup codes**: they are shown only once.
 3. People who aren't staff get a 404 at `/admin`.
 
+## Shipping
+
+By default `SHIPPING_PROVIDER=fake`, a demo courier for development. On an order in `/admin/orders`, **Book parcel** gets a demo AWB and a "DEMO LABEL" PDF. **Demo scans** on the order then move the parcel through pickup and delivery, or back to you (RTO). Production refuses the fake courier.
+
+For **Shiprocket** (not yet verified: see doc/10 A5):
+
+1. In your local `.env` only (never commit them), set:
+   ```bash
+   SHIPPING_PROVIDER=shiprocket
+   SHIPROCKET_API_EMAIL=api-user@example.com
+   SHIPROCKET_API_PASSWORD=...
+   SHIPROCKET_WEBHOOK_TOKEN=a-long-random-string
+   SHIPROCKET_PICKUP_LOCATION=Primary
+   SHIPROCKET_PICKUP_PINCODE=226001
+   ```
+2. In the Shiprocket panel, add the tracking webhook `https://<your-domain>/api/webhooks/logistics` with the same token.
+
+Labels are kept in `STORAGE_PRIVATE_ROOT` (default `./storage/private`), which is never served publicly.
+
+**COD remittances:** on `/admin/orders/cod`, upload a CSV with these columns:
+
+| Column         | Accepted names              |
+| -------------- | --------------------------- |
+| Reference      | AWB, or order number        |
+| Amount         | e.g. `amount`, `cod_amount` |
+| Bank reference | `utr`                       |
+| Date           | `remitted_on` or `date`     |
+
+A row is recorded only when the amount equals the cash due; the other rows are listed with their line numbers.
+
 ## Commands
 
 | Command                                      | What it does                                                                                             |

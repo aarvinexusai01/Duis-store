@@ -13,7 +13,9 @@ import {
   OrderConfirmedEmail,
   orderConfirmedText,
   OrderNotCompletedEmail,
+  OrderShippedEmail,
   orderNotCompletedText,
+  orderShippedText,
   RefundIssuedEmail,
   refundIssuedText,
 } from "@/emails/orders"
@@ -58,6 +60,10 @@ const views: {
   "order-not-completed": {
     html: (props) => <OrderNotCompletedEmail {...props} />,
     text: orderNotCompletedText,
+  },
+  "order-shipped": {
+    html: (props) => <OrderShippedEmail {...props} />,
+    text: orderShippedText,
   },
   "newsletter-confirm": {
     html: (props) => <NewsletterConfirmEmail {...props} />,

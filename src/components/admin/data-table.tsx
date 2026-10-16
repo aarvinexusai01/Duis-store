@@ -42,6 +42,7 @@ export function DataTable<T>({
   bulk,
   empty = "Nothing here yet.",
   toolbar,
+  fields,
 }: {
   rows: T[]
   columns: Column<T>[]
@@ -57,6 +58,8 @@ export function DataTable<T>({
   bulk?: BulkAction
   empty?: string
   toolbar?: ReactNode
+  /** More inputs for the filter form (e.g. a date range). */
+  fields?: ReactNode
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1
@@ -128,7 +131,7 @@ export function DataTable<T>({
 
   return (
     <div className="flex flex-col gap-3">
-      {(search || filters.length > 0 || toolbar) && (
+      {(search || filters.length > 0 || toolbar || fields) && (
         <div className="flex flex-wrap items-end gap-2">
           <form
             method="get"
@@ -167,6 +170,7 @@ export function DataTable<T>({
                 </select>
               </label>
             ))}
+            {fields}
             <button
               type="submit"
               className="h-9 rounded-sm border border-input bg-card px-3 text-sm hover:bg-secondary"

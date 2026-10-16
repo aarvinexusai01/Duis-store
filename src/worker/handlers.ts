@@ -2,12 +2,18 @@ import type { Job, PgBoss } from "pg-boss"
 
 import { refreshAutomaticCollections } from "@/features/collections"
 import { expireReservations } from "@/features/inventory"
+// Loading the orders module registers the parcel → order listener.
 import {
   expirePendingOrders,
   processWebhookEvent,
   reconcilePendingPayments,
 } from "@/features/orders"
 import { processRefund } from "@/features/payments"
+import {
+  processTrackingWebhook,
+  runShipmentJob,
+  syncActiveShipments,
+} from "@/features/shipping"
 import { expireWalletCredits } from "@/features/wallet"
 import { fanOutRevalidation } from "@/server/cache/revalidate"
 import { QUEUES, type JobPayloads, type QueueName } from "@/server/jobs/queues"
@@ -68,6 +74,16 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
     if (expired > 0)
       logger.info({ expired }, "promotional wallet credit expired")
   },
+  "shipping.create-shipment": async (job) => {
+    await runShipmentJob(job.data.shipmentId)
+  },
+  "shipping.process-tracking": async (job) => {
+    await processTrackingWebhook(job.data.webhookEventId)
+  },
+  "shipping.sync-tracking": async () => {
+    const applied = await syncActiveShipments()
+    if (applied > 0) logger.info({ applied }, "parcel tracking synced")
+  },
 }
 
 /** Recurring jobs, in IST. */
@@ -78,6 +94,7 @@ const SCHEDULES: { queue: QueueName; cron: string }[] = [
   { queue: QUEUES.reconcilePayments, cron: "*/5 * * * *" },
   { queue: QUEUES.expireWalletCredits, cron: "15 3 * * *" },
   { queue: QUEUES.refreshAutoCollections, cron: "30 2 * * *" },
+  { queue: QUEUES.syncTracking, cron: "*/30 * * * *" },
 ]
 
 export async function registerHandlers(boss: PgBoss): Promise<void> {

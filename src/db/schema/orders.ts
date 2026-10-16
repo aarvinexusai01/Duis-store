@@ -261,3 +261,58 @@ export const couponRedemptions = pgTable(
   },
   (t) => [index("coupon_redemptions_user_idx").on(t.couponId, t.userId)],
 )
+
+export const remittanceSource = pgEnum("remittance_source", [
+  "api",
+  "csv",
+  "manual",
+])
+
+/**
+ * Cash the courier collected on delivery and paid over (doc/03 §2). One row
+ * per order: a second import of the same remittance is a no-op.
+ */
+export const codRemittances = pgTable(
+  "cod_remittances",
+  {
+    id: primaryId(),
+    orderId: uuid()
+      .notNull()
+      .unique()
+      .references(() => orders.id, { onDelete: "restrict" }),
+    // No foreign key: shipments are declared in shipping.ts, which imports this file.
+    shipmentId: uuid(),
+    amountPaise: integer().notNull(),
+    remittedAt: timestamptz().notNull(),
+    utr: text().notNull(),
+    source: remittanceSource().notNull(),
+    batchRef: text(),
+    createdBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [
+    index("cod_remittances_utr_idx").on(t.utr),
+    check("cod_remittances_amount_check", sql`${t.amountPaise} > 0`),
+  ],
+)
+
+/** Internal staff notes on an order; never shown to the customer. */
+export const orderNotes = pgTable(
+  "order_notes",
+  {
+    id: primaryId(),
+    orderId: uuid()
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    authorUserId: uuid().references(() => users.id, { onDelete: "set null" }),
+    body: text().notNull(),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [
+    index("order_notes_order_idx").on(t.orderId, t.createdAt),
+    check(
+      "order_notes_body_check",
+      sql`char_length(${t.body}) between 1 and 2000`,
+    ),
+  ],
+)

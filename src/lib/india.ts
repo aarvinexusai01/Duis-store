@@ -49,6 +49,13 @@ export const INDIAN_STATE_CODES = new Set<string>(
   INDIAN_STATES.map(([code]) => code),
 )
 
+const STATE_NAMES = new Map<string, string>(INDIAN_STATES)
+
+/** "IN-UP" → "Uttar Pradesh"; null for an unknown code. */
+export function stateName(code: string): string | null {
+  return STATE_NAMES.get(code) ?? null
+}
+
 // [first PIN digits, state]; longer (more specific) prefixes are checked first.
 const PREFIXES: [string, IndianStateCode][] = [
   ["11", "IN-DL"],

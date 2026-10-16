@@ -534,10 +534,93 @@ export async function reconcilePendingPayments(
 // --- Cancellation -------------------------------------------------------------------
 
 /**
- * Customer cancellation before dispatch (doc/03 §5): restock, return the
- * wallet part to the wallet, refund what was paid online to its source,
- * and give the coupon use back.
+ * Cancels a confirmed order inside the caller's transaction (doc/03 §5):
+ * restock, return the wallet part to the wallet, refund what was paid online
+ * to its source, and give the coupon use back. The caller checks who may
+ * cancel and that no parcel is with the courier.
  */
+export async function cancelConfirmedOrder(
+  tx: Transaction,
+  order: OrderRow,
+  actor: Actor,
+  options: { by: "customer" | "staff"; reason?: string },
+): Promise<{ refundPaise: number; walletPaise: number }> {
+  const live = await tx.execute<{ n: number }>(sql`
+    select count(*)::int as n from shipments where order_id = ${order.id} and status <> 'cancelled'`)
+  const fulfillment = await tx.execute<{ fulfillment_status: string }>(
+    sql`select fulfillment_status from orders where id = ${order.id}`,
+  )
+  if (
+    !["confirmed", "processing"].includes(order.status) ||
+    fulfillment.rows[0]!.fulfillment_status !== "unfulfilled" ||
+    live.rows[0]!.n > 0
+  ) {
+    throw new DomainError(
+      "INVALID_STATE",
+      options.by === "customer"
+        ? "This order can no longer be cancelled. Contact us if you need help."
+        : "Cancel the parcel with the courier first; a parcel that has been picked up can't be cancelled.",
+    )
+  }
+  await restockCommitted(tx, order.id, "cancel_restock")
+  // The original debit, or the one taken again for a late payment.
+  let walletBack = 0
+  for (const key of [walletKey(order.id), `${walletKey(order.id)}:late`]) {
+    walletBack += await reverseDebit(tx, {
+      debitIdempotencyKey: key,
+      reason: "cancellation_refund",
+    })
+  }
+  await reverseCouponRedemption(tx, order.id)
+  const captured = await tx.execute<{
+    id: string
+    amount_paise: number
+    refunded_paise: number
+  }>(sql`
+    select p.id, p.amount_paise,
+      p.refunded_paise + coalesce((select sum(r.amount_paise) from refunds r where r.payment_id = p.id and r.status = 'pending'), 0)::int as refunded_paise
+    from payments p where p.order_id = ${order.id} and p.status in ('captured', 'partially_refunded')`)
+  let onlineRefund = 0
+  for (const payment of captured.rows) {
+    const amount = payment.amount_paise - payment.refunded_paise
+    const id = await requestRefund(tx, {
+      paymentId: payment.id,
+      orderId: order.id,
+      amountPaise: amount,
+      reason: `${options.by}_cancellation`,
+      idempotencyKey: `cancel:${order.id}:${payment.id}`,
+      initiatedBy: actor.kind === "user" ? actor.userId : null,
+    })
+    if (id) onlineRefund += amount
+  }
+  const reason = options.reason
+    ? `${options.by}: ${options.reason}`
+    : options.by
+  await tx.execute(sql`
+    update orders set status = 'cancelled', cancelled_at = now(),
+      cancel_reason = ${reason},
+      payment_status = case when ${onlineRefund} = 0 and payment_status <> 'unpaid' then 'refunded'::order_payment_status else payment_status end,
+      updated_at = now()
+    where id = ${order.id}`)
+  await recordChange(tx, order.id, {
+    field: "status",
+    from: order.status,
+    to: "cancelled",
+    actor,
+    reason: `${options.by}_cancellation`,
+  })
+  await emailCancellation(
+    tx,
+    order,
+    options.by === "customer"
+      ? "you cancelled it."
+      : "we had to cancel it. We're sorry for the trouble.",
+    onlineRefund + walletBack,
+  )
+  return { refundPaise: onlineRefund, walletPaise: walletBack }
+}
+
+/** Customer cancellation before dispatch (doc/03 §5). */
 export const cancelOrder = defineOperation({
   name: "orders.cancel",
   access: "authenticated",
@@ -553,67 +636,7 @@ export const cancelOrder = defineOperation({
         select id from orders where order_number = ${orderNumber} and user_id = ${actor.userId}`)
       if (!found.rows[0]) throw new DomainError("NOT_FOUND", "Order not found.")
       const order = await lockOrder(tx, found.rows[0].id)
-      const fulfillment = await tx.execute<{ fulfillment_status: string }>(
-        sql`select fulfillment_status from orders where id = ${order.id}`,
-      )
-      if (
-        !["confirmed", "processing"].includes(order.status) ||
-        fulfillment.rows[0]!.fulfillment_status !== "unfulfilled"
-      ) {
-        throw new DomainError(
-          "INVALID_STATE",
-          "This order can no longer be cancelled. Contact us if you need help.",
-        )
-      }
-      await restockCommitted(tx, order.id, "cancel_restock")
-      // The original debit, or the one taken again for a late payment.
-      let walletBack = 0
-      for (const key of [walletKey(order.id), `${walletKey(order.id)}:late`]) {
-        walletBack += await reverseDebit(tx, {
-          debitIdempotencyKey: key,
-          reason: "cancellation_refund",
-        })
-      }
-      await reverseCouponRedemption(tx, order.id)
-      const captured = await tx.execute<{
-        id: string
-        amount_paise: number
-        refunded_paise: number
-      }>(sql`
-        select id, amount_paise, refunded_paise from payments where order_id = ${order.id} and status in ('captured', 'partially_refunded')`)
-      let onlineRefund = 0
-      for (const payment of captured.rows) {
-        const amount = payment.amount_paise - payment.refunded_paise
-        const id = await requestRefund(tx, {
-          paymentId: payment.id,
-          orderId: order.id,
-          amountPaise: amount,
-          reason: "customer_cancellation",
-          idempotencyKey: `cancel:${order.id}:${payment.id}`,
-          initiatedBy: actor.userId,
-        })
-        if (id) onlineRefund += amount
-      }
-      await tx.execute(sql`
-        update orders set status = 'cancelled', cancelled_at = now(),
-          cancel_reason = ${reason ? `customer: ${reason}` : "customer"},
-          payment_status = case when ${onlineRefund} = 0 and payment_status <> 'unpaid' then 'refunded'::order_payment_status else payment_status end,
-          updated_at = now()
-        where id = ${order.id}`)
-      await recordChange(tx, order.id, {
-        field: "status",
-        from: order.status,
-        to: "cancelled",
-        actor,
-        reason: "customer_cancellation",
-      })
-      await emailCancellation(
-        tx,
-        order,
-        "you cancelled it.",
-        onlineRefund + walletBack,
-      )
-      return { refundPaise: onlineRefund, walletPaise: walletBack }
+      return cancelConfirmedOrder(tx, order, actor, { by: "customer", reason })
     })
   },
 })

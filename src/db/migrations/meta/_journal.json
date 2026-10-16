@@ -36,6 +36,13 @@
       "when": 1792067158986,
       "tag": "0004_checkout_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792138138690,
+      "tag": "0005_operations",
+      "breakpoints": true
     }
   ]
 }

@@ -76,7 +76,7 @@ These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-c
 | A2 | **SMS DLT registration:** principal entity, sender header, OTP content template (through the chosen provider) | **1–3 weeks** | Phase 5 (development uses the fake) | You |
 | A3 | **WhatsApp Business:** Meta Business verification, BSP onboarding, display name, template approvals | **1–3 weeks** | Phase 5 | You |
 | A4 | Razorpay account: test keys now, **live KYC** (business documents, bank account, website with policies live) | Test: immediate. Live: days to weeks. | Test: Phase 3. Live: Phase 8. | You |
-| A5 | Shiprocket account: KYC, pickup address (warehouse), API user, webhook token | Days | Phase 4 | You |
+| A5 | Shiprocket account: KYC, pickup address (warehouse), API user, webhook token. **2026-10-16:** the client is built (unverified). With the account: set the `SHIPROCKET_*` values and book and cancel one test parcel. Then check the partial-COD collectable amount, status words, webhook URL rules and label host. | Days | Phase 4 | You |
 | A6 | Google Cloud OAuth client (consent screen, authorised redirect URIs) | 1 day (verification may take longer) | Phase 2 (development client), Phase 8 (production) | You / us |
 | A7 | Transactional email account plus DNS (SPF, DKIM, DMARC) | 1–2 days | Phase 3 (development uses Mailpit) | You / us |
 | A8 | VPS provisioning (8 vCPU / 16 GB, Ubuntu LTS) | Hours | Phase 7 (staging earlier) | You |

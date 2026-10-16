@@ -103,10 +103,18 @@ export const coupons = pgTable(
     code: citext().notNull().unique(),
     // Changed only under a row lock at redemption (doc/03 §1.3).
     timesUsed: integer().notNull().default(0),
+    // Uses allowed for this one code (bulk single-use codes); null = no
+    // limit beyond the discount's own.
+    usageLimit: integer(),
     ...timestamps(),
   },
   (t) => [
     check("coupons_code_check", sql`${t.code} ~ '^[A-Za-z0-9_-]{3,32}$'`),
     check("coupons_times_used_check", sql`${t.timesUsed} >= 0`),
+    check(
+      "coupons_usage_limit_check",
+      sql`${t.usageLimit} is null or ${t.usageLimit} > 0`,
+    ),
+    index("coupons_discount_idx").on(t.discountId),
   ],
 )

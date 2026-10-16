@@ -119,7 +119,14 @@ type RefundProps = {
   orderNumber: string
   url: string
   amount: string
+  /** Refunded to the Duis wallet rather than the bank. */
+  toWallet?: boolean
 }
+
+const refundWhere = (props: RefundProps) =>
+  props.toWallet
+    ? "It's in your Duis wallet now, ready for your next order."
+    : "Your bank usually shows it within 5–7 working days."
 
 export function RefundIssuedEmail(props: RefundProps) {
   return (
@@ -129,7 +136,7 @@ export function RefundIssuedEmail(props: RefundProps) {
       <EmailText>Hi {props.name},</EmailText>
       <EmailText>
         We&apos;ve refunded <strong>{props.amount}</strong> for order{" "}
-        {props.orderNumber}. Your bank usually shows it within 5–7 working days.
+        {props.orderNumber}. {refundWhere(props)}
       </EmailText>
       <EmailButton href={props.url}>View your order</EmailButton>
     </EmailLayout>
@@ -139,7 +146,7 @@ export function RefundIssuedEmail(props: RefundProps) {
 export function refundIssuedText(props: RefundProps): string {
   return [
     `Hi ${props.name},`,
-    `We've refunded ${props.amount} for order ${props.orderNumber}. Your bank usually shows it within 5–7 working days.`,
+    `We've refunded ${props.amount} for order ${props.orderNumber}. ${refundWhere(props)}`,
     `View your order: ${props.url}`,
   ].join("\n\n")
 }
@@ -165,5 +172,45 @@ export function orderNotCompletedText(props: NotCompletedProps): string {
     `Hi ${props.name},`,
     `We didn't receive the payment for order ${props.orderNumber}, so it wasn't placed and nothing was charged. Your bag still has the items if you'd like to try again.`,
     props.url,
+  ].join("\n\n")
+}
+
+type ShippedProps = {
+  name: string
+  orderNumber: string
+  url: string
+  courier: string
+  awb: string
+  /** Partial COD: cash to pay the courier. */
+  codDue?: string
+}
+
+export function OrderShippedEmail(props: ShippedProps) {
+  return (
+    <EmailLayout preview={`Order ${props.orderNumber} is on its way.`}>
+      <EmailText>Hi {props.name},</EmailText>
+      <EmailText>
+        Your order <strong>{props.orderNumber}</strong> is on its way with{" "}
+        {props.courier}. Tracking number: <strong>{props.awb}</strong>.
+      </EmailText>
+      {props.codDue && (
+        <EmailText>
+          Please keep <strong>{props.codDue}</strong> ready to pay the courier
+          on delivery.
+        </EmailText>
+      )}
+      <EmailButton href={props.url}>Track your order</EmailButton>
+    </EmailLayout>
+  )
+}
+
+export function orderShippedText(props: ShippedProps): string {
+  return [
+    `Hi ${props.name},`,
+    `Your order ${props.orderNumber} is on its way with ${props.courier}. Tracking number: ${props.awb}.`,
+    ...(props.codDue
+      ? [`Please keep ${props.codDue} ready to pay the courier on delivery.`]
+      : []),
+    `Track your order: ${props.url}`,
   ].join("\n\n")
 }

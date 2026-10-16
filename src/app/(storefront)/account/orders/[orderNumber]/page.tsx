@@ -62,6 +62,7 @@ async function Order({ params }: Pick<Props, "params">) {
             {order.placedAt.toLocaleString("en-IN", {
               dateStyle: "medium",
               timeStyle: "short",
+              timeZone: "Asia/Kolkata",
             })}{" "}
             · {ORDER_STATUS_LABEL[order.status] ?? order.status} ·{" "}
             {PAYMENT_STATUS_LABEL[order.paymentStatus]}
@@ -103,6 +104,7 @@ async function Order({ params }: Pick<Props, "params">) {
                     {at.toLocaleDateString("en-IN", {
                       day: "numeric",
                       month: "short",
+                      timeZone: "Asia/Kolkata",
                     })}
                   </span>
                 )}
@@ -111,6 +113,14 @@ async function Order({ params }: Pick<Props, "params">) {
           })}
         </ol>
       ) : null}
+
+      {order.parcel && order.status !== "cancelled" && (
+        <p className="border bg-card p-4 text-sm">
+          {order.status === "delivered" ? "Delivered by" : "Shipping with"}{" "}
+          <strong>{order.parcel.courier ?? "our courier"}</strong>. Tracking
+          number <span className="font-mono">{order.parcel.awb}</span>.
+        </p>
+      )}
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-[minmax(0,1fr)_18rem]">
         <ul className="divide-y border bg-card">
