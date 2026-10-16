@@ -506,6 +506,28 @@ Tasks:
     - A moderation queue for staff.
     - Ratings on product cards and the product page, and `AggregateRating` in its structured data.
     - A review request 5 days after delivery.
+- **5b plan and owner decisions (2026-10-16):**
+  - **WhatsApp opt-in:** an unticked box at checkout ("Send order updates on WhatsApp"), plus an on/off switch in the account. Replying STOP turns it off.
+  - **WhatsApp messages:**
+    - order confirmed, shipped, out for delivery and delivered;
+    - exchange steps;
+    - back-in-stock alerts for people who asked.
+
+    No promotions and no abandoned-cart messages on WhatsApp. Email is always sent as well.
+  - **Quiet hours:** back-in-stock messages wait between 21:00 and 09:00 IST. Order and exchange updates go straight away.
+  - **OTP abuse:**
+    - Cloudflare Turnstile, switched on once its keys are set (doc/10 A10);
+    - per phone: a 30-second resend cooldown, 5 an hour and 10 a day;
+    - per IP: 20 an hour.
+  - **MSG91 adapters** for SMS OTP (DLT template) and WhatsApp templates. They stay unverified until the account and approvals exist (A2, A3); the fakes are used until then.
+  - **Back-in-stock:** "Notify me" on a sold-out size. When it's back in stock, a batched email (and WhatsApp if opted in) is sent, with a one-click unsubscribe.
+  - **Abandoned cart:** signed-in bags idle for 1 hour and again at 24 hours; up to 2 reminders. Only for customers with marketing email consent, and skipped if they ordered since. The email links straight back to the bag and has a one-click unsubscribe.
+- **5b, built 2026-10-16** ([ADR-026](adr/0026-phase-5b-messaging-alerts-decisions.md)):
+  - **Login codes:** limits per phone and IP, and Turnstile once its keys are set.
+  - **MSG91 adapters:** SMS OTP and WhatsApp (unverified).
+  - **WhatsApp updates:** checkout opt-in and an account switch; order and exchange messages; back-in-stock alerts with quiet hours; STOP replies.
+  - **Back-in-stock alerts:** "Notify me" on a sold-out size; one batched email per address.
+  - **Bag reminders:** emails at 1 hour and 24 hours, with a signed unsubscribe.
 - **Assumptions** (tell me if any is wrong):
   - Categories get an "exchangeable" switch; innerwear is off.
   - Customers request an exchange from the order page, within the window, once the parcel is delivered.

@@ -32,6 +32,8 @@ export type AccountOverview = {
   hasPassword: boolean
   marketingEmail: boolean
   marketingWhatsapp: boolean
+  /** Order and exchange updates on WhatsApp (not marketing). */
+  whatsappUpdates: boolean
   deletionRequestedAt: Date | null
 }
 
@@ -76,6 +78,7 @@ export const getAccountOverview = defineOperation({
       hasPassword: (password?.n ?? 0) > 0,
       marketingEmail: Boolean(profile?.marketingEmailConsentAt),
       marketingWhatsapp: Boolean(profile?.marketingWhatsappConsentAt),
+      whatsappUpdates: Boolean(profile?.whatsappUpdatesConsentAt),
       deletionRequestedAt: profile?.deletionRequestedAt ?? null,
     }
   },
@@ -226,5 +229,26 @@ export const deleteAddress = defineOperation({
           where id = (select id from addresses where user_id = ${userId} order by created_at limit 1)`)
       }
     })
+  },
+})
+
+/**
+ * Order and exchange updates on WhatsApp (owner decision 2026-10-16): an
+ * unticked box at checkout and a switch in the account; STOP also ends it.
+ */
+export const setWhatsAppUpdates = defineOperation({
+  name: "customers.setWhatsAppUpdates",
+  access: "authenticated",
+  input: z.object({ enabled: z.boolean() }),
+  async handler({ actor, log }, { enabled }) {
+    const userId = ownerId(actor)
+    await getDb().execute(sql`
+      insert into customer_profiles (user_id, whatsapp_updates_consent_at)
+      values (${userId}, case when ${enabled} then now() end)
+      on conflict (user_id) do update set
+        whatsapp_updates_consent_at = case when ${enabled}
+          then coalesce(customer_profiles.whatsapp_updates_consent_at, now()) end,
+        updated_at = now()`)
+    log.info({ enabled }, "WhatsApp updates preference saved")
   },
 })

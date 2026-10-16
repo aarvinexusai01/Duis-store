@@ -12,8 +12,16 @@ import {
   SubmitButton,
   TextField,
 } from "./form-bits"
+import { useTurnstile } from "./turnstile"
 
-export function RegisterForm({ next }: { next: string }) {
+export function RegisterForm({
+  next,
+  turnstileSiteKey = null,
+}: {
+  next: string
+  turnstileSiteKey?: string | null
+}) {
+  const captcha = useTurnstile(turnstileSiteKey)
   const [error, setError] = useState("")
   const [pending, setPending] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
@@ -24,13 +32,17 @@ export function RegisterForm({ next }: { next: string }) {
     const email = String(form.get("email"))
     setError("")
     setPending(true)
-    const { error } = await authClient.signUp.email({
-      name: String(form.get("name")).trim(),
-      email,
-      password: String(form.get("password")),
-      // The verification link signs the customer in and lands here.
-      callbackURL: completeSignInUrl(next),
-    })
+    const { error } = await authClient.signUp.email(
+      {
+        name: String(form.get("name")).trim(),
+        email,
+        password: String(form.get("password")),
+        // The verification link signs the customer in and lands here.
+        callbackURL: completeSignInUrl(next),
+      },
+      captcha.fetchOptions ? { ...captcha.fetchOptions } : undefined,
+    )
+    captcha.reset()
     setPending(false)
     if (error) setError(authErrorMessage(error))
     else setSentTo(email)
@@ -74,6 +86,7 @@ export function RegisterForm({ next }: { next: string }) {
         hint="At least 10 characters."
       />
       <FormMessage tone="error">{error}</FormMessage>
+      {captcha.element}
       <SubmitButton pending={pending}>Create account</SubmitButton>
       <p className="text-xs text-muted-foreground">
         By creating an account you agree to our{" "}
@@ -90,7 +103,12 @@ export function RegisterForm({ next }: { next: string }) {
   )
 }
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({
+  turnstileSiteKey = null,
+}: {
+  turnstileSiteKey?: string | null
+}) {
+  const captcha = useTurnstile(turnstileSiteKey)
   const [pending, setPending] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState("")
@@ -100,10 +118,14 @@ export function ForgotPasswordForm() {
     const form = new FormData(event.currentTarget)
     setPending(true)
     setError("")
-    const { error } = await authClient.requestPasswordReset({
-      email: String(form.get("email")),
-      redirectTo: "/reset-password",
-    })
+    const { error } = await authClient.requestPasswordReset(
+      {
+        email: String(form.get("email")),
+        redirectTo: "/reset-password",
+      },
+      captcha.fetchOptions ? { ...captcha.fetchOptions } : undefined,
+    )
+    captcha.reset()
     setPending(false)
     // The same message whether or not the address has an account.
     if (error?.status === 429) setError(authErrorMessage(error))
@@ -129,6 +151,7 @@ export function ForgotPasswordForm() {
         required
       />
       <FormMessage tone="error">{error}</FormMessage>
+      {captcha.element}
       <SubmitButton pending={pending}>Send reset link</SubmitButton>
     </form>
   )

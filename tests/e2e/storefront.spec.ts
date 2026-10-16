@@ -158,3 +158,32 @@ test("unknown products get a noindex not-found page", async ({ page }) => {
     /noindex/,
   )
 })
+
+test("a sold-out size offers a back-in-stock alert", async ({ page }) => {
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
+  await client.connect()
+  const { rows } = await client.query<{
+    slug: string
+    options: Record<string, string>
+  }>(`
+    select p.slug::text,
+           (select json_object_agg(a.code, av.slug) from variant_attribute_values vav
+            join attributes a on a.id = vav.attribute_id
+            join attribute_values av on av.id = vav.attribute_value_id
+            where vav.variant_id = v.id) as options
+    from product_variants v join products p on p.id = v.product_id
+    left join inventory_levels l on l.variant_id = v.id
+    where p.status = 'active' and v.status = 'active'
+      and coalesce(l.on_hand - l.reserved, 0) <= 0
+    order by p.slug limit 1`)
+  await client.end()
+  test.skip(rows.length === 0, "no sold-out size in the catalogue")
+  const { slug, options } = rows[0]!
+  await page.goto(`/products/${slug}?${new URLSearchParams(options)}`)
+  await expect(page.getByText("Sold out in this size")).toBeVisible()
+  await page
+    .getByLabel("Tell me when this size is back")
+    .fill("e2e-alert@duis.test")
+  await page.getByRole("button", { name: "Notify me" }).click()
+  await expect(page.getByText(/We'll email you once/)).toBeVisible()
+})

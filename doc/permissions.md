@@ -209,4 +209,18 @@ How the customer operations are limited:
 - **Tracking** (`orders.tracking`) is public; the signed token in the link is the credential.
 - **Photos:** a customer photo is served only to its owner, to staff with exchange or review read access when it is attached to an exchange or review, and to everyone once its review is approved.
 
+## Operations (Phase 5b, messaging and alerts)
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `alerts.subscribe` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `customers.setWhatsAppUpdates` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `marketing.unsubscribe` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+How these are limited:
+- **`alerts.subscribe`** is public, and rate-limited per IP in its Server Action.
+- **`marketing.unsubscribe`** is public; the signed link is the credential.
+- **`customers.setWhatsAppUpdates`** changes only the signed-in customer's own setting.
+- **Login codes** are limited per phone and per IP before Better Auth sends them.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

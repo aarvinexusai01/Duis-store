@@ -32,6 +32,10 @@ import {
   refundIssuedText,
 } from "@/emails/orders"
 import {
+  BackInStockEmail,
+  backInStockText,
+  CartReminderEmail,
+  cartReminderText,
   NewsletterConfirmEmail,
   newsletterConfirmText,
 } from "@/emails/marketing"
@@ -96,6 +100,14 @@ const views: {
   "test-email": {
     html: (props) => <TestEmail {...props} />,
     text: testEmailText,
+  },
+  "back-in-stock": {
+    html: (props) => <BackInStockEmail {...props} />,
+    text: backInStockText,
+  },
+  "cart-reminder": {
+    html: (props) => <CartReminderEmail {...props} />,
+    text: cartReminderText,
   },
   "newsletter-confirm": {
     html: (props) => <NewsletterConfirmEmail {...props} />,

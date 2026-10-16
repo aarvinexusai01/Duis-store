@@ -36,10 +36,50 @@ const fakeProvider: SmsProvider = {
   },
 }
 
+/**
+ * MSG91's OTP API with our own code and the DLT-approved template (owner
+ * decision 2026-10-16). UNVERIFIED until the account and the DLT template
+ * exist (doc/10 A2): the request shape follows MSG91's documentation.
+ */
+const msg91Provider: SmsProvider = {
+  name: "msg91",
+  async sendOtp(to, code) {
+    const env = getServerEnv()
+    const query = new URLSearchParams({
+      template_id: env.SMS_OTP_TEMPLATE_ID!,
+      // MSG91 wants the country code without "+".
+      mobile: to.replace(/^\+/, ""),
+      otp: code,
+    })
+    const response = await fetch(
+      `https://control.msg91.com/api/v5/otp?${query}`,
+      {
+        method: "POST",
+        headers: { authkey: env.SMS_API_KEY!, accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+      },
+    )
+    const body = (await response.json().catch(() => ({}))) as {
+      type?: string
+      request_id?: string
+      message?: string
+    }
+    if (!response.ok || body.type !== "success") {
+      // Never include the code or the full number in errors.
+      throw new Error(
+        `MSG91 OTP send failed: ${body.message ?? response.status}`,
+      )
+    }
+    return { providerMessageId: body.request_id ?? `msg91-${Date.now()}` }
+  },
+}
+
 function getProvider(): SmsProvider {
   switch (getServerEnv().SMS_PROVIDER) {
     case "fake":
       return fakeProvider
+    case "msg91":
+      return msg91Provider
   }
 }
 

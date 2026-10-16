@@ -11,6 +11,8 @@ import type { ProductDetail } from "@/features/catalog"
 import { addToCart } from "@/features/cart/actions"
 import { setCartDrawerOpen } from "@/features/cart/ui/drawer-store"
 import { cn } from "@/lib/utils"
+
+import { NotifyMe } from "./notify-me"
 import {
   findVariant,
   initialSelection,
@@ -230,7 +232,10 @@ function Purchase({
                 const selected = selection[axis.code] === value.slug
                 // Colours stay selectable to view their photos; sizes that
                 // cannot be bought are disabled.
-                const disabled = !isColour && state !== "available"
+                // Sizes that don't exist are disabled; sold-out sizes stay
+                // selectable so customers can ask to be told when they return.
+                const disabled = !isColour && state === "missing"
+                const soldOutOption = !isColour && state === "sold_out"
                 return (
                   <label
                     key={value.slug}
@@ -245,6 +250,7 @@ function Purchase({
                       value={value.slug}
                       checked={selected}
                       disabled={disabled}
+                      data-sold-out={soldOutOption || undefined}
                       onChange={() => {
                         setMissing(false)
                         choose(axis.code, value.slug)
@@ -276,7 +282,8 @@ function Purchase({
                           selected
                             ? "border-ink bg-ink text-paper"
                             : "border-input bg-card hover:border-ink",
-                          disabled &&
+                          (disabled || soldOutOption) &&
+                            !selected &&
                             "border-dashed text-muted-foreground line-through hover:border-input",
                         )}
                       >
@@ -324,14 +331,18 @@ function Purchase({
           </Button>
           {wishlist}
         </div>
-        <Button
-          variant="outline"
-          onClick={() => add(true)}
-          disabled={pending || soldOut}
-          className="h-12 rounded-none border-ink text-sm font-semibold tracking-wider uppercase"
-        >
-          Buy now
-        </Button>
+        {soldOut && variant ? (
+          <NotifyMe key={variant.id} variantId={variant.id} />
+        ) : (
+          <Button
+            variant="outline"
+            onClick={() => add(true)}
+            disabled={pending || soldOut}
+            className="h-12 rounded-none border-ink text-sm font-semibold tracking-wider uppercase"
+          >
+            Buy now
+          </Button>
+        )}
       </div>
     </div>
   )

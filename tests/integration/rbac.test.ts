@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 
 // Importing the modules registers their operations.
+import "@/features/alerts"
 import "@/features/cart"
 import "@/features/catalog"
 import "@/features/checkout"

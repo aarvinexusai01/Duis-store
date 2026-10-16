@@ -51,7 +51,26 @@ export const serverEnvSchema = z
 
     // "fake" records messages in memory and the log; real providers arrive
     // with DLT registration (doc/10 A2).
-    SMS_PROVIDER: z.enum(["fake"]).default("fake"),
+    SMS_PROVIDER: z.enum(["fake", "msg91"]).default("fake"),
+    // MSG91 (owner decision 2026-10-16): auth key and the DLT-approved OTP
+    // template. Unverified until the account exists (doc/10 A2).
+    SMS_API_KEY: z.string().min(10).optional(),
+    SMS_OTP_TEMPLATE_ID: z.string().min(5).optional(),
+    // WhatsApp order and exchange updates: "off" sends none, "fake" logs them.
+    WHATSAPP_PROVIDER: z.enum(["off", "fake", "msg91"]).default("fake"),
+    WHATSAPP_API_KEY: z.string().min(10).optional(),
+    // The business number registered with MSG91, and the template namespace.
+    WHATSAPP_NUMBER: z
+      .string()
+      .regex(/^\d{10,15}$/)
+      .optional(),
+    WHATSAPP_TEMPLATE_NAMESPACE: z.string().min(5).optional(),
+    // Sent by MSG91 on inbound-message webhooks (STOP handling).
+    WHATSAPP_WEBHOOK_TOKEN: z.string().min(16).optional(),
+    // Cloudflare Turnstile on login codes, sign-up and password reset; off
+    // until both are set (doc/10 A10).
+    TURNSTILE_SITE_KEY: z.string().min(10).optional(),
+    TURNSTILE_SECRET_KEY: z.string().min(10).optional(),
     // Courier rates, shipments and tracking (doc/03 §6). "fake" answers from
     // fixed rules for development; "shiprocket" uses the account below and is
     // unverified until one real test shipment (doc/10 A5).
@@ -114,6 +133,40 @@ export const serverEnvSchema = z
       })
     }
     if (
+      env.SMS_PROVIDER === "msg91" &&
+      !(env.SMS_API_KEY && env.SMS_OTP_TEMPLATE_ID)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["SMS_PROVIDER"],
+        message: "SMS_PROVIDER=msg91 needs SMS_API_KEY and SMS_OTP_TEMPLATE_ID",
+      })
+    }
+    if (
+      env.WHATSAPP_PROVIDER === "msg91" &&
+      !(
+        env.WHATSAPP_API_KEY &&
+        env.WHATSAPP_NUMBER &&
+        env.WHATSAPP_TEMPLATE_NAMESPACE &&
+        env.WHATSAPP_WEBHOOK_TOKEN
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["WHATSAPP_PROVIDER"],
+        message:
+          "WHATSAPP_PROVIDER=msg91 needs WHATSAPP_API_KEY, WHATSAPP_NUMBER, WHATSAPP_TEMPLATE_NAMESPACE and WHATSAPP_WEBHOOK_TOKEN",
+      })
+    }
+    if (Boolean(env.TURNSTILE_SITE_KEY) !== Boolean(env.TURNSTILE_SECRET_KEY)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["TURNSTILE_SITE_KEY"],
+        message:
+          "TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY must be set together",
+      })
+    }
+    if (
       env.SHIPPING_PROVIDER === "shiprocket" &&
       !(
         env.SHIPROCKET_API_EMAIL &&
@@ -150,6 +203,14 @@ export const serverEnvSchema = z
           code: "custom",
           path: ["SMS_PROVIDER"],
           message: "SMS_PROVIDER cannot be fake in production",
+        })
+      }
+      if (env.WHATSAPP_PROVIDER === "fake") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["WHATSAPP_PROVIDER"],
+          message:
+            "WHATSAPP_PROVIDER cannot be fake in production (use off or msg91)",
         })
       }
       if (env.SHIPPING_PROVIDER === "fake") {

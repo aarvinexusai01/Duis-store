@@ -8,6 +8,7 @@ import {
   productVariants,
   stockLocations,
 } from "@/db/schema"
+import { queueBackInStock } from "@/features/alerts"
 import { refreshListingCache } from "@/features/catalog"
 import { systemActor } from "@/server/auth/actor"
 import { writeAudit } from "@/server/audit"
@@ -66,6 +67,8 @@ async function productIdsForVariants(
 
 /** Keeps listings in step with stock that crossed zero. */
 export async function stockChanged(tx: Transaction, variantIds: string[]) {
+  // People waiting for a size hear about it (the job checks stock is back).
+  await queueBackInStock(tx, variantIds)
   const productIds = await productIdsForVariants(tx, variantIds)
   await refreshListingCache(tx, productIds)
   await requestRevalidation(

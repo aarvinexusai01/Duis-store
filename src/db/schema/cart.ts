@@ -34,6 +34,9 @@ export const carts = pgTable(
     anonymousTokenHash: text().unique(),
     status: cartStatus().notNull().default("active"),
     lastActivityAt: timestamptz().notNull().defaultNow(),
+    // Abandoned-cart reminders sent since the last activity (at most 2).
+    reminderCount: integer().notNull().default(0),
+    lastRemindedAt: timestamptz(),
     ...timestamps(),
   },
   (t) => [

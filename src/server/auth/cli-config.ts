@@ -18,5 +18,6 @@ export const auth = betterAuth(
     sendVerificationEmail: noop,
     sendResetPasswordEmail: noop,
     sendPhoneOtp: noop,
+    guardOtpRequest: async () => null,
   }),
 )

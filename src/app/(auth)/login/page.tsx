@@ -37,6 +37,7 @@ async function Form({
   await redirectIfSignedIn(next)
   return (
     <LoginForm
+      turnstileSiteKey={getServerEnv().TURNSTILE_SITE_KEY ?? null}
       next={next}
       googleEnabled={Boolean(getServerEnv().GOOGLE_CLIENT_ID)}
     />

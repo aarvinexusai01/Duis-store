@@ -124,6 +124,23 @@ export const emailTemplates = {
     props: z.object({ sentBy: z.string().min(1).max(200) }),
     subject: () => "Duis test email",
   },
+  "back-in-stock": {
+    props: z.object({
+      product: z.string().max(200),
+      variant: z.string().max(100),
+      url: z.url({ protocol: /^https?$/ }),
+    }),
+    subject: () => "It's back in stock at Duis",
+  },
+  "cart-reminder": {
+    props: z.object({
+      name: z.string().min(1).max(200),
+      items: z.array(z.string().max(200)).min(1).max(5),
+      url: z.url({ protocol: /^https?$/ }),
+      unsubscribeUrl: z.url({ protocol: /^https?$/ }),
+    }),
+    subject: () => "Still thinking it over?",
+  },
   "newsletter-confirm": {
     props: z.object({ url: z.url({ protocol: /^https?$/ }) }),
     subject: () => "Confirm your Duis subscription",

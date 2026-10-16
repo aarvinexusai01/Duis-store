@@ -12,7 +12,9 @@ test("checkout: address → pay (simulated) → confirmed → cancel", async ({
   // Add the first in-stock size to the bag.
   await page.goto(`/products/${slug}`)
   await page.waitForLoadState("networkidle")
-  const size = page.locator('input[name="axis-size"]:not([disabled])').first()
+  const size = page
+    .locator('input[name="axis-size"]:not([disabled]):not([data-sold-out])')
+    .first()
   await size.check({ force: true })
   await page.getByRole("button", { name: "Add to bag" }).click()
   await expect(page.getByRole("dialog")).toBeVisible()

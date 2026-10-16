@@ -12,6 +12,7 @@ import { creditWallet, reverseDebit } from "@/features/wallet"
 import { formatPaise } from "@/lib/money"
 import type { Transaction } from "@/server/db/transaction"
 import { queueEmail } from "@/server/notifications/email"
+import { queueWhatsApp } from "@/server/notifications/whatsapp"
 
 import { lockOrder, recordChange, walletKey } from "./lifecycle"
 import { trackingUrl } from "./tracking"
@@ -94,7 +95,56 @@ async function applyShipmentChange(
   if (next === "shipped" && order.status !== "shipped") {
     await emailShipped(tx, order, change.shipmentId)
   }
+  await whatsAppUpdate(tx, order, next, change.shipmentId)
   if (returned) await handleReturn(tx, order)
+}
+
+/** WhatsApp for opted-in customers (owner decision 2026-10-16). */
+async function whatsAppUpdate(
+  tx: Transaction,
+  order: Awaited<ReturnType<typeof lockOrder>>,
+  status: string,
+  shipmentId: string,
+) {
+  const base = {
+    userId: order.user_id,
+    fallbackPhone: order.customer_phone,
+    reference: { type: "order", id: order.id },
+  }
+  const tracking = trackingUrl(order.order_number)
+  if (status === "shipped") {
+    const parcel = await tx.execute<{
+      awb: string | null
+      courier_name: string | null
+    }>(sql`select awb, courier_name from shipments where id = ${shipmentId}`)
+    await queueWhatsApp(tx, {
+      ...base,
+      template: "order_shipped",
+      params: {
+        name: order.customer_name,
+        orderNumber: order.order_number,
+        courier: parcel.rows[0]?.courier_name ?? "our courier",
+        awb: parcel.rows[0]?.awb ?? "",
+        trackingUrl: tracking,
+      },
+    })
+  } else if (status === "out_for_delivery") {
+    await queueWhatsApp(tx, {
+      ...base,
+      template: "order_out_for_delivery",
+      params: {
+        name: order.customer_name,
+        orderNumber: order.order_number,
+        trackingUrl: tracking,
+      },
+    })
+  } else if (status === "delivered") {
+    await queueWhatsApp(tx, {
+      ...base,
+      template: "order_delivered",
+      params: { name: order.customer_name, orderNumber: order.order_number },
+    })
+  }
 }
 
 async function emailShipped(

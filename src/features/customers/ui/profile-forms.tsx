@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch"
 
 import {
   saveConsentAction,
+  setWhatsAppUpdatesAction,
   saveProfileAction,
   setDeletionRequestAction,
 } from "../actions"
@@ -107,6 +108,38 @@ export function ConsentForm({
       <p className="text-xs text-muted-foreground">
         Order updates are always sent; these only cover marketing. You can
         change them any time.
+      </p>
+    </div>
+  )
+}
+
+export function WhatsAppUpdatesToggle({ enabled }: { enabled: boolean }) {
+  const [on, setOn] = useState(enabled)
+  const [pending, startTransition] = useTransition()
+  return (
+    <div className="flex max-w-md flex-col gap-2">
+      <label className="flex items-center justify-between gap-4 text-sm">
+        Order and exchange updates on WhatsApp
+        <Switch
+          checked={on}
+          disabled={pending}
+          onCheckedChange={(checked) => {
+            setOn(checked)
+            startTransition(async () => {
+              const result = await setWhatsAppUpdatesAction(checked)
+              if (result.ok) toast.success("Preferences saved")
+              else {
+                setOn(!checked)
+                toast.error(result.message)
+              }
+            })
+          }}
+        />
+      </label>
+      <p className="text-xs text-muted-foreground">
+        Confirmed, shipped, out for delivery and delivered, sent to your mobile
+        number. Email updates continue either way. Reply STOP on WhatsApp to
+        turn this off.
       </p>
     </div>
   )

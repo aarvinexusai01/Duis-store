@@ -16,6 +16,7 @@ import { formatPaise } from "@/lib/money"
 import { cn } from "@/lib/utils"
 
 import { placeOrderAction, quoteAction } from "@/features/checkout/actions"
+import { setWhatsAppUpdatesAction } from "@/features/customers/actions"
 import type { CheckoutChoices, CheckoutView } from "@/features/checkout"
 import { usePayment } from "@/components/payment/use-payment"
 
@@ -23,11 +24,15 @@ export function CheckoutForm({
   addresses,
   initial,
   initialChoices,
+  whatsapp = { offered: false, enabled: false },
 }: {
   addresses: Address[]
   initial: CheckoutView | null
   initialChoices: CheckoutChoices | null
+  /** WhatsApp order updates: shown when WhatsApp is on; ticked if already opted in. */
+  whatsapp?: { offered: boolean; enabled: boolean }
 }) {
+  const [whatsappUpdates, setWhatsappUpdates] = useState(whatsapp.enabled)
   const router = useRouter()
   const [view, setView] = useState(initial)
   const [choices, setChoices] = useState<CheckoutChoices | null>(initialChoices)
@@ -78,6 +83,10 @@ export function CheckoutForm({
     setPlacing(true)
     setError("")
     try {
+      // Opt-in only: an unticked box changes nothing.
+      if (whatsappUpdates && !whatsapp.enabled) {
+        await setWhatsAppUpdatesAction(true)
+      }
       const placed = await placeOrderAction({
         ...choices,
         quoteHash: view.hash,
@@ -413,6 +422,18 @@ export function CheckoutForm({
           <p role="alert" className="mt-4 text-sm font-medium text-destructive">
             {error}
           </p>
+        )}
+        {whatsapp.offered && (
+          <label className="mt-4 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={whatsappUpdates}
+              onChange={(e) => setWhatsappUpdates(e.target.checked)}
+              className="mt-0.5 accent-ink"
+            />
+            Send order updates on WhatsApp (confirmed, shipped, delivered).
+            Reply STOP any time.
+          </label>
         )}
         <Button
           onClick={placeAndPay}

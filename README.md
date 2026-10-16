@@ -101,6 +101,16 @@ To try the after-sales flow in development:
 
 Turn off **exchangeable** on categories such as innerwear (in **Admin → Categories**).
 
+## Messaging
+
+- **Login codes:** in development the fake SMS provider prints codes to the dev server log.
+  - Each number gets a 30-second resend cooldown, at most 5 codes an hour and 10 a day.
+  - Each IP gets at most 20 an hour.
+  - Set `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` to add Cloudflare Turnstile.
+- **WhatsApp:** `WHATSAPP_PROVIDER=fake` logs the order and exchange updates that would be sent to customers who opted in (at checkout or in their account). For MSG91, see doc/10 A3 for the six templates to get approved.
+- **Back-in-stock:** "Notify me" appears on a sold-out size. When stock is received, the worker emails everyone waiting, once.
+- **Bag reminders:** customers who agreed to marketing emails get up to two reminders, 1 hour and 24 hours after leaving items in their bag.
+
 ## Commands
 
 | Command                                      | What it does                                                                                             |

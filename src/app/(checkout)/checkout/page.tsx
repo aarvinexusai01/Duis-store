@@ -4,11 +4,12 @@ import { Suspense } from "react"
 
 import { PageSkeleton } from "@/components/page-skeleton"
 import { buttonVariants } from "@/components/ui/button"
+import { getServerEnv } from "@/config/env"
 import { SHOP_HREF } from "@/config/routes"
 import { requireUser } from "@/features/auth/session-guard"
 import { getCurrentCart } from "@/features/cart/queries"
 import { getCheckoutQuote, type CheckoutChoices } from "@/features/checkout"
-import { listAddresses } from "@/features/customers"
+import { getAccountOverview, listAddresses } from "@/features/customers"
 import { cn } from "@/lib/utils"
 
 import { CheckoutForm } from "./_components/checkout-form"
@@ -54,12 +55,19 @@ async function Checkout() {
         couponCode: null,
       }
     : null
-  const initial = choices ? await getCheckoutQuote(actor, choices) : null
+  const [initial, account] = await Promise.all([
+    choices ? getCheckoutQuote(actor, choices) : null,
+    getAccountOverview(actor, {}),
+  ])
   return (
     <CheckoutForm
       addresses={addresses}
       initial={initial}
       initialChoices={choices}
+      whatsapp={{
+        offered: getServerEnv().WHATSAPP_PROVIDER !== "off",
+        enabled: account.whatsappUpdates,
+      }}
     />
   )
 }

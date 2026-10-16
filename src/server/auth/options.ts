@@ -1,6 +1,7 @@
 import type { BetterAuthOptions } from "better-auth"
+import { APIError, createAuthMiddleware } from "better-auth/api"
 import { nextCookies } from "better-auth/next-js"
-import { admin, phoneNumber, twoFactor } from "better-auth/plugins"
+import { admin, captcha, phoneNumber, twoFactor } from "better-auth/plugins"
 
 import { ac, roleDefinitions } from "./permissions"
 
@@ -19,6 +20,13 @@ export type AuthDependencies = {
   sendVerificationEmail(message: AuthEmail): Promise<void>
   sendResetPasswordEmail(message: AuthEmail): Promise<void>
   sendPhoneOtp(message: { phoneNumber: string; code: string }): Promise<void>
+  /** Per-phone and per-IP limits for login codes: null to allow, else why not. */
+  guardOtpRequest(
+    phoneNumber: string,
+    ip: string | null,
+  ): Promise<string | null>
+  /** Cloudflare Turnstile, when its keys are set. */
+  turnstileSecretKey?: string
 }
 
 export type AuthEmail = { to: string; name: string; url: string }
@@ -109,7 +117,34 @@ export function buildAuthOptions(deps: AuthDependencies) {
       },
     },
 
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/phone-number/send-otp") return
+        const phone = (ctx.body as { phoneNumber?: unknown } | undefined)
+          ?.phoneNumber
+        if (typeof phone !== "string") return
+        const ip = ctx.request?.headers.get("x-real-ip") ?? null
+        const refused = await deps.guardOtpRequest(phone, ip)
+        if (refused)
+          throw new APIError("TOO_MANY_REQUESTS", { message: refused })
+      }),
+    },
+
     plugins: [
+      // Always present (a conditional entry breaks the inferred session
+      // type). Without a Turnstile key it guards a path that never exists:
+      // an empty list would fall back to the plugin's defaults.
+      captcha({
+        provider: "cloudflare-turnstile",
+        secretKey: deps.turnstileSecretKey ?? "turnstile-off",
+        endpoints: deps.turnstileSecretKey
+          ? [
+              "/phone-number/send-otp",
+              "/sign-up/email",
+              "/request-password-reset",
+            ]
+          : ["/__turnstile-off"],
+      }),
       admin({
         ac,
         roles: roleDefinitions,

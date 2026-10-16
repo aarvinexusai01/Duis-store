@@ -26,6 +26,7 @@ import { getDb } from "@/server/db/client"
 import { withTransaction, type Transaction } from "@/server/db/transaction"
 import { DomainError } from "@/server/errors"
 import { queueEmail } from "@/server/notifications/email"
+import { queueWhatsApp } from "@/server/notifications/whatsapp"
 import { logger } from "@/server/observability/logger"
 import { defineOperation } from "@/server/operation"
 
@@ -49,11 +50,13 @@ export type OrderRow = {
   cod_due_paise: number
   customer_name: string
   customer_email: string | null
+  customer_phone: string | null
   reservation_expires_at: Date | null
 }
 
 const ORDER_COLUMNS = sql`id, order_number, user_id, status, payment_status, payment_mode, total_paise,
-  online_amount_paise, wallet_applied_paise, cod_due_paise, customer_name, customer_email, reservation_expires_at`
+  online_amount_paise, wallet_applied_paise, cod_due_paise, customer_name, customer_email, customer_phone,
+  reservation_expires_at`
 
 export async function lockOrder(
   tx: Transaction,
@@ -198,6 +201,17 @@ export async function confirmInTransaction(
     where cart_id in (select id from carts where user_id = ${order.user_id} and status = 'active')
       and variant_id in (select variant_id from order_items where order_id = ${order.id} and variant_id is not null)`)
   await emailConfirmation(tx, order)
+  await queueWhatsApp(tx, {
+    template: "order_confirmed",
+    userId: order.user_id,
+    fallbackPhone: order.customer_phone,
+    params: {
+      name: order.customer_name,
+      orderNumber: order.order_number,
+      total: formatPaise(order.total_paise),
+    },
+    reference: { type: "order", id: order.id },
+  })
 }
 
 export type SettleResult =

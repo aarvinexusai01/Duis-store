@@ -34,7 +34,7 @@ export async function sellableProduct(stockEach = 100) {
   await publishProduct(asSystem(), { id: fx.productId })
   const { rows } = await getDb().execute<{ id: string }>(sql`
     select id from product_variants where product_id = ${fx.productId} order by option_signature`)
-  for (const { id } of rows) {
+  for (const { id } of stockEach > 0 ? rows : []) {
     await adjustStock(asSystem(), {
       variantId: id,
       delta: stockEach,

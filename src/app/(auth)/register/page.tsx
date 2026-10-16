@@ -4,6 +4,7 @@ import { connection } from "next/server"
 import { Suspense } from "react"
 
 import { redirectIfSignedIn } from "@/features/auth/session-guard"
+import { getServerEnv } from "@/config/env"
 import { RegisterForm } from "@/features/auth/ui/account-forms"
 import { safeNextPath } from "@/lib/safe-redirect"
 
@@ -33,5 +34,10 @@ async function Form({
   const raw = (await searchParams).next
   const next = safeNextPath(typeof raw === "string" ? raw : null)
   await redirectIfSignedIn(next)
-  return <RegisterForm next={next} />
+  return (
+    <RegisterForm
+      next={next}
+      turnstileSiteKey={getServerEnv().TURNSTILE_SITE_KEY ?? null}
+    />
+  )
 }

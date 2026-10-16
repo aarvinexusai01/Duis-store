@@ -3,6 +3,7 @@
 import { getActor } from "@/server/auth/session"
 import { toActionError } from "@/server/action"
 
+import { unsubscribeMarketing } from "./cart-reminders"
 import { confirmNewsletter, subscribeNewsletter } from "./service"
 
 export type NewsletterState =
@@ -48,4 +49,18 @@ export async function confirmNewsletterSubscription(
     toActionError(error)
     return { status: "invalid" }
   }
+}
+
+export type UnsubscribeState = { status: "idle" | "done" | "invalid" }
+
+/** The confirm button on /unsubscribe (a click, so mail scanners can't trigger it). */
+export async function unsubscribeMarketingAction(
+  _previous: UnsubscribeState,
+  form: FormData,
+): Promise<UnsubscribeState> {
+  const result = await unsubscribeMarketing(await getActor(), {
+    userId: String(form.get("u") ?? ""),
+    token: String(form.get("t") ?? ""),
+  }).catch(() => ({ done: false }))
+  return { status: result.done ? "done" : "invalid" }
 }

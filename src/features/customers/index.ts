@@ -6,6 +6,7 @@ export {
   saveAddress,
   setDeletionRequest,
   setMarketingConsent,
+  setWhatsAppUpdates,
   updateProfile,
   type AccountOverview,
   type Address,

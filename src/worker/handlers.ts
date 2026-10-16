@@ -9,6 +9,8 @@ import {
   processWebhookEvent,
   reconcilePendingPayments,
 } from "@/features/orders"
+import { sendBackInStock } from "@/features/alerts"
+import { sendCartReminders } from "@/features/marketing"
 import { processRefund } from "@/features/payments"
 import { sendReviewRequests } from "@/features/reviews"
 import {
@@ -20,6 +22,7 @@ import { expireWalletCredits } from "@/features/wallet"
 import { fanOutRevalidation } from "@/server/cache/revalidate"
 import { QUEUES, type JobPayloads, type QueueName } from "@/server/jobs/queues"
 import { deliverEmail, markEmailFailed } from "@/server/notifications/delivery"
+import { deliverWhatsApp } from "@/server/notifications/whatsapp"
 import { logger } from "@/server/observability/logger"
 
 /**
@@ -43,6 +46,9 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
   },
   "notify.email": async (job) => {
     await deliverEmail(job.data)
+  },
+  "notify.whatsapp": async (job) => {
+    await deliverWhatsApp(job.data)
   },
   "cache.revalidate": async (job) => {
     await fanOutRevalidation(job.data.tags)
@@ -82,6 +88,14 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
   "shipping.process-tracking": async (job) => {
     await processTrackingWebhook(job.data.webhookEventId)
   },
+  "alerts.back-in-stock": async (job) => {
+    const sent = await sendBackInStock(job.data.variantId)
+    if (sent > 0) logger.info({ sent }, "back-in-stock alerts queued")
+  },
+  "marketing.cart-reminders": async () => {
+    const sent = await sendCartReminders()
+    if (sent > 0) logger.info({ sent }, "cart reminders queued")
+  },
   "reviews.request": async () => {
     const sent = await sendReviewRequests()
     if (sent > 0) logger.info({ sent }, "review requests queued")
@@ -107,6 +121,7 @@ const SCHEDULES: { queue: QueueName; cron: string }[] = [
   { queue: QUEUES.syncTracking, cron: "*/30 * * * *" },
   { queue: QUEUES.lowStockDigest, cron: "0 9 * * *" },
   { queue: QUEUES.reviewRequests, cron: "0 11 * * *" },
+  { queue: QUEUES.cartReminders, cron: "*/15 * * * *" },
 ]
 
 export async function registerHandlers(boss: PgBoss): Promise<void> {

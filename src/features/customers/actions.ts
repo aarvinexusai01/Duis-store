@@ -11,6 +11,7 @@ import {
   saveAddress,
   setDeletionRequest,
   setMarketingConsent,
+  setWhatsAppUpdates,
   updateProfile,
 } from "./service"
 
@@ -35,6 +36,10 @@ export async function saveConsentAction(input: {
   marketingWhatsapp: boolean
 }) {
   return run(async () => setMarketingConsent(await getActor(), input))
+}
+
+export async function setWhatsAppUpdatesAction(enabled: boolean) {
+  return run(async () => setWhatsAppUpdates(await getActor(), { enabled }))
 }
 
 export async function setDeletionRequestAction(requested: boolean) {

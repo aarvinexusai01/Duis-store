@@ -8,6 +8,7 @@ import {
   ConsentForm,
   DeletionRequest,
   ProfileForm,
+  WhatsAppUpdatesToggle,
 } from "@/features/customers/ui/profile-forms"
 
 export const metadata: Metadata = { title: "Profile" }
@@ -39,6 +40,12 @@ async function Profile() {
           <dt className="text-muted-foreground">Mobile</dt>
           <dd>{account.phoneNumber ?? "Not added"}</dd>
         </dl>
+      </section>
+      <section className="py-8">
+        <h2 className="mb-4 font-display text-2xl tracking-wide uppercase">
+          Order updates
+        </h2>
+        <WhatsAppUpdatesToggle enabled={account.whatsappUpdates} />
       </section>
       <section className="py-8">
         <h2 className="mb-4 font-display text-2xl tracking-wide uppercase">

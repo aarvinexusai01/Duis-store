@@ -19,14 +19,18 @@ import {
   SubmitButton,
   TextField,
 } from "./form-bits"
+import { useTurnstile } from "./turnstile"
 
 /** Phone OTP first (doc/01), then email and password, then Google. */
 export function LoginForm({
   next,
   googleEnabled,
+  turnstileSiteKey = null,
 }: {
   next: string
   googleEnabled: boolean
+  /** Set when Cloudflare Turnstile is configured. */
+  turnstileSiteKey?: string | null
 }) {
   const done = () => window.location.assign(completeSignInUrl(next))
   return (
@@ -37,7 +41,7 @@ export function LoginForm({
           <TabsTrigger value="email">Email</TabsTrigger>
         </TabsList>
         <TabsContent value="phone" className="pt-4">
-          <PhoneLogin onDone={done} />
+          <PhoneLogin onDone={done} turnstileSiteKey={turnstileSiteKey} />
         </TabsContent>
         <TabsContent value="email" className="pt-4">
           <EmailLogin onDone={done} />
@@ -68,7 +72,14 @@ export function LoginForm({
   )
 }
 
-function PhoneLogin({ onDone }: { onDone: () => void }) {
+function PhoneLogin({
+  onDone,
+  turnstileSiteKey,
+}: {
+  onDone: () => void
+  turnstileSiteKey: string | null
+}) {
+  const captcha = useTurnstile(turnstileSiteKey)
   const [digits, setDigits] = useState("")
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [code, setCode] = useState("")
@@ -84,7 +95,16 @@ function PhoneLogin({ onDone }: { onDone: () => void }) {
     }
     setPending(true)
     const phoneNumber = `+91${digits}`
-    const { error } = await authClient.phoneNumber.sendOtp({ phoneNumber })
+    if (!captcha.ready) {
+      setPending(false)
+      setError("Just a moment: we're checking your browser.")
+      return
+    }
+    const { error } = await authClient.phoneNumber.sendOtp(
+      { phoneNumber },
+      captcha.fetchOptions ? { ...captcha.fetchOptions } : undefined,
+    )
+    captcha.reset()
     setPending(false)
     if (error) setError(authErrorMessage(error))
     else setSentTo(phoneNumber)
@@ -136,6 +156,7 @@ function PhoneLogin({ onDone }: { onDone: () => void }) {
           </p>
         </div>
         <FormMessage tone="error">{error}</FormMessage>
+        {captcha.element}
         <SubmitButton pending={pending} pendingLabel="Sending…">
           Send code
         </SubmitButton>

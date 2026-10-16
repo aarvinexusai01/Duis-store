@@ -6,6 +6,7 @@ import type { Actor } from "@/server/auth/actor"
 import type { Transaction } from "@/server/db/transaction"
 import { DomainError } from "@/server/errors"
 import { queueEmail } from "@/server/notifications/email"
+import { queueWhatsApp } from "@/server/notifications/whatsapp"
 
 /**
  * Shared pieces of the exchange flow (doc/03 §7): loading and locking an
@@ -101,6 +102,16 @@ export async function notifyCustomer(
   headline: string,
   message: string,
 ) {
+  await queueWhatsApp(tx, {
+    template: "exchange_update",
+    userId: row.user_id,
+    params: {
+      name: row.customer_name,
+      exchangeNumber: row.exchange_number,
+      headline,
+    },
+    reference: { type: "exchange", id: row.id },
+  })
   if (!row.customer_email || row.customer_email.endsWith(".invalid")) return
   await queueEmail(
     {

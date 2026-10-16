@@ -10,6 +10,7 @@ export const QUEUES = {
   systemHeartbeat: "system.heartbeat",
   deadLetter: "system.dead-letter",
   notifyEmail: "notify.email",
+  notifyWhatsApp: "notify.whatsapp",
   cacheRevalidate: "cache.revalidate",
   refreshAutoCollections: "catalog.refresh-auto-collections",
   expireReservations: "inventory.expire-reservations",
@@ -23,6 +24,8 @@ export const QUEUES = {
   syncTracking: "shipping.sync-tracking",
   lowStockDigest: "inventory.low-stock-digest",
   reviewRequests: "reviews.request",
+  backInStock: "alerts.back-in-stock",
+  cartReminders: "marketing.cart-reminders",
 } as const
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES]
@@ -35,6 +38,12 @@ export type JobPayloads = {
     template: EmailTemplateName
     to: string
     props: Record<string, unknown>
+  }
+  "notify.whatsapp": {
+    notificationId: string
+    template: string
+    to: string
+    params: string[]
   }
   "cache.revalidate": { tags: string[] }
   "catalog.refresh-auto-collections": { collectionId?: string }
@@ -49,6 +58,8 @@ export type JobPayloads = {
   "shipping.sync-tracking": null
   "inventory.low-stock-digest": null
   "reviews.request": null
+  "alerts.back-in-stock": { variantId: string }
+  "marketing.cart-reminders": null
 }
 
 type QueuePolicy = Parameters<PgBoss["createQueue"]>[1]
@@ -62,6 +73,15 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
   "notify.email": {
     retryLimit: 5,
     retryDelay: 30,
+    retryBackoff: true,
+    expireInSeconds: 120,
+    deleteAfterSeconds: 3600,
+    deadLetter,
+  },
+  // Numbers are personal data: keep finished jobs briefly, like email.
+  "notify.whatsapp": {
+    retryLimit: 5,
+    retryDelay: 60,
     retryBackoff: true,
     expireInSeconds: 120,
     deleteAfterSeconds: 3600,
@@ -140,6 +160,20 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
     retryDelay: 15,
     retryBackoff: true,
     expireInSeconds: 120,
+    deadLetter,
+  },
+  "alerts.back-in-stock": {
+    retryLimit: 5,
+    retryDelay: 60,
+    retryBackoff: true,
+    expireInSeconds: 300,
+    deadLetter,
+  },
+  "marketing.cart-reminders": {
+    policy: "stately",
+    retryLimit: 1,
+    retryDelay: 120,
+    expireInSeconds: 600,
     deadLetter,
   },
   "reviews.request": {

@@ -19,6 +19,8 @@ export const customerProfiles = pgTable("customer_profiles", {
   // Separate, withdrawable consents (DPDP): null means not given.
   marketingEmailConsentAt: timestamptz(),
   marketingWhatsappConsentAt: timestamptz(),
+  // Order and exchange updates on WhatsApp (opt-in, owner decision 2026-10-16).
+  whatsappUpdatesConsentAt: timestamptz(),
   codBlocked: boolean().notNull().default(false),
   codBlockedReason: text(),
   deletionRequestedAt: timestamptz(),
