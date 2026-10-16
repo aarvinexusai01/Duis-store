@@ -7,6 +7,7 @@ export {
   getAvailability,
   releaseReservations,
   reserveStock,
+  restockCommitted,
   setLowStockThreshold,
   type ReservationHolder,
   type ReservationLine,

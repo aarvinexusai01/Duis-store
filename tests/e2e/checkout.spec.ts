@@ -1,0 +1,88 @@
+import { expect, test, type Page } from "@playwright/test"
+import pg from "pg"
+
+async function inStockSlug(): Promise<string | undefined> {
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
+  await client.connect()
+  try {
+    const { rows } = await client.query<{ slug: string }>(`
+      select p.slug::text from products p
+      join product_variants v on v.product_id = p.id and v.status = 'active'
+      join inventory_levels l on l.variant_id = v.id
+      where p.status = 'active' and l.on_hand - l.reserved >= 5 and v.price_paise < 99900
+      group by p.slug having count(distinct v.id) >= 1
+      order by p.slug limit 1`)
+    return rows[0]?.slug
+  } finally {
+    await client.end()
+  }
+}
+
+async function signInWithOtp(page: Page, next: string) {
+  const digits = `9${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`
+  await page.goto(`/login?next=${encodeURIComponent(next)}`)
+  await page.getByRole("textbox", { name: "Mobile number" }).fill(digits)
+  await page.getByRole("button", { name: "Send code" }).click()
+  await expect(page.getByText(`+91${digits}`)).toBeVisible()
+  const otp = await page.request.get(
+    `/api/test/otp?phone=${encodeURIComponent(`+91${digits}`)}`,
+  )
+  const { code } = (await otp.json()) as { code: string }
+  await page.getByRole("textbox", { name: /One-time code/ }).fill(code)
+  await page.getByRole("button", { name: "Verify and continue" }).click()
+  await page.waitForURL((url) => url.pathname === next)
+}
+
+test("checkout: address → pay (simulated) → confirmed → cancel", async ({
+  page,
+}) => {
+  const slug = await inStockSlug()
+  test.skip(!slug, "no seeded catalogue")
+  await signInWithOtp(page, "/account")
+
+  // Add the first in-stock size to the bag.
+  await page.goto(`/products/${slug}`)
+  await page.waitForLoadState("networkidle")
+  const size = page.locator('input[name="axis-size"]:not([disabled])').first()
+  await size.check({ force: true })
+  await page.getByRole("button", { name: "Add to bag" }).click()
+  await expect(page.getByRole("dialog")).toBeVisible()
+
+  await page.goto("/checkout")
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Checkout" }),
+  ).toBeVisible()
+  // First order: add a delivery address.
+  await page.getByLabel("Full name").fill("Asha Rao")
+  await page.getByLabel(/Mobile number/).fill("9876543210")
+  await page.getByLabel("Address", { exact: true }).fill("12 Hazratganj")
+  await page.getByLabel("PIN code").fill("226001")
+  await page.getByLabel("City").fill("Lucknow")
+  await page.getByLabel("State").selectOption("IN-UP")
+  await page.getByRole("button", { name: "Save address" }).click()
+
+  // Below ₹999 the courier rate is shown; GST is included.
+  await expect(page.getByText("Prices include GST")).toBeVisible()
+  const place = page.getByRole("button", { name: /Place order & pay/ })
+  await expect(place).toBeEnabled()
+  await place.click()
+  await expect(
+    page.getByRole("dialog", { name: "Simulated payment" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Pay successfully" }).click()
+
+  await expect(
+    page.getByRole("heading", { name: "Order confirmed" }),
+  ).toBeVisible()
+  const orderNumber = (await page
+    .getByText(/DUIS-\d{6}/)
+    .first()
+    .textContent())!.match(/DUIS-\d{6,}/)![0]
+
+  await page.goto(`/account/orders/${orderNumber}`)
+  await expect(page.getByText(/Confirmed · Paid/)).toBeVisible()
+  await page.waitForLoadState("networkidle")
+  await page.getByRole("button", { name: "Cancel order" }).click()
+  await page.getByRole("button", { name: "Yes, cancel order" }).click()
+  await expect(page.getByText("This order was cancelled.")).toBeVisible()
+})

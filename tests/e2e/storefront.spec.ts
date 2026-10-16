@@ -106,9 +106,9 @@ test("browse → filter → variant → bag → OTP sign-in keeps the bag", asyn
   await page.keyboard.press("Escape")
 
   // Sign in with a phone OTP (fake provider), landing back on the bag.
-  const digits = `9${String(Date.now()).slice(-9)}`
+  const digits = `9${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`
   await page.goto("/login?next=/cart")
-  await page.getByLabel("Mobile number").fill(digits)
+  await page.getByRole("textbox", { name: "Mobile number" }).fill(digits)
   await page.getByRole("button", { name: "Send code" }).click()
   await expect(page.getByText(`+91${digits}`)).toBeVisible()
   const otp = await page.request.get(

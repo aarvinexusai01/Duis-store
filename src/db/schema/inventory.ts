@@ -14,6 +14,7 @@ import {
 
 import { users } from "./auth"
 import { productVariants } from "./catalog"
+import { orders } from "./orders"
 import { citext, primaryId, timestamps, timestamptz } from "./columns"
 
 export const reservationStatus = pgEnum("reservation_status", [
@@ -102,8 +103,8 @@ export const inventoryReservations = pgTable(
       .notNull()
       .references(() => stockLocations.id, { onDelete: "restrict" }),
     quantity: integer().notNull(),
-    // Foreign keys to orders/exchanges are added with those tables (Phase 3/5).
-    orderId: uuid(),
+    orderId: uuid().references(() => orders.id, { onDelete: "restrict" }),
+    // The FK to exchanges is added with that table (Phase 5).
     exchangeId: uuid(),
     status: reservationStatus().notNull().default("active"),
     expiresAt: timestamptz().notNull(),

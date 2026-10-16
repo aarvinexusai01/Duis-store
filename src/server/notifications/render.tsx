@@ -8,6 +8,16 @@ import {
   verifyEmailText,
 } from "@/emails/account"
 import {
+  OrderCancelledEmail,
+  orderCancelledText,
+  OrderConfirmedEmail,
+  orderConfirmedText,
+  OrderNotCompletedEmail,
+  orderNotCompletedText,
+  RefundIssuedEmail,
+  refundIssuedText,
+} from "@/emails/orders"
+import {
   NewsletterConfirmEmail,
   newsletterConfirmText,
 } from "@/emails/marketing"
@@ -32,6 +42,22 @@ const views: {
   "reset-password": {
     html: (props) => <ResetPasswordEmail {...props} />,
     text: resetPasswordText,
+  },
+  "order-confirmed": {
+    html: (props) => <OrderConfirmedEmail {...props} />,
+    text: orderConfirmedText,
+  },
+  "order-cancelled": {
+    html: (props) => <OrderCancelledEmail {...props} />,
+    text: orderCancelledText,
+  },
+  "refund-issued": {
+    html: (props) => <RefundIssuedEmail {...props} />,
+    text: refundIssuedText,
+  },
+  "order-not-completed": {
+    html: (props) => <OrderNotCompletedEmail {...props} />,
+    text: orderNotCompletedText,
   },
   "newsletter-confirm": {
     html: (props) => <NewsletterConfirmEmail {...props} />,

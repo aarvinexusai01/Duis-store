@@ -2,7 +2,7 @@
 
 Self-hosted men's fashion e-commerce platform: storefront (`/`), admin portal (`/admin`) and CMS (`/admin/cms`) in one Next.js 16 application, backed by PostgreSQL 18 and deployed with Docker.
 
-The full plan (requirements, architecture, phases, database design, deployment) is in [`doc/`](doc/README.md). **Current status: Phase 1 (backend foundation) complete** — next is Phase 2, the storefront.
+The full plan (requirements, architecture, phases, database design, deployment) is in [`doc/`](doc/README.md). **Current status: Phase 3 (checkout, payments, orders) built** — the manual Razorpay test-key check is pending; next is Phase 4, the admin portal.
 
 ## Requirements
 
@@ -24,10 +24,25 @@ npm run dev               # http://localhost:3000 (next free port if taken)
 npm run worker            # in a second terminal: background jobs (emails, refreshes)
 ```
 
-Seeded development accounts (password `Duis-dev-Passw0rd!`, development only): `superadmin@duis.local`, `storeadmin@duis.local`, `contentmanager@duis.local`, `contenteditor@duis.local`, `fulfilmentstaff@duis.local`, `supportagent@duis.local` and `customer@duis.local`. Staff accounts must set up two-factor authentication at first sign-in. With the fake SMS provider, phone OTP codes are printed in the dev server log.
+Seeded development accounts (password `Duis-dev-Passw0rd!`, development only): `superadmin@duis.local`, `storeadmin@duis.local`, `contentmanager@duis.local`, `contenteditor@duis.local`, `fulfilmentstaff@duis.local`, `supportagent@duis.local` and `customer@duis.local`. Staff accounts must set up two-factor authentication at first sign-in. With the fake SMS provider, phone OTP codes are printed in the dev server log; the fake shipping provider answers PIN-code checks from fixed rules (both are refused in production). Keep `npm run worker` running too: it sends emails, expires unpaid orders after 15 minutes, reconciles payments and processes refunds. Demo coupons: `WELCOME10` (first order) and `FLAT150` (orders of ₹1,499+).
 
 - Mailpit catches all outgoing email: <http://localhost:8025>
 - The first `npm run db:up` creates the database roles and extensions from `docker/postgres/initdb/`.
+
+## Payments
+
+By default `PAYMENT_PROVIDER=fake`: checkout shows a **Simulated payment** window (pay or fail) and nothing is charged. To use **Razorpay test mode**:
+
+1. In the Razorpay dashboard (Test mode), create API keys and copy the key id and secret.
+2. Put them in your local `.env` only (never commit them):
+   ```bash
+   PAYMENT_PROVIDER=razorpay
+   RAZORPAY_KEY_ID=rzp_test_...
+   RAZORPAY_KEY_SECRET=...
+   RAZORPAY_WEBHOOK_SECRET=any-long-random-string
+   ```
+3. Restart `npm run dev` and `npm run worker`, then check out and pay with a [Razorpay test card or UPI id](https://razorpay.com/docs/payments/payments/test-card-details/).
+4. Webhooks (optional locally): expose the app with a tunnel and add `https://<tunnel>/api/webhooks/razorpay` in Razorpay → Webhooks with the same secret, for `payment.captured`, `payment.failed`, `order.paid`, `refund.processed` and `refund.failed`. Without a webhook, the browser callback and the 5-minute reconciler still confirm orders.
 
 ## Commands
 

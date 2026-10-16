@@ -85,7 +85,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 
 | Table | Key columns / notes |
 |---|---|
-| `orders` | `order_number` (unique, from a sequence: `DUIS-100001`), `user_id`, `status`, `payment_status`, `fulfillment_status`, `payment_mode` (`prepaid`, `partial_cod`), `currency` (always `INR`, ADR-018), `destination_country`, `is_export` (true when shipping outside India), `subtotal_paise`, `discount_paise`, `shipping_fee_paise`, `cod_fee_paise`, `tax_total_paise`, `total_paise`, `wallet_applied_paise`, `online_amount_paise`, `cod_due_paise`, `cod_collected_at`, `coupon_code`, `shipping_address jsonb` (snapshot), `customer_email`, `customer_phone`, `place_idempotency_key` (unique), `placed_at`, `confirmed_at`, `cancelled_at`, `cancel_reason`, `reservation_expires_at`, `quote jsonb` (full pricing snapshot). Indexes: (`user_id`, `placed_at desc`), (`status`, `placed_at`). |
+| `orders` | `order_number` (unique, from a sequence: `DUIS-100001`), `user_id`, `status`, `payment_status`, `fulfillment_status`, `payment_mode` (`prepaid`, `partial_cod`), `currency` (always `INR`, ADR-018), `destination_country`, `is_export` (true when shipping outside India), `subtotal_paise`, `discount_paise`, `shipping_fee_paise`, `cod_fee_paise`, `tax_total_paise`, `total_paise`, `wallet_applied_paise`, `online_amount_paise`, `cod_due_paise`, `cod_collected_at`, `coupon_code`, `shipping_address jsonb` (snapshot), `customer_email`, `customer_phone`, `place_idempotency_key` (unique), `placed_at`, `confirmed_at`, `cancelled_at`, `cancel_reason`, `reservation_expires_at`, `expired_at`, `quote jsonb` (full pricing snapshot) and `quote_hash`, plus `fee_tax_rate_bp` / `fee_taxable_paise` / `fee_cgst_paise` / `fee_sgst_paise` / `fee_igst_paise` (GST on shipping and COD fees). CHECKs: total = subtotal − discount + shipping + COD fee; wallet + online + COD due = total; COD due only on partial COD; exports are prepaid. Indexes: (`user_id`, `placed_at desc`), (`status`, `placed_at`). |
 | `order_items` | `order_id`, `variant_id` (FK, `on delete set null`), `product_id`, `sku`, `title`, `variant_label`, `image_url`, `hsn_code`, `unit_price_paise`, `unit_mrp_paise`, `quantity`, `discount_paise`, `line_total_paise`, `tax_rate_bp`, `taxable_value_paise`, `cgst_paise`, `sgst_paise`, `igst_paise`, `exchanged_quantity` |
 | `order_discounts` | `order_id`, `discount_id`, `coupon_id`, `amount_paise`, `allocation jsonb` (amount per line) |
 | `order_status_history` *(append-only)* | `order_id`, `field` (`status`, `payment_status`, `fulfillment_status`), `from`, `to`, `actor_user_id` / `system`, `reason`, `created_at` |
@@ -93,7 +93,9 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | `refunds` | `payment_id`, `order_id`, `amount_paise`, `reason`, `status` (`pending`, `processed`, `failed`), `provider_refund_id` (unique), `idempotency_key` (unique), `initiated_by`. Total refunded per payment ≤ captured amount, enforced in the service under a lock. |
 | `cod_remittances` | `order_id`, `shipment_id`, `amount_paise`, `remitted_at`, `utr`, `source` (`api`, `csv`), `batch_ref` |
 | `wallet_accounts` | `user_id` (PK), `balance_paise` (CHECK ≥ 0), `updated_at` |
-| `wallet_ledger` *(append-only)* | `user_id`, `amount_paise` (signed), `reason` (`order_payment`, `order_reversal`, `cancellation_refund`, `exchange_credit`, `goodwill`, `rto_advance_credit`, `expiry`), `reference_type`/`reference_id`, `idempotency_key` (unique), `expires_at`, `created_by`, `note` |
+| `wallet_ledger` *(append-only)* | `user_id`, `amount_paise` (signed), `reason` (`order_payment`, `order_reversal`, `cancellation_refund`, `exchange_credit`, `goodwill`, `rto_advance_credit`, `expiry`, `adjustment`), `reference_type`/`reference_id`, `idempotency_key` (unique; a debit's single reversal is `<key>:reversal`), `expires_at` (promotional credit only), `created_by`, `note` |
+| `wallet_credit_lots` | One per credit: `amount_paise`, `remaining_paise` (CHECK 0..amount), `expires_at`. Debits spend the soonest-expiring lot first (ADR-021). |
+| `wallet_lot_usages` | (`debit_ledger_id`, `lot_id`) PK, `amount_paise`: which lots a debit used, so a reversal returns money to the same lots. |
 
 ## 8. Shipping and exchanges
 
@@ -145,7 +147,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 
 | Table | Key columns / notes |
 |---|---|
-| `store_settings` | Singleton, versioned: `free_shipping_threshold_paise`, `flat_shipping_fee_paise`, `partial_cod_enabled`, `cod_advance_type` / `cod_advance_value`, `cod_max_order_paise`, `cod_fee_paise`, `exchange_window_days`, `max_exchanges_per_item`, `reservation_ttl_minutes`, `gstin`, `legal_name`, `registered_state_code`, `rto_advance_policy`, `iec_code` and `lut_reference` (exports, ADR-018), `blocked_country_codes` |
+| `store_settings` | Singleton (`id = 1`, CHECK): `free_shipping_threshold_paise`, `partial_cod_enabled`, `cod_advance_type` / `cod_advance_value`, `cod_max_order_paise`, `cod_fee_paise`, `exchange_window_days`, `max_exchanges_per_item`, `reservation_ttl_minutes` (5–60), `promo_credit_validity_days` (30), `gstin`, `legal_name`, `registered_state_code` (`IN-UP`), `rto_advance_policy`, `iec_code` and `lut_reference` (exports, ADR-018), `international_country_codes` (an allow-list rather than a blocklist). No flat fee: below the threshold the live courier rate applies. |
 | `tax_rules` | `hsn_prefix`, `price_threshold_paise`, `rate_below_bp`, `rate_above_bp`, `effective_from`, `effective_to` |
 
 ## 12. Operations

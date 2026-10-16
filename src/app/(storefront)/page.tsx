@@ -29,25 +29,36 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
+/**
+ * The first section (usually the hero, the LCP element) streams in its own
+ * boundary: its reveal does not wait for the browser to parse every product
+ * rail below it. Both halves share one cached read.
+ */
 export default function HomePage() {
   return (
-    <Suspense fallback={<PageSkeleton variant="home" />}>
-      <Home />
-    </Suspense>
+    <>
+      <Suspense fallback={<PageSkeleton variant="home" />}>
+        <HomeSections part="first" />
+      </Suspense>
+      {/* A screen-tall placeholder keeps the footer out of view meanwhile. */}
+      <Suspense fallback={<div aria-hidden className="min-h-dvh" />}>
+        <HomeSections part="rest" />
+      </Suspense>
+    </>
   )
 }
 
-async function Home() {
+async function HomeSections({ part }: { part: "first" | "rest" }) {
   await connection()
-  const page = await getResolvedPage("home")
-  const blocks = page?.blocks ?? []
+  const blocks = (await getResolvedPage("home"))?.blocks ?? []
+  if (part === "rest") return <Blocks blocks={blocks.slice(1)} startIndex={1} />
   const first = blocks[0]
   const heroHasHeading =
     first?.type === "hero_banner" && Boolean(first.slides[0]?.heading)
   return (
     <>
       {!heroHasHeading && <h1 className="sr-only">{SITE.defaultTitle}</h1>}
-      <Blocks blocks={blocks} />
+      <Blocks blocks={blocks.slice(0, 1)} />
     </>
   )
 }

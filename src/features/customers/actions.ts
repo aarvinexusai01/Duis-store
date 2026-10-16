@@ -41,8 +41,16 @@ export async function setDeletionRequestAction(requested: boolean) {
   return run(async () => setDeletionRequest(await getActor(), { requested }))
 }
 
-export async function saveAddressAction(input: AddressInput) {
-  return run(async () => saveAddress(await getActor(), input))
+export async function saveAddressAction(
+  input: AddressInput,
+): Promise<{ ok: true; id: string } | ({ ok: false } & ActionError)> {
+  try {
+    const { id } = await saveAddress(await getActor(), input)
+    refresh()
+    return { ok: true, id }
+  } catch (error) {
+    return { ok: false, ...toActionError(error) }
+  }
 }
 
 export async function deleteAddressAction(id: string) {

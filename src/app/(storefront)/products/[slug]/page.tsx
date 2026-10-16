@@ -24,6 +24,7 @@ import {
 } from "@/features/catalog/queries"
 import { getAvailability } from "@/features/inventory"
 import { WishlistButton } from "@/features/wishlist/ui/wishlist-button"
+import { countryName } from "@/lib/countries"
 import { formatPaise } from "@/lib/money"
 import { SLUG } from "@/lib/slug"
 import type { Stock } from "@/lib/variant-selection"
@@ -165,8 +166,6 @@ function categoryTrail(tree: CatalogTree, categoryId: string | null) {
   ]
 }
 
-const regionNames = new Intl.DisplayNames(["en"], { type: "region" })
-
 function ProductDetails({ product }: { product: ProductDetail }) {
   const specs = [
     ...product.descriptiveValues.map((value) => ({
@@ -218,10 +217,7 @@ function ProductDetails({ product }: { product: ProductDetail }) {
           {/* Declarations required by the Legal Metrology (Packaged Commodities) Rules. */}
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 pb-4">
             <dt className="text-muted-foreground">Country of origin</dt>
-            <dd>
-              {regionNames.of(product.countryOfOrigin) ??
-                product.countryOfOrigin}
-            </dd>
+            <dd>{countryName(product.countryOfOrigin)}</dd>
             <dt className="text-muted-foreground">Manufacturer</dt>
             <dd className="whitespace-pre-line">
               {product.manufacturerDetails}

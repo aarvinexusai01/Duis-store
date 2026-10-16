@@ -1,5 +1,5 @@
 import "server-only"
-import { and, eq, inArray, lt, sql } from "drizzle-orm"
+import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm"
 
 import {
   inventoryLevels,
@@ -397,8 +397,64 @@ export async function releaseReservations(
 }
 
 /**
+ * Puts committed stock back on the shelf (an order cancelled before
+ * dispatch). Each reservation is restocked once: its status moves to
+ * `released`, and the movement row records why.
+ */
+export async function restockCommitted(
+  tx: Transaction,
+  orderId: string,
+  reason: "cancel_restock" | "rto_restock",
+): Promise<number> {
+  const restocked = await tx
+    .update(inventoryReservations)
+    .set({ status: "released" })
+    .where(
+      and(
+        eq(inventoryReservations.orderId, orderId),
+        eq(inventoryReservations.status, "committed"),
+      ),
+    )
+    .returning({
+      variantId: inventoryReservations.variantId,
+      locationId: inventoryReservations.locationId,
+      quantity: inventoryReservations.quantity,
+    })
+  for (const row of restocked.sort((a, b) =>
+    a.variantId.localeCompare(b.variantId),
+  )) {
+    await tx
+      .update(inventoryLevels)
+      .set({ onHand: sql`${inventoryLevels.onHand} + ${row.quantity}` })
+      .where(
+        and(
+          eq(inventoryLevels.variantId, row.variantId),
+          eq(inventoryLevels.locationId, row.locationId),
+        ),
+      )
+    await tx.insert(inventoryMovements).values({
+      variantId: row.variantId,
+      locationId: row.locationId,
+      deltaOnHand: row.quantity,
+      reason,
+      referenceType: "order",
+      referenceId: orderId,
+    })
+  }
+  if (restocked.length > 0) {
+    await stockChanged(
+      tx,
+      restocked.map((row) => row.variantId),
+    )
+  }
+  return restocked.length
+}
+
+/**
  * inventory.expire-reservations job: releases reservations whose time ran out.
- * SKIP LOCKED lets several workers run it without double-processing.
+ * Order reservations are left to orders.expire-pending, which asks the
+ * payment gateway first so a paid order is never expired. SKIP LOCKED lets
+ * several workers run it without double-processing.
  */
 export async function expireReservations(batchSize = 200): Promise<number> {
   return withTransaction(async (tx) => {
@@ -409,6 +465,7 @@ export async function expireReservations(batchSize = 200): Promise<number> {
         and(
           eq(inventoryReservations.status, "active"),
           lt(inventoryReservations.expiresAt, new Date()),
+          isNull(inventoryReservations.orderId),
         ),
       )
       .limit(batchSize)

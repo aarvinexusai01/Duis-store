@@ -31,6 +31,7 @@ import { paragraphs } from "@/lib/rich-text"
 import { systemActor } from "@/server/auth/actor"
 import { getAuth } from "@/server/auth/auth"
 import { STAFF_ROLES } from "@/server/auth/roles"
+import { createDiscount } from "@/features/discounts"
 import { suppressRevalidation } from "@/server/cache/revalidate"
 import { closeDb, getDb } from "@/server/db/client"
 import { createBoss } from "@/server/jobs/boss"
@@ -567,6 +568,37 @@ async function main() {
         },
       }),
     )
+  })
+
+  await step("promotions", async () => {
+    await createDiscount(actor, {
+      name: "Welcome 10% off",
+      kind: "coupon",
+      code: "WELCOME10",
+      valueType: "percentage",
+      value: 1_000,
+      maxDiscountPaise: 30_000,
+      eligibility: { firstOrderOnly: true },
+      usageLimitPerCustomer: 1,
+    })
+    await createDiscount(actor, {
+      name: "₹150 off orders of ₹1,499+",
+      kind: "coupon",
+      code: "FLAT150",
+      valueType: "fixed",
+      value: 15_000,
+      minOrderPaise: 149_900,
+    })
+    const summer = collectionIds["summer-essentials"]
+    if (summer) {
+      await createDiscount(actor, {
+        name: "Summer edit 15% off",
+        kind: "automatic",
+        valueType: "percentage",
+        value: 1_500,
+        targets: [{ type: "collection", id: summer }],
+      })
+    }
   })
 
   const accounts = await step("staff and customer accounts", async () => {

@@ -55,6 +55,15 @@ export const serverEnvSchema = z
     // Courier serviceability and rates. "fake" answers from fixed rules for
     // development; Shiprocket arrives in Phase 3 (doc/03 §6).
     SHIPPING_PROVIDER: z.enum(["fake"]).default("fake"),
+    // "fake" simulates payments for development and tests; "razorpay" uses
+    // the keys below (test keys until launch). Never committed.
+    PAYMENT_PROVIDER: z.enum(["fake", "razorpay"]).default("fake"),
+    RAZORPAY_KEY_ID: z
+      .string()
+      .regex(/^rzp_(test|live)_\w+$/)
+      .optional(),
+    RAZORPAY_KEY_SECRET: z.string().min(10).optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().min(10).optional(),
 
     MEDIA_ROOT: z.string().min(1).default("./storage/media"),
     MEDIA_MAX_UPLOAD_BYTES: z.coerce
@@ -76,7 +85,29 @@ export const serverEnvSchema = z
           "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together",
       })
     }
+    if (
+      env.PAYMENT_PROVIDER === "razorpay" &&
+      !(
+        env.RAZORPAY_KEY_ID &&
+        env.RAZORPAY_KEY_SECRET &&
+        env.RAZORPAY_WEBHOOK_SECRET
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["PAYMENT_PROVIDER"],
+        message:
+          "PAYMENT_PROVIDER=razorpay needs RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET",
+      })
+    }
     if (env.APP_ENV === "production") {
+      if (env.PAYMENT_PROVIDER !== "razorpay") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["PAYMENT_PROVIDER"],
+          message: "PAYMENT_PROVIDER must be razorpay in production",
+        })
+      }
       if (!env.APP_URL.startsWith("https://")) {
         ctx.addIssue({
           code: "custom",

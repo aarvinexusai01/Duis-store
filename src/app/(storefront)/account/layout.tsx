@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 
-import { AccountNav } from "./account-nav"
+import { AccountNav, AccountNavLinks } from "./account-nav"
 
 export const metadata: Metadata = {
   title: { template: "%s | My account | Duis", default: "My account" },
@@ -15,8 +16,11 @@ export default function AccountLayout({ children }: LayoutProps<"/account">) {
   return (
     <div className="page-container py-8">
       <h1 className="mb-6 display-heading text-5xl sm:text-6xl">My account</h1>
-      <div className="grid gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
-        <AccountNav />
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
+        {/* The active tab reads the URL, which is request data on dynamic routes. */}
+        <Suspense fallback={<AccountNavLinks active={null} />}>
+          <AccountNav />
+        </Suspense>
         <div>{children}</div>
       </div>
     </div>

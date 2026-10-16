@@ -41,9 +41,11 @@ A production-ready, self-hosted e-commerce platform for **Duis**, a single-merch
 
 | # | Topic | Decision | What it means for the build |
 |---|---|---|---|
-| 21 | Policy values | Answered in [10 §1](10-open-questions.md#1-policy-questions-needed-before-the-phase-shown) | Stored as admin settings: partial-COD advance ₹100 and cap ₹2,500, COD fee ₹5, advance kept on RTO, reservation hold 15 minutes, exchange window 10 days (innerwear excluded), up to 2 exchanges per item, free reverse pickup, no wallet expiry. |
+| 21 | Policy values | Answered in [10 §1](10-open-questions.md#1-policy-questions-needed-before-the-phase-shown) | Stored as admin settings: partial-COD advance ₹100 and cap ₹2,500, COD fee ₹5, advance kept on RTO, reservation hold 15 minutes, exchange window 10 days (innerwear excluded), up to 2 exchanges per item, free reverse pickup. Wallet: promotional credit expires after 30 days, refunds never expire (changed 2026-10-15). |
 | 22 | Currency and markets | **INR everywhere; worldwide shipping at launch** | One INR price list. International customers pay by international card through Razorpay. International orders are prepaid only. Addresses, shipping and tax become country-aware from Phase 1 ([ADR-018](adr/0018-worldwide-shipping-inr-only.md)). |
 | 23 | Staff roles | **Seven roles** | The five from the spec plus **Fulfilment staff** (packing and shipping, no revenue visibility) and **Support agent** (orders and exchanges). |
+| 24 | GST registration (2026-10-15) | **Uttar Pradesh (Lucknow), `IN-UP`** | Registered and warehouse state for CGST+SGST (deliveries within UP) versus IGST (other states). Apparel GST 5% up to ₹2,500 per piece and 18% above; prices include GST. The CA still confirms the slab rules (doc/10 A14). |
+| 25 | Phase 3 integrations (2026-10-15) | **Razorpay test keys available; courier APIs not yet** | Checkout uses real Razorpay test mode (keys in `.env`, never committed). Courier rates come from the fake provider until Shiprocket and Shiprocket X accounts exist (Phase 4); the fake is refused in production. |
 
 ## 3. Requirements that follow from these decisions
 

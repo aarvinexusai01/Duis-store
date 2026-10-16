@@ -22,6 +22,20 @@
       "when": 1792054445904,
       "tag": "0002_storefront",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792067150585,
+      "tag": "0003_checkout",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792067158986,
+      "tag": "0004_checkout_policies",
+      "breakpoints": true
     }
   ]
 }

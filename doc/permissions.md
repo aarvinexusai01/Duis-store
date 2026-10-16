@@ -73,4 +73,18 @@ None of these is a staff permission, so the role makes no difference: every role
 
 Ownership is enforced inside each operation (by the actor's user id), and integration tests in `tests/integration/storefront-customer.test.ts` cover it.
 
+## Operations (Phase 3, checkout and orders)
+
+| Operation | Access | Scope |
+|---|---|---|
+| `checkout.quote`, `checkout.placeOrder` | Signed in | Own bag and own saved addresses; amounts always recomputed on the server |
+| `checkout.startPayment`, `checkout.verifyPayment` | Signed in | Own orders; the payment must belong to the order and pass the gateway signature and server-side fetch |
+| `checkout.simulatePayment` | Signed in | Own orders, and refused unless `PAYMENT_PROVIDER=fake` outside production |
+| `orders.listMine`, `orders.getMine`, `orders.cancel` | Signed in | Own orders; cancellation only before dispatch |
+| `wallet.getSummary` | Signed in | Own wallet |
+| `discounts.create` | `discount: create` | Super Admin, Store Admin |
+| `wallet.grantGoodwill` | `customer: credit` | Super Admin, Store Admin (promotional credit that expires) |
+
+Payment settlement, expiry, reconciliation and refunds run as the system (jobs and the verified webhook), never on a customer's behalf.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

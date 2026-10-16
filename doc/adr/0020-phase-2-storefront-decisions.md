@@ -204,6 +204,20 @@ These are deliberately **not** cached:
 
 **Why.** End-to-end tests sign in through the real OTP flow. Production cannot run the fake provider.
 
+### Performance budget
+
+**Decision.**
+- Product cards use a lean `<img>` limited to the 320, 640 and 960 renditions (`components/product/card-image.tsx`) instead of `next/image`.
+- Home-page rails leave out the hover image.
+- The first homepage section streams in its own Suspense boundary.
+- `next/image` widths match the five stored renditions.
+- The announcement bar has a fixed height (with a same-size placeholder), and skeletons are at least one screen tall.
+
+**Why.**
+- Lighthouse showed LCP was mostly render delay: about 32 cards produced roughly 100 KB of HTML plus the same again in the RSC payload, and all of it was parsed before the content was revealed.
+- A short skeleton let the footer paint and then jump away when content arrived (CLS 0.92 on fast loads).
+- After these changes, home, listing and product page score 91–92 on mobile with CLS 0.
+
 ## Consequences
 
 - The first request after a deploy fills each cache entry; the deploy smoke test should warm the home page, a listing and a product page (ADR-016).

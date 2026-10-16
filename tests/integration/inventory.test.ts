@@ -25,6 +25,7 @@ import { withTransaction } from "@/server/db/transaction"
 import { asSystem } from "../helpers/actors"
 import { createProductFixture } from "../helpers/catalog"
 import { closeConnectionsAfterAll } from "../helpers/cleanup"
+import { placeholderOrderId } from "../helpers/orders"
 
 closeConnectionsAfterAll()
 
@@ -67,10 +68,10 @@ describe("stock adjustments", () => {
     const { variants } = await createProductFixture()
     const variantId = variants[0]!.id
     await adjustStock(system, { variantId, delta: 3, reason: "receive" })
-    await withTransaction((tx) =>
+    await withTransaction(async (tx) =>
       reserveStock(
         tx,
-        { orderId: randomUUID() },
+        { orderId: await placeholderOrderId() },
         [{ variantId, quantity: 2 }],
         15,
       ),
@@ -100,10 +101,10 @@ describe("reservations", () => {
     const db = drizzle({ client: pool, schema, casing: "snake_case" })
     const attempts = await Promise.allSettled(
       Array.from({ length: 20 }, () =>
-        db.transaction((tx) =>
+        db.transaction(async (tx) =>
           reserveStock(
             tx,
-            { orderId: randomUUID() },
+            { orderId: await placeholderOrderId() },
             [{ variantId, quantity: 1 }],
             15,
           ),
@@ -138,10 +139,10 @@ describe("reservations", () => {
       reason: "receive",
     })
 
-    const error = await withTransaction((tx) =>
+    const error = await withTransaction(async (tx) =>
       reserveStock(
         tx,
-        { orderId: randomUUID() },
+        { orderId: await placeholderOrderId() },
         [
           { variantId: plenty, quantity: 2 },
           { variantId: scarce, quantity: 2 },
@@ -160,7 +161,7 @@ describe("reservations", () => {
     const { variants } = await createProductFixture()
     const variantId = variants[0]!.id
     await adjustStock(system, { variantId, delta: 4, reason: "receive" })
-    const orderId = randomUUID()
+    const orderId = await placeholderOrderId()
 
     const [sold] = await withTransaction((tx) =>
       reserveStock(tx, { orderId }, [{ variantId, quantity: 3 }], 15),
@@ -174,10 +175,10 @@ describe("reservations", () => {
     ).toBe(0)
     expect(await level(variantId)).toEqual({ onHand: 1, reserved: 0 })
 
-    const [held] = await withTransaction((tx) =>
+    const [held] = await withTransaction(async (tx) =>
       reserveStock(
         tx,
-        { orderId: randomUUID() },
+        { orderId: await placeholderOrderId() },
         [{ variantId, quantity: 1 }],
         15,
       ),
@@ -191,26 +192,40 @@ describe("reservations", () => {
     expect(await level(variantId)).toEqual({ onHand: 1, reserved: 0 })
   })
 
-  it("expires reservations whose time ran out", async () => {
+  it("expires reservations whose time ran out, except those held by orders", async () => {
     const { variants } = await createProductFixture()
     const variantId = variants[0]!.id
-    await adjustStock(system, { variantId, delta: 2, reason: "receive" })
-    const [reservationId] = await withTransaction((tx) =>
+    await adjustStock(system, { variantId, delta: 3, reason: "receive" })
+    // Exchanges (Phase 5) hold stock without an order.
+    const [exchangeHold] = await withTransaction((tx) =>
       reserveStock(
         tx,
-        { orderId: randomUUID() },
+        { exchangeId: randomUUID() },
         [{ variantId, quantity: 2 }],
+        -1,
+      ),
+    )
+    // Order holds are left to orders.expire-pending, which asks the gateway first.
+    const [orderHold] = await withTransaction(async (tx) =>
+      reserveStock(
+        tx,
+        { orderId: await placeholderOrderId() },
+        [{ variantId, quantity: 1 }],
         -1,
       ),
     )
 
     expect(await expireReservations()).toBeGreaterThanOrEqual(1)
-    const [row] = await getDb()
-      .select({ status: inventoryReservations.status })
-      .from(inventoryReservations)
-      .where(and(eq(inventoryReservations.id, reservationId!)))
-    expect(row!.status).toBe("expired")
-    expect(await level(variantId)).toEqual({ onHand: 2, reserved: 0 })
+    const status = async (id: string) =>
+      (
+        await getDb()
+          .select({ status: inventoryReservations.status })
+          .from(inventoryReservations)
+          .where(and(eq(inventoryReservations.id, id)))
+      )[0]!.status
+    expect(await status(exchangeHold!)).toBe("expired")
+    expect(await status(orderHold!)).toBe("active")
+    expect(await level(variantId)).toEqual({ onHand: 3, reserved: 1 })
 
     const availability = await getAvailability(system, {
       variantIds: [variantId],

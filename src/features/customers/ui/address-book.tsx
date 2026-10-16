@@ -5,16 +5,15 @@ import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { COUNTRY_CODES } from "@/lib/countries"
+import { COUNTRY_CODES, countryName } from "@/lib/countries"
 import { INDIAN_STATES, suggestStateForPincode } from "@/lib/india"
 
 import { deleteAddressAction, saveAddressAction } from "../actions"
 import type { Address } from "../service"
 
-const regionNames = new Intl.DisplayNames(["en"], { type: "region" })
 const countries = COUNTRY_CODES.map((code) => ({
   code,
-  name: regionNames.of(code) ?? code,
+  name: countryName(code),
 })).sort((a, b) =>
   a.code === "IN" ? -1 : b.code === "IN" ? 1 : a.name.localeCompare(b.name),
 )
@@ -81,7 +80,7 @@ export function AddressBook({ addresses }: { addresses: Address[] }) {
                 : address.region}{" "}
               {address.postalCode}
               <br />
-              {regionNames.of(address.countryCode)} · {address.phone}
+              {countryName(address.countryCode)} · {address.phone}
             </p>
             <div className="mt-auto flex gap-3 pt-2">
               <button
@@ -142,13 +141,14 @@ function toInput(address: Address) {
   }
 }
 
-function AddressForm({
+export function AddressForm({
   address,
   onDone,
   canCancel,
 }: {
   address: Address | null
-  onDone: () => void
+  /** Called with the saved address id, or without one on cancel. */
+  onDone: (savedId?: string) => void
   canCancel: boolean
 }) {
   const [country, setCountry] = useState(address?.countryCode ?? "IN")
@@ -180,7 +180,7 @@ function AddressForm({
       })
       if (result.ok) {
         toast.success("Address saved")
-        onDone()
+        onDone(result.id)
       } else {
         setErrors(result.fieldErrors ?? {})
         setMessage(result.message)
@@ -356,7 +356,7 @@ function AddressForm({
             type="button"
             variant="ghost"
             className="h-11 rounded-none"
-            onClick={onDone}
+            onClick={() => onDone()}
           >
             Cancel
           </Button>

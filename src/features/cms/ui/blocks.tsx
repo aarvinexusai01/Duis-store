@@ -21,9 +21,16 @@ import { BannerImage } from "./hero-image"
 type Of<T extends ResolvedBlock["type"]> = Extract<ResolvedBlock, { type: T }>
 
 /** Storefront renderer for every block type (doc/04 §4). */
-export function Blocks({ blocks }: { blocks: ResolvedBlock[] }) {
+export function Blocks({
+  blocks,
+  startIndex = 0,
+}: {
+  blocks: ResolvedBlock[]
+  /** Position of `blocks[0]` on the page; only the page's first block preloads. */
+  startIndex?: number
+}) {
   return blocks.map((block, index) => (
-    <BlockView key={block.id} block={block} first={index === 0} />
+    <BlockView key={block.id} block={block} first={startIndex + index === 0} />
   ))
 }
 

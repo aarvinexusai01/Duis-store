@@ -154,6 +154,17 @@ Tasks:
 
 **Goal:** the premium, bold-streetwear shopping experience on real data. This is the highest-priority surface.
 
+> **Status: complete (2026-10-15).** Every exit criterion was verified ([ADR-020](adr/0020-phase-2-storefront-decisions.md) records the decisions):
+> - **Playwright:** browse → filter → product page variant switch (price and live stock checked against the database) → add to bag → phone-OTP sign-in (fake provider) → the bag is merged, on desktop and mobile. 22 end-to-end tests pass.
+> - **axe:** no serious or critical violations on the home, listing and product pages.
+> - **Lighthouse mobile (median of 3 runs, default simulated throttling, local production build):** home 91, listing 91, product page 92. CLS is 0 on all three.
+> - **Integration:** 411 tests, including cart (guest token, stock and per-line limits, merge and adoption), wishlist, country-aware addresses, consent, newsletter double opt-in and serviceability. 58 unit tests.
+>
+> **Moved to later phases:**
+> - Turnstile on the sign-in forms (Phase 7, Better Auth captcha plugin).
+> - Adding or changing an email on a phone-only account (Phase 5).
+> - Blog routes in the sitemap (with the blog, Phase 6).
+
 Tasks:
 1. **Design system:**
    - Tokens (colour, type scale, spacing, radii) in `globals.css`
@@ -211,6 +222,25 @@ Tasks:
 ## Phase 3: Checkout, payments & orders
 
 **Goal:** money and stock correctness, end to end, in Razorpay **test mode**.
+
+> **Status: built and verified on 2026-10-15, except one manual check** ([ADR-021](adr/0021-phase-3-checkout-decisions.md)):
+> - **Integration (16 checkout tests, 504 in total):**
+>   - the last-unit race (4 buyers, 1 unit) and the coupon limit under concurrency;
+>   - duplicate and out-of-order webhooks are no-ops;
+>   - failed payment → retry → success;
+>   - expiry releases stock, wallet and coupon;
+>   - payment captured during expiry is confirmed; payment after the stock sold out is refunded;
+>   - partial-COD advance and cash due;
+>   - a stale or tampered quote is refused;
+>   - cancellation refunds online money to source and wallet money to the wallet, once;
+>   - promotional wallet credit expires and refunds don't;
+>   - international orders are prepaid, zero-rated and limited to the approved countries.
+> - **End-to-end (desktop and mobile):** sign in → bag → address → simulated payment → confirmed → cancel.
+> - **Still to do (owner):** the manual payment with real Razorpay **test keys** (see the README, "Payments").
+>
+> **Moved:**
+> - Live Shiprocket and Shiprocket X rates move to Phase 4 with the courier accounts. Fake rates are used until then, refused in production.
+> - Staff screens for discounts, refunds and goodwill credit come with the admin portal (Phase 4).
 
 Tasks:
 1. **Pricing engine** (pure, heavily unit-tested): automatic discounts, coupon validation, pro-rata allocation, shipping fee rule, COD fee, GST lines from `tax_rules`, wallet, payment plan, `quoteHash`.

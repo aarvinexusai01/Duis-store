@@ -4,18 +4,26 @@ import { fromDrizzle, type PgBoss } from "pg-boss"
 
 import type { Transaction } from "@/server/db/transaction"
 
+import { logger } from "@/server/observability/logger"
+
 import { createBoss } from "./boss"
-import type { JobPayloads, QueueName } from "./queues"
+import { ensureQueues, type JobPayloads, type QueueName } from "./queues"
 
 const globalForJobs = globalThis as typeof globalThis & {
   __duisSender?: Promise<PgBoss>
 }
 
-/** One send-only pg-boss instance per process (web, worker, scripts). */
+/**
+ * One send-only pg-boss instance per process (web, worker, scripts). It
+ * creates any missing queue first (idempotent): after a deploy the web
+ * replicas may send before the new worker has started, and pg-boss refuses
+ * to send to a queue that doesn't exist.
+ */
 function getSender(): Promise<PgBoss> {
   globalForJobs.__duisSender ??= (async () => {
     const boss = createBoss("web")
     await boss.start()
+    await ensureQueues(boss, (message) => logger.warn(message))
     return boss
   })().catch((err: unknown) => {
     globalForJobs.__duisSender = undefined

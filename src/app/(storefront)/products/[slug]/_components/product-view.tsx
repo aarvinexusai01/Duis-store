@@ -87,7 +87,7 @@ export function ProductView({
   const images = forColour.length > 0 ? forColour : product.media
 
   return (
-    <div className="grid gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">
       <Gallery images={images} title={product.title} />
       <div className="md:sticky md:top-24 md:self-start">
         <h1 className="display-heading text-4xl sm:text-5xl">

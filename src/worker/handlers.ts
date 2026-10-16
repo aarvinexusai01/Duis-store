@@ -2,6 +2,13 @@ import type { Job, PgBoss } from "pg-boss"
 
 import { refreshAutomaticCollections } from "@/features/collections"
 import { expireReservations } from "@/features/inventory"
+import {
+  expirePendingOrders,
+  processWebhookEvent,
+  reconcilePendingPayments,
+} from "@/features/orders"
+import { processRefund } from "@/features/payments"
+import { expireWalletCredits } from "@/features/wallet"
 import { fanOutRevalidation } from "@/server/cache/revalidate"
 import { QUEUES, type JobPayloads, type QueueName } from "@/server/jobs/queues"
 import { deliverEmail, markEmailFailed } from "@/server/notifications/delivery"
@@ -41,12 +48,35 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
     if (expired > 0)
       logger.info({ expired }, "expired stock reservations released")
   },
+  "orders.expire-pending": async () => {
+    const result = await expirePendingOrders()
+    if (result.expired + result.confirmed > 0)
+      logger.info(result, "unpaid orders processed")
+  },
+  "payments.process-webhook": async (job) => {
+    await processWebhookEvent(job.data.webhookEventId)
+  },
+  "payments.reconcile": async () => {
+    const settled = await reconcilePendingPayments()
+    if (settled > 0) logger.info({ settled }, "payments reconciled")
+  },
+  "payments.refund": async (job) => {
+    await processRefund(job.data.refundId)
+  },
+  "wallet.expire-credits": async () => {
+    const expired = await expireWalletCredits()
+    if (expired > 0)
+      logger.info({ expired }, "promotional wallet credit expired")
+  },
 }
 
 /** Recurring jobs, in IST. */
 const SCHEDULES: { queue: QueueName; cron: string }[] = [
   { queue: QUEUES.systemHeartbeat, cron: "* * * * *" },
   { queue: QUEUES.expireReservations, cron: "* * * * *" },
+  { queue: QUEUES.expirePendingOrders, cron: "* * * * *" },
+  { queue: QUEUES.reconcilePayments, cron: "*/5 * * * *" },
+  { queue: QUEUES.expireWalletCredits, cron: "15 3 * * *" },
   { queue: QUEUES.refreshAutoCollections, cron: "30 2 * * *" },
 ]
 

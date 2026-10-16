@@ -9,20 +9,20 @@ The 20 major decisions are settled (see [01](01-requirements-and-decisions.md#2-
 | P1 | **Partial-COD advance:** fixed amount or % of the order? Which value? | Phase 3 | Fixed ₹100 |
 | P2 | Maximum order value allowed for partial COD | Phase 3 | ₹2,500 |
 | P3 | COD handling fee on top of the advance? | Phase 3 | ₹5 COD fee (confirmed 2026-10-13) |
-| P4 | **If a partial-COD parcel is refused or returned to origin:** refund the advance, credit it to the wallet, or keep it to cover shipping? | Phase 3 | Keep it (covers two-way shipping), with this stated clearly at checkout and in the policy |
+| P4 | **If a partial-COD parcel is refused or returned to origin:** refund the advance, credit it to the wallet, or keep it to cover shipping? | Phase 3 | Keep it (covers two-way shipping), with this stated clearly at checkout and in the policy (confirmed 2026-10-15) |
 | P5 | Free-shipping threshold and flat fee below it | Phase 3 | Free at or above ₹999; below that, the live Shiprocket rate for the PIN code and parcel weight (confirmed 2026-10-13) |
-| P6 | Reservation hold time during payment | Phase 3 | 15 minutes |
+| P6 | Reservation hold time during payment | Phase 3 | 15 minutes (confirmed 2026-10-15) |
 | P7 | **Exchange window** after delivery, and categories excluded (for example innerwear, sale items) | Phase 5 | 10 days. Innerwear excluded. |
 | P8 | Exchanges allowed per item | Phase 5 | 2 |
 | P9 | **Exchange price difference:** allow a replacement at a different price (pay or credit the difference), or same price only? | Phase 5 | Allow it: pay the difference through Razorpay, or get credit to the wallet |
 | P10 | Reverse pickup for exchanges: free for the customer, or a fee? | Phase 5 | Free |
 | P11 | Damaged or wrong items: refund to the original method, wallet credit, or replacement only? COD-paid amounts can't go back to a card, so wallet or bank? | Phase 4 | Replacement first. Otherwise refund the online part to source and credit the COD part to the wallet. |
-| P12 | Does wallet credit expire? Any cap on wallet use per order? | Phase 3 | No expiry. No cap. |
-| P13 | Can a coupon combine with automatic sale discounts by default? | Phase 3 | No (set per discount) |
+| P12 | Does wallet credit expire? Any cap on wallet use per order? | Phase 3 | **Changed 2026-10-15:** promotional (goodwill) credit expires 30 days after it is given; refunds and returned money never expire. No cap on wallet use. |
+| P13 | Can a coupon combine with automatic sale discounts by default? | Phase 3 | No (set per discount) (confirmed 2026-10-15) |
 | P14 | Review publishing: moderate first (assumed), or auto-publish 4–5★ text-only reviews? | Phase 5 | Moderate everything |
 | P15 | Abandoned-cart timing and channel: email only, or WhatsApp too (needs marketing opt-in and costs per message)? | Phase 5 | Email at 1 hour and 24 hours |
 | P16 | Back-in-stock channel: email only, or WhatsApp too? | Phase 5 | Email; WhatsApp if opted in |
-| P17 | Order-number format | Phase 3 | `DUIS-100001` |
+| P17 | Order-number format | Phase 3 | `DUIS-100001` (confirmed 2026-10-15) |
 | P18 | Sizes per category (alpha S–3XL for tops, waist 28–40 for bottoms) and extra filter attributes (fit, sleeve, neck, pattern, material) | Phase 1 | As listed |
 | P19 | Do you need roles beyond the five in the spec, for example **Fulfilment staff** (packing and shipping only, no revenue visibility) or **Support agent** (orders and exchanges only)? | Phase 1 | Add both. Cheap now, awkward to add later. |
 | P20 | Backup targets: is RPO ≤ 5 minutes and RTO ≤ 2 hours acceptable? | Phase 7 | Yes |
@@ -35,11 +35,11 @@ Worldwide shipping at launch, priced in INR, was confirmed on 2026-10-13. These 
 | # | Question | Needed by | Proposed default |
 |---|---|---|---|
 | I1 | Which international courier: Shiprocket X (same panel as domestic), DHL Express, FedEx or Aramex? | Phase 3 (rates), Phase 4 (shipments) | Shiprocket X: one vendor, one dashboard, API similar to domestic |
-| I2 | **Duties and import taxes:** the customer pays on delivery (DDU), or we collect them at checkout and ship DDP? | Phase 3 | DDU, clearly stated before payment |
-| I3 | Countries served: every country the courier serves, or an approved list? | Phase 3 | An approved list (for example US, UK, UAE, Canada, Australia, Singapore, EU) |
-| I4 | International shipping fee: always the live courier rate, or a free-shipping threshold abroad too? | Phase 3 | Always the live rate |
+| I2 | **Duties and import taxes:** the customer pays on delivery (DDU), or we collect them at checkout and ship DDP? | Phase 3 | DDU, clearly stated before payment (confirmed 2026-10-15) |
+| I3 | Countries served: every country the courier serves, or an approved list? | Phase 3 | An approved list: US, UK, UAE, Canada, Australia, Singapore and the EU countries (confirmed 2026-10-15) |
+| I4 | International shipping fee: always the live courier rate, or a free-shipping threshold abroad too? | Phase 3 | Always the live rate (confirmed 2026-10-15) |
 | I5 | Exchanges for international orders: allowed (expensive reverse shipping), or damaged/wrong items only? | Phase 5 | Damaged or wrong items only, handled by admins |
-| I6 | Export tax route: ship under an **LUT** (zero-rated, no IGST paid) or pay IGST and claim a refund? Your CA decides. | Phase 3 | LUT |
+| I6 | Export tax route: ship under an **LUT** (zero-rated, no IGST paid) or pay IGST and claim a refund? Your CA decides. | Phase 3 | LUT (confirmed 2026-10-15); the CA still confirms |
 
 ## 2. Assumptions to confirm
 

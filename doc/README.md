@@ -2,7 +2,7 @@
 
 Planning documents for **Duis**, a self-hosted men's fashion e-commerce platform selling across India and worldwide (prices in INR; Razorpay, Shiprocket), designed to add women's fashion and other departments later.
 
-**Status:** Phase 2 (storefront) complete on 2026-10-15. Next is Phase 3: checkout, payments and orders.
+**Status:** Phase 3 (checkout, payments, orders) built on 2026-10-15; the manual Razorpay test-key payment is still to do. Next is Phase 4, the admin portal.
 **Plan date:** 2026-10-13. Library versions were checked against the npm registry on that date.
 **Repository:** `github.com/aarvinexusai01/Duis-store` (branch `main`; CI on GitHub Actions)
 

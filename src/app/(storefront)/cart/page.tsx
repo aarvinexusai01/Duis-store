@@ -43,7 +43,7 @@ async function Cart() {
     )
   }
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_24rem]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <section aria-label="Items">
         <CartLines lines={cart.lines} />
       </section>
@@ -57,13 +57,24 @@ async function Cart() {
             Some items need your attention before checkout.
           </p>
         )}
-        {/* Checkout, payments and orders arrive in Phase 3 (doc/06). */}
-        <Button
-          disabled
-          className="mt-6 h-12 w-full rounded-none text-sm font-semibold tracking-wider uppercase"
-        >
-          Checkout — coming soon
-        </Button>
+        {cart.hasIssues ? (
+          <Button
+            disabled
+            className="mt-6 h-12 w-full rounded-none text-sm font-semibold tracking-wider uppercase"
+          >
+            Checkout
+          </Button>
+        ) : (
+          <Link
+            href="/checkout"
+            className={cn(
+              buttonVariants(),
+              "mt-6 h-12 w-full rounded-none text-sm font-semibold tracking-wider uppercase",
+            )}
+          >
+            Checkout
+          </Link>
+        )}
       </aside>
     </div>
   )

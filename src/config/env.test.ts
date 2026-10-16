@@ -73,6 +73,17 @@ describe("parseServerEnv", () => {
     expect(message).toMatch(/https in production/)
     expect(message).toMatch(/SMS_PROVIDER cannot be fake in production/)
     expect(message).toMatch(/SHIPPING_PROVIDER cannot be fake in production/)
+    expect(message).toMatch(/PAYMENT_PROVIDER must be razorpay in production/)
+  })
+
+  it("needs all three Razorpay values when Razorpay is the provider", () => {
+    expect(
+      errorMessage({
+        ...valid,
+        PAYMENT_PROVIDER: "razorpay",
+        RAZORPAY_KEY_ID: "rzp_test_abc123",
+      }),
+    ).toMatch(/needs RAZORPAY_KEY_ID/)
   })
 
   it("never includes secret values in the error message", () => {

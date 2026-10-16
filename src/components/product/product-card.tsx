@@ -2,7 +2,7 @@ import type { Route } from "next"
 import Link from "next/link"
 
 import { Price } from "@/components/brand/price"
-import { MediaImage } from "@/components/media-image"
+import { CardImage } from "@/components/product/card-image"
 import type { ProductCard as ProductCardData } from "@/features/catalog"
 import { WishlistButton } from "@/features/wishlist/ui/wishlist-button"
 import { cn } from "@/lib/utils"
@@ -14,11 +14,14 @@ export function ProductCard({
   preload = false,
   sizes = DEFAULT_SIZES,
   headingLevel = 3,
+  hover = true,
   className,
 }: {
   product: ProductCardData
   /** h2 directly under a page's h1 (listings), h3 under a section heading. */
   headingLevel?: 2 | 3
+  /** Second photo on hover; rails skip it to keep long pages light. */
+  hover?: boolean
   /** Above-the-fold cards (first row of a listing) load eagerly. */
   preload?: boolean
   sizes?: string
@@ -27,31 +30,27 @@ export function ProductCard({
   const href = `/products/${product.slug}` as Route
   const colours = product.colours
   const Title = headingLevel === 2 ? "h2" : "h3"
+  const hoverImage = hover ? product.hoverImage : null
   return (
     <article className={cn("group/card relative", className)}>
       <Link href={href} className="block">
         <div className="relative aspect-[4/5] overflow-hidden bg-secondary">
-          {product.image ? (
-            <MediaImage
+          {product.image && (
+            <CardImage
               media={product.image}
-              // The title below names the product; the image is decorative here.
-              alt=""
-              fill
               sizes={sizes}
               preload={preload}
               className={cn(
-                "object-cover transition-opacity duration-300",
-                product.hoverImage && "group-hover/card:opacity-0",
+                "transition-opacity duration-300",
+                hoverImage && "group-hover/card:opacity-0",
               )}
             />
-          ) : null}
-          {product.hoverImage && (
-            <MediaImage
-              media={product.hoverImage}
-              alt=""
-              fill
+          )}
+          {hoverImage && (
+            <CardImage
+              media={hoverImage}
               sizes={sizes}
-              className="object-cover opacity-0 transition-opacity duration-300 group-hover/card:opacity-100"
+              className="opacity-0 transition-opacity duration-300 group-hover/card:opacity-100"
             />
           )}
           {product.discountPercent > 0 && product.inStock && (
@@ -112,6 +111,8 @@ export function ProductGrid({
   products: ProductCardData[]
   preloadFirst?: number
   headingLevel?: 2 | 3
+  /** Second photo on hover; rails skip it to keep long pages light. */
+  hover?: boolean
 }) {
   return (
     <ul className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-3 md:gap-x-5 xl:grid-cols-4">
@@ -150,6 +151,7 @@ export function ProductRail({
         >
           <ProductCard
             product={product}
+            hover={false}
             sizes="(min-width: 1280px) 288px, (min-width: 1024px) 21vw, (min-width: 768px) 28vw, 44vw"
           />
         </li>
