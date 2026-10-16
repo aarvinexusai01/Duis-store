@@ -14,6 +14,8 @@ import { getDb } from "@/server/db/client"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
 
+import { trackingToken } from "./tracking"
+
 /** The customer's own orders (account pages). Never cached: personal data. */
 
 export type OrderSummary = {
@@ -88,6 +90,8 @@ export type OrderDetail = {
   canPay: boolean
   /** The live parcel, once booked. */
   parcel: { courier: string | null; awb: string; status: string } | null
+  /** A signed link to the public tracking page. */
+  trackingPath: string
   items: {
     title: string
     variantLabel: string
@@ -207,6 +211,7 @@ export const getMyOrder = defineOperation({
             status: parcel.status,
           }
         : null,
+      trackingPath: `/track/${o.orderNumber}?t=${trackingToken(o.orderNumber)}`,
       items,
       history,
       refunds: refundRows,

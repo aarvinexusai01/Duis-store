@@ -73,6 +73,17 @@ export function ProductCard({
           mrpPaise={product.mrpPaise}
           from={product.maxPricePaise > product.pricePaise}
         />
+        {product.rating && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            <span aria-hidden className="text-ink">
+              ★
+            </span>{" "}
+            {product.rating.average.toFixed(1)}{" "}
+            <span className="sr-only">out of 5 from </span>(
+            {product.rating.count}
+            <span className="sr-only"> reviews</span>)
+          </p>
+        )}
         {colours.length > 1 && (
           <p className="mt-2 flex items-center gap-1.5">
             {colours.slice(0, 5).map((colour) => (

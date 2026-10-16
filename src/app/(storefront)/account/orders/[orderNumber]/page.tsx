@@ -7,11 +7,13 @@ import { MediaThumb } from "@/components/media-thumb"
 import { PageSkeleton } from "@/components/page-skeleton"
 import { requireUser } from "@/features/auth/session-guard"
 import { getMyOrder } from "@/features/orders"
+import { listReviewableItems } from "@/features/reviews"
 import { formatPaise } from "@/lib/money"
 import { ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/order-status"
 import { isDomainError } from "@/server/errors"
 
 import { OrderActions } from "./order-actions"
+import { ReviewForm } from "./review-form"
 
 export const metadata: Metadata = { title: "Order" }
 
@@ -115,10 +117,28 @@ async function Order({ params }: Pick<Props, "params">) {
       ) : null}
 
       {order.parcel && order.status !== "cancelled" && (
-        <p className="border bg-card p-4 text-sm">
-          {order.status === "delivered" ? "Delivered by" : "Shipping with"}{" "}
-          <strong>{order.parcel.courier ?? "our courier"}</strong>. Tracking
-          number <span className="font-mono">{order.parcel.awb}</span>.
+        <p className="flex flex-wrap items-center justify-between gap-3 border bg-card p-4 text-sm">
+          <span>
+            {order.status === "delivered" ? "Delivered by" : "Shipping with"}{" "}
+            <strong>{order.parcel.courier ?? "our courier"}</strong>. Tracking
+            number <span className="font-mono">{order.parcel.awb}</span>.
+          </span>
+          <span className="flex gap-3">
+            <Link
+              href={order.trackingPath as Route}
+              className="underline underline-offset-4"
+            >
+              Track parcel
+            </Link>
+            {order.status === "delivered" && (
+              <Link
+                href={`/account/orders/${order.orderNumber}/exchange` as Route}
+                className="font-medium underline underline-offset-4"
+              >
+                Exchange an item
+              </Link>
+            )}
+          </span>
         </p>
       )}
 
@@ -201,7 +221,60 @@ async function Order({ params }: Pick<Props, "params">) {
           </div>
         </div>
       </div>
+      {order.status === "delivered" && (
+        <Suspense fallback={null}>
+          <Reviews actor={actor} orderNumber={order.orderNumber} />
+        </Suspense>
+      )}
     </div>
+  )
+}
+
+async function Reviews({
+  actor,
+  orderNumber,
+}: {
+  actor: Awaited<ReturnType<typeof requireUser>>
+  orderNumber: string
+}) {
+  const items = await listReviewableItems(actor, { orderNumber })
+  if (items.length === 0) return null
+  return (
+    <section
+      id="reviews"
+      aria-labelledby="reviews-title"
+      className="scroll-mt-24"
+    >
+      <h3 id="reviews-title" className="mb-3 font-semibold">
+        Review your items
+      </h3>
+      <ul className="flex flex-col gap-4">
+        {items.map((item) => (
+          <li key={item.orderItemId} className="border bg-card p-4 text-sm">
+            <p className="flex items-center gap-3">
+              <MediaThumb mediaKey={item.imageKey} />
+              <span>
+                <span className="font-medium">{item.title}</span>
+                <span className="block text-muted-foreground">
+                  {item.variantLabel}
+                </span>
+              </span>
+            </p>
+            {item.reviewStatus ? (
+              <p className="mt-3 text-muted-foreground">
+                {item.reviewStatus === "approved"
+                  ? "Your review is live. Thank you!"
+                  : item.reviewStatus === "pending"
+                    ? "Thanks! Your review is waiting for a quick check."
+                    : "Your review wasn't published."}
+              </p>
+            ) : (
+              <ReviewForm orderItemId={item.orderItemId} />
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

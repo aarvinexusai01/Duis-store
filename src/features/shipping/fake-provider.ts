@@ -81,8 +81,17 @@ export const fakeProvider: ShippingProvider = {
   async label({ awb, courierName, request }) {
     step("label")
     const to = request.consignee
+    const from = request.pickupFrom
     return textPdf([
       { text: "DEMO LABEL - NOT FOR SHIPPING", size: 9, bold: true },
+      ...(from
+        ? [
+            { text: "RETURN PICKUP", size: 14, bold: true },
+            {
+              text: `Collect from: ${from.name}, ${from.line1}, ${from.city} ${from.postalCode}`,
+            },
+          ]
+        : []),
       { text: courierName, size: 14, bold: true },
       { text: `AWB ${awb}`, size: 18, bold: true },
       { text: `Order ${request.channelOrderId}` },

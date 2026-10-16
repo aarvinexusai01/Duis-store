@@ -230,6 +230,9 @@ export async function settleCapturedPayment(
   const result = await withTransaction(async (tx): Promise<SettleResult> => {
     const row = await lockPaymentByProviderOrder(tx, providerOrderId)
     if (!row) return "unknown_order"
+    if (row.purpose === "exchange_difference") {
+      return settleExchangeDifference(tx, row, payment, actor)
+    }
     const order = await lockOrder(tx, row.order_id)
     const sameCapture =
       row.status === "captured" && row.provider_payment_id === payment.id
@@ -257,6 +260,49 @@ export async function settleCapturedPayment(
   })
   logger.info({ providerOrderId, result, source }, "payment settled")
   return result
+}
+
+// Set by the exchanges module: what a paid price difference unlocks.
+type ExchangePaymentHandler = (
+  tx: Transaction,
+  paymentRowId: string,
+  actor: Actor,
+) => Promise<"confirmed" | "refund">
+let exchangePaymentHandler: ExchangePaymentHandler | null = null
+export function onExchangeDifferencePaid(handler: ExchangePaymentHandler) {
+  exchangePaymentHandler = handler
+}
+
+/**
+ * A captured exchange price difference: recorded once, then handed to the
+ * exchange. If the exchange can no longer use it (cancelled meanwhile), or a
+ * second payment arrives, the money goes back.
+ */
+async function settleExchangeDifference(
+  tx: Transaction,
+  row: Awaited<ReturnType<typeof lockPaymentByProviderOrder>> & object,
+  payment: GatewayPayment,
+  actor: Actor,
+): Promise<SettleResult> {
+  if (row.status === "captured") {
+    if (row.provider_payment_id === payment.id) return "already_confirmed"
+    await requestRefundForDuplicate(tx, row.id, row.order_id, payment)
+    return "refunded_duplicate"
+  }
+  await markCaptured(tx, row, payment)
+  // Registered when the exchanges module loads (cycle-safe dynamic import).
+  if (!exchangePaymentHandler) await import("@/features/exchanges")
+  if (!exchangePaymentHandler) throw new Error("exchanges module not loaded")
+  const outcome = await exchangePaymentHandler(tx, row.id, actor)
+  if (outcome === "confirmed") return "confirmed"
+  await requestRefund(tx, {
+    paymentId: row.id,
+    orderId: row.order_id,
+    amountPaise: payment.amountPaise,
+    reason: "exchange_closed_before_payment",
+    idempotencyKey: `exchange-refund:${payment.id}`,
+  })
+  return "refunded_late"
 }
 
 async function requestRefundForDuplicate(

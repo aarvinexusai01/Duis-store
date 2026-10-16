@@ -9,6 +9,7 @@ export {
   confirmWalletPaidOrder,
   expirePendingOrders,
   lockOrder,
+  onExchangeDifferencePaid,
   reconcilePendingPayments,
   recordChange,
   settleCapturedPayment,
@@ -49,3 +50,9 @@ export {
   listCodOutstanding,
   type RemittanceProblem,
 } from "./remittance"
+export {
+  getTracking,
+  trackingToken,
+  trackingUrl,
+  type Tracking,
+} from "./tracking"

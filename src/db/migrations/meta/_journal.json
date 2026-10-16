@@ -50,6 +50,13 @@
       "when": 1792145319985,
       "tag": "0006_admin_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792148710283,
+      "tag": "0007_exchanges_reviews",
+      "breakpoints": true
     }
   ]
 }

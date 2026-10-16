@@ -15,6 +15,7 @@ import {
 
 import { users } from "./auth"
 import { primaryId, timestamps, timestamptz } from "./columns"
+import { exchangeRequests } from "./exchanges"
 import { orderItems, orders } from "./orders"
 
 /**
@@ -97,8 +98,9 @@ export const shipments = pgTable(
     orderId: uuid()
       .notNull()
       .references(() => orders.id, { onDelete: "restrict" }),
-    // Exchanges arrive in Phase 5; the column is ready for them.
-    exchangeId: uuid(),
+    exchangeId: uuid().references(() => exchangeRequests.id, {
+      onDelete: "restrict",
+    }),
     direction: shipmentDirection().notNull().default("forward"),
     provider: text().notNull(),
     channelOrderId: text().notNull().unique(),
@@ -130,6 +132,7 @@ export const shipments = pgTable(
   },
   (t) => [
     index("shipments_order_idx").on(t.orderId),
+    index("shipments_exchange_idx").on(t.exchangeId),
     index("shipments_active_idx")
       .on(t.status, t.lastSyncedAt)
       .where(

@@ -21,6 +21,7 @@ import {
   getProductDetail,
   getRelatedProducts,
 } from "@/features/catalog/queries"
+import { getProductReviews } from "@/features/reviews"
 import { describeCodAdvance, getStorePolicy } from "@/features/settings"
 import { getAvailability } from "@/features/inventory"
 import { WishlistButton } from "@/features/wishlist/ui/wishlist-button"
@@ -32,6 +33,7 @@ import { anonymousActor } from "@/server/auth/actor"
 import { absoluteUrl } from "@/server/site-url"
 
 import { PincodeCheck } from "./_components/pincode-check"
+import { ProductReviews } from "./_components/product-reviews"
 import { ProductView } from "./_components/product-view"
 import { SizeGuide } from "./_components/size-guide"
 
@@ -148,6 +150,9 @@ async function Product({ params }: Pick<Props, "params">) {
       </div>
 
       <Suspense fallback={null}>
+        <ProductReviews productId={product.id} />
+      </Suspense>
+      <Suspense fallback={null}>
         <Related productId={product.id} />
       </Suspense>
       <Suspense fallback={null}>
@@ -261,7 +266,10 @@ async function ProductStructuredData({
   tree: CatalogTree
   stock: Promise<Stock>
 }) {
-  const live = await stock
+  const [live, reviews] = await Promise.all([
+    stock,
+    getProductReviews(product.id),
+  ])
   const url = absoluteUrl(`/products/${product.slug}`)
   const category = tree.categories.find(
     (c) => c.id === product.primaryCategoryId,
@@ -276,6 +284,18 @@ async function ProductStructuredData({
         url,
         productGroupID: product.id,
         brand: { "@type": "Brand", name: "Duis" },
+        // Approved reviews only (doc/06 Phase 5 §5).
+        ...(reviews.count > 0
+          ? {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: reviews.average.toFixed(1),
+                reviewCount: reviews.count,
+                bestRating: 5,
+                worstRating: 1,
+              },
+            }
+          : {}),
         category: category?.name,
         countryOfOrigin: product.countryOfOrigin,
         image: product.media

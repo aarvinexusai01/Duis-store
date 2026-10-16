@@ -10,9 +10,9 @@ import { getServerEnv } from "@/config/env"
  * addresses). Layout: STORAGE_PRIVATE_ROOT/{area}/{name}. Staff download them
  * through a route that checks permissions.
  */
-const AREAS = ["labels"] as const
+const AREAS = ["labels", "photos"] as const
 export type PrivateArea = (typeof AREAS)[number]
-const NAME = /^[a-z0-9-]{1,80}\.(pdf)$/
+const NAME = /^[a-z0-9-]{1,80}\.(pdf|webp)$/
 
 function target(area: PrivateArea, name: string): string {
   if (!AREAS.includes(area) || !NAME.test(name)) {

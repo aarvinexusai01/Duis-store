@@ -2,6 +2,7 @@
 
 import {
   ActivityIcon,
+  ArrowLeftRightIcon,
   BadgePercentIcon,
   BarChart3Icon,
   BanknoteIcon,
@@ -15,6 +16,7 @@ import {
   SettingsIcon,
   ShieldCheckIcon,
   ShirtIcon,
+  StarIcon,
   TagsIcon,
   UsersIcon,
 } from "lucide-react"
@@ -37,6 +39,8 @@ const ICONS: Record<AdminNavItem["icon"], typeof ShirtIcon> = {
   cod: BanknoteIcon,
   customers: UsersIcon,
   discounts: BadgePercentIcon,
+  exchanges: ArrowLeftRightIcon,
+  reviews: StarIcon,
   reports: BarChart3Icon,
   staff: ShieldCheckIcon,
   audit: ScrollTextIcon,

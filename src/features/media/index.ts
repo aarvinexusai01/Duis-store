@@ -6,3 +6,4 @@ export {
   uploadImage,
   type UploadedMedia,
 } from "./service"
+export { readCustomerPhoto, uploadCustomerPhoto } from "./customer-photos"

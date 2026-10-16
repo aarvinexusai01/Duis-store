@@ -71,3 +71,34 @@ export const SHIPMENT_STATUS_TONE: Record<string, StatusTone> = {
   cancelled: "neutral",
   lost: "bad",
 }
+
+/** Staff words for exchange states (doc/03 §7). */
+export const EXCHANGE_STATUS_LABEL = {
+  requested: "To review",
+  awaiting_payment: "Awaiting payment",
+  approved: "Approved",
+  pickup_scheduled: "Pickup booked",
+  picked_up: "Collected",
+  received: "Received: do QC",
+  qc_passed: "QC passed",
+  replacement_shipped: "Replacement shipped",
+  completed: "Completed",
+  qc_failed: "QC failed",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
+} as const
+
+export const EXCHANGE_STATUS_TONE: Record<string, StatusTone> = {
+  requested: "warn",
+  awaiting_payment: "info",
+  approved: "info",
+  pickup_scheduled: "info",
+  picked_up: "info",
+  received: "warn",
+  qc_passed: "info",
+  replacement_shipped: "info",
+  completed: "good",
+  qc_failed: "bad",
+  rejected: "neutral",
+  cancelled: "neutral",
+}

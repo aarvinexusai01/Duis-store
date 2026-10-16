@@ -15,6 +15,8 @@ export type AdminNavItem = {
     | "cod"
     | "customers"
     | "discounts"
+    | "exchanges"
+    | "reviews"
     | "reports"
     | "staff"
     | "audit"
@@ -45,6 +47,18 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         label: "COD remittances",
         icon: "cod",
         permission: { order: ["read_financials"] },
+      },
+      {
+        href: "/admin/exchanges",
+        label: "Exchanges",
+        icon: "exchanges",
+        permission: { exchange: ["read"] },
+      },
+      {
+        href: "/admin/reviews",
+        label: "Reviews",
+        icon: "reviews",
+        permission: { review: ["read"] },
       },
       {
         href: "/admin/customers",

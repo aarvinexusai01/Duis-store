@@ -470,6 +470,52 @@ Tasks:
 
 ## Phase 5: Post-purchase & engagement
 
+**Plan (written 2026-10-16, before building):**
+- **Already decided in doc/10:**
+  - Exchanges: 10-day window, innerwear excluded, 2 exchanges per item, free reverse pickup.
+  - Price difference: the customer pays it through Razorpay, or it is credited to the wallet.
+  - Reviews: every review is moderated.
+  - Abandoned cart: email at 1 hour and 24 hours.
+  - Back-in-stock: email, plus WhatsApp if the customer opted in.
+  - International orders: exchanges only for damaged or wrong items, handled by admins.
+- **Waiting on accounts** (doc/10 A2, A3, A11):
+  - SMS DLT registration;
+  - WhatsApp Business;
+  - GA4 and Meta.
+  
+  As with Shiprocket, each gets a fake for development and tests and a real adapter that stays unverified until the account exists. Production refuses the fakes.
+- **Owner decisions (2026-10-16):**
+  - **Delivery:** three slices with a review stop after each:
+    - 5a: exchanges, tracking page, reviews;
+    - 5b: MSG91 WhatsApp and SMS OTP, OTP abuse limits, back-in-stock, abandoned cart;
+    - 5c: consent banner, GA4, Meta Pixel and Conversions API, contact form.
+  - **SMS and WhatsApp provider:** MSG91.
+  - **Analytics:** GA4, Meta Pixel and the Conversions API. Each stays off until consent is given and its ID is set.
+  - **An item that fails QC** is sent back to the customer at our cost. No replacement or credit is given, and the customer is emailed the reason.
+- **5a, built 2026-10-16** ([ADR-025](adr/0025-phase-5a-exchanges-reviews-decisions.md)):
+  - **Exchanges:**
+    - Customers request from the order page, with photos.
+    - Staff approve or reject, then mark received and pass or fail QC.
+    - Free return pickups and replacements go through the courier pipeline.
+    - The price difference is paid online, or credited to the wallet after QC.
+    - Stock moves as `exchange_out` and `exchange_in`.
+    - An email goes out at each step.
+  - **Tracking page:** reached by a signed link, which the shipped email now uses.
+  - **Reviews:**
+    - Verified buyers submit, with photos and fit.
+    - A moderation queue for staff.
+    - Ratings on product cards and the product page, and `AggregateRating` in its structured data.
+    - A review request 5 days after delivery.
+- **Assumptions** (tell me if any is wrong):
+  - Categories get an "exchangeable" switch; innerwear is off.
+  - Customers request an exchange from the order page, within the window, once the parcel is delivered.
+  - Replacement stock is held at approval.
+  - QC happens on the admin exchange page.
+  - Photos are optional, up to 3.
+  - Review prompts go out 5 days after delivery.
+  - Tracking links in messages use a signed token, so customers don't need to sign in to see a parcel's progress.
+
+
 Tasks:
 1. **Exchanges:**
    - Customer request flow (eligibility, replacement variant with live stock, reason, photos)

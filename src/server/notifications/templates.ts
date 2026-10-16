@@ -77,6 +77,24 @@ export const emailTemplates = {
     }),
     subject: () => "Your Duis order wasn't completed",
   },
+  "exchange-update": {
+    props: z.object({
+      name: z.string().min(1).max(200),
+      exchangeNumber: z.string(),
+      headline: z.string().max(120),
+      message: z.string().max(600),
+      url: z.url({ protocol: /^https?$/ }),
+    }),
+    subject: () => "An update on your Duis exchange",
+  },
+  "review-request": {
+    props: z.object({
+      name: z.string().min(1).max(200),
+      orderNumber: z.string(),
+      url: z.url({ protocol: /^https?$/ }),
+    }),
+    subject: () => "How's the fit? Review your Duis order",
+  },
   "staff-invite": {
     props: z.object({
       invitedBy: z.string().min(1).max(200),

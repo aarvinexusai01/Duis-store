@@ -299,11 +299,15 @@ export async function reserveStock(
   return reservationIds
 }
 
-/** Turns reservations into sales (order confirmed). Idempotent. */
+/**
+ * Turns reservations into stock that left: a sale (order confirmed) or an
+ * exchange replacement shipped. Idempotent.
+ */
 export async function commitReservations(
   tx: Transaction,
   reservationIds: string[],
   reference: { type: string; id: string },
+  reason: "sale" | "exchange_out" = "sale",
 ): Promise<number> {
   if (reservationIds.length === 0) return 0
   const committed = await tx
@@ -340,7 +344,7 @@ export async function commitReservations(
       variantId: row.variantId,
       locationId: row.locationId,
       deltaOnHand: -row.quantity,
-      reason: "sale",
+      reason,
       referenceType: reference.type,
       referenceId: reference.id,
     })
@@ -466,6 +470,8 @@ export async function expireReservations(batchSize = 200): Promise<number> {
           eq(inventoryReservations.status, "active"),
           lt(inventoryReservations.expiresAt, new Date()),
           isNull(inventoryReservations.orderId),
+          // Exchange replacements are held until they ship or the exchange ends.
+          isNull(inventoryReservations.exchangeId),
         ),
       )
       .limit(batchSize)
@@ -484,4 +490,46 @@ export async function expireReservations(batchSize = 200): Promise<number> {
     }
     return count
   })
+}
+
+/**
+ * A returned item that passed QC goes back on the shelf (exchanges). The
+ * movement is recorded once per reference.
+ */
+export async function receiveReturnedStock(
+  tx: Transaction,
+  input: {
+    variantId: string
+    quantity: number
+    reference: { type: string; id: string }
+  },
+): Promise<void> {
+  const locationId = await defaultLocationId(tx)
+  const already = await tx
+    .select({ id: inventoryMovements.id })
+    .from(inventoryMovements)
+    .where(
+      and(
+        eq(inventoryMovements.reason, "exchange_in"),
+        eq(inventoryMovements.referenceType, input.reference.type),
+        eq(inventoryMovements.referenceId, input.reference.id),
+      ),
+    )
+  if (already.length > 0) return
+  await tx
+    .insert(inventoryLevels)
+    .values({ variantId: input.variantId, locationId, onHand: input.quantity })
+    .onConflictDoUpdate({
+      target: [inventoryLevels.variantId, inventoryLevels.locationId],
+      set: { onHand: sql`${inventoryLevels.onHand} + ${input.quantity}` },
+    })
+  await tx.insert(inventoryMovements).values({
+    variantId: input.variantId,
+    locationId,
+    deltaOnHand: input.quantity,
+    reason: "exchange_in",
+    referenceType: input.reference.type,
+    referenceId: input.reference.id,
+  })
+  await stockChanged(tx, [input.variantId])
 }

@@ -1,7 +1,6 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 
-import { getServerEnv } from "@/config/env"
 import { restockCommitted } from "@/features/inventory"
 import { requestRefund } from "@/features/payments"
 import {
@@ -15,6 +14,7 @@ import type { Transaction } from "@/server/db/transaction"
 import { queueEmail } from "@/server/notifications/email"
 
 import { lockOrder, recordChange, walletKey } from "./lifecycle"
+import { trackingUrl } from "./tracking"
 
 /**
  * Parcel → order (doc/03 §5). The order follows its parcel forward and never
@@ -57,6 +57,8 @@ async function applyShipmentChange(
   tx: Transaction,
   change: ShipmentStatusChange,
 ): Promise<void> {
+  // Exchange parcels (returns, replacements) belong to the exchanges module.
+  if (change.direction !== "forward") return
   const order = await lockOrder(tx, change.orderId)
   const next = orderStatusAfter(order.status, change.to)
   if (!next) return
@@ -115,10 +117,8 @@ async function emailShipped(
       props: {
         name: order.customer_name,
         orderNumber: order.order_number,
-        url: new URL(
-          `/account/orders/${order.order_number}`,
-          getServerEnv().APP_URL,
-        ).toString(),
+        // Opens without signing in (signed link).
+        url: trackingUrl(order.order_number),
         courier: row.courier_name ?? "our courier",
         awb: row.awb,
         ...(order.cod_due_paise > 0

@@ -88,6 +88,19 @@ Labels are kept in `STORAGE_PRIVATE_ROOT` (default `./storage/private`), which i
 
 A row is recorded only when the amount equals the cash due; the other rows are listed with their line numbers.
 
+## Exchanges and reviews
+
+To try the after-sales flow in development:
+
+1. Deliver an order. On its admin page, **Book parcel**, then press **Next scan** until it says Delivered.
+2. **Exchange an item** (customer): on their order page, choose another size or colour.
+3. **Approve the exchange** in **Admin → Exchanges**. The free return pickup is booked; if the new option costs more, the customer pays the difference first.
+4. **Move the return along:** use the demo scans on the order page, or **Mark received**.
+5. **Pass or fail QC.** If it passes, the item goes back on the shelf and the replacement ships. If it fails, the item goes back to the customer and any difference paid is refunded.
+6. **Reviews:** customers review delivered items from the order page, and staff publish them in **Admin → Reviews**.
+
+Turn off **exchangeable** on categories such as innerwear (in **Admin → Categories**).
+
 ## Commands
 
 | Command                                      | What it does                                                                                             |

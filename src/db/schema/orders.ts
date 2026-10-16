@@ -128,6 +128,7 @@ export const orders = pgTable(
     cancelReason: text(),
     expiredAt: timestamptz(),
     codCollectedAt: timestamptz(),
+    reviewRequestedAt: timestamptz(),
     ...timestamps(),
   },
   (t) => [

@@ -214,3 +214,58 @@ export function orderShippedText(props: ShippedProps): string {
     `Track your order: ${props.url}`,
   ].join("\n\n")
 }
+
+type ExchangeProps = {
+  name: string
+  exchangeNumber: string
+  headline: string
+  message: string
+  url: string
+}
+
+export function ExchangeUpdateEmail(props: ExchangeProps) {
+  return (
+    <EmailLayout preview={`${props.exchangeNumber}: ${props.headline}`}>
+      <EmailText>Hi {props.name},</EmailText>
+      <EmailText>
+        <strong>
+          Exchange {props.exchangeNumber}: {props.headline}
+        </strong>
+      </EmailText>
+      <EmailText>{props.message}</EmailText>
+      <EmailButton href={props.url}>See your exchange</EmailButton>
+    </EmailLayout>
+  )
+}
+
+export function exchangeUpdateText(props: ExchangeProps): string {
+  return [
+    `Hi ${props.name},`,
+    `Exchange ${props.exchangeNumber}: ${props.headline}`,
+    props.message,
+    `See your exchange: ${props.url}`,
+  ].join("\n\n")
+}
+
+type ReviewRequestProps = { name: string; orderNumber: string; url: string }
+
+export function ReviewRequestEmail(props: ReviewRequestProps) {
+  return (
+    <EmailLayout preview="How's the fit? Tell other shoppers.">
+      <EmailText>Hi {props.name},</EmailText>
+      <EmailText>
+        How are you finding your order {props.orderNumber}? A quick review (fit,
+        feel, photos) helps other shoppers pick the right size.
+      </EmailText>
+      <EmailButton href={props.url}>Write a review</EmailButton>
+    </EmailLayout>
+  )
+}
+
+export function reviewRequestText(props: ReviewRequestProps): string {
+  return [
+    `Hi ${props.name},`,
+    `How are you finding your order ${props.orderNumber}? A quick review (fit, feel, photos) helps other shoppers pick the right size.`,
+    `Write a review: ${props.url}`,
+  ].join("\n\n")
+}

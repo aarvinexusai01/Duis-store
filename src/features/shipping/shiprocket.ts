@@ -6,7 +6,7 @@ import { getDb } from "@/server/db/client"
 import { DomainError } from "@/server/errors"
 import { logger } from "@/server/observability/logger"
 
-import type { ShippingProvider } from "./provider"
+import type { Consignee, ShipmentRequest, ShippingProvider } from "./provider"
 import {
   parseShiprocketTime,
   parseShiprocketTracking,
@@ -141,6 +141,63 @@ async function couriers(
   }
 }
 
+/**
+ * A return (exchange reverse pickup): collected from the customer, delivered
+ * to our pickup location. ⚠ Verify field names with the account (doc/10 q.5).
+ */
+async function createReturn(
+  request: ShipmentRequest,
+  from: Consignee,
+): Promise<{ providerOrderId: string; providerShipmentId: string }> {
+  const to = request.consignee
+  const result = await call<{ order_id?: number; shipment_id?: number }>(
+    "POST",
+    "/orders/create/return",
+    {
+      order_id: request.channelOrderId,
+      order_date: request.orderDate
+        .toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" })
+        .slice(0, 10),
+      pickup_customer_name: from.name,
+      pickup_address: from.line1,
+      pickup_address_2: from.line2 ?? "",
+      pickup_city: from.city,
+      pickup_state: from.state ?? "",
+      pickup_country: "India",
+      pickup_pincode: from.postalCode,
+      pickup_email: from.email ?? "",
+      pickup_phone: from.phone.replace(/^\+91/, ""),
+      shipping_customer_name: to.name,
+      shipping_address: to.line1,
+      shipping_city: to.city,
+      shipping_state: to.state ?? "",
+      shipping_country: "India",
+      shipping_pincode: to.postalCode,
+      shipping_phone: from.phone.replace(/^\+91/, ""),
+      order_items: request.items.map((item) => ({
+        name: item.name,
+        sku: item.sku,
+        units: item.units,
+        selling_price: rupees(item.unitPricePaise),
+        hsn: item.hsn,
+      })),
+      payment_method: "Prepaid",
+      sub_total: rupees(request.subTotalPaise),
+      length: request.lengthCm,
+      breadth: request.breadthCm,
+      height: request.heightCm,
+      weight: Math.max(0.1, request.weightGrams / 1000),
+    },
+  )
+  if (!result.order_id || !result.shipment_id) {
+    throw new Error("Shiprocket did not return a return order and shipment id")
+  }
+  return {
+    providerOrderId: String(result.order_id),
+    providerShipmentId: String(result.shipment_id),
+  }
+}
+
 export const shiprocketProvider: ShippingProvider = {
   name: "shiprocket",
   async checkServiceability(pincode) {
@@ -173,6 +230,9 @@ export const shiprocketProvider: ShippingProvider = {
       )
     }
     const env = getServerEnv()
+    if (request.direction === "reverse" && request.pickupFrom) {
+      return createReturn(request, request.pickupFrom)
+    }
     const to = request.consignee
     const [first, ...rest] = to.name.trim().split(/\s+/)
     const itemsTotal = request.items.reduce(
@@ -229,12 +289,13 @@ export const shiprocketProvider: ShippingProvider = {
       providerShipmentId: String(result.shipment_id),
     }
   },
-  async assignAwb(providerShipmentId) {
+  async assignAwb(providerShipmentId, options) {
     const result = await call<{
       awb_assign_status?: number
       response?: { data?: { awb_code?: string; courier_name?: string } }
     }>("POST", "/courier/assign/awb", {
       shipment_id: Number(providerShipmentId),
+      ...(options?.isReturn ? { is_return: 1 } : {}),
     })
     const data = result.response?.data
     if (result.awb_assign_status !== 1 || !data?.awb_code) {

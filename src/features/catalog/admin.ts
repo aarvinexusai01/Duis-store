@@ -265,6 +265,7 @@ export type CatalogOptions = {
     defaultHsnCode: string | null
     sizeChartId: string | null
     description: string | null
+    exchangeAllowed: boolean
     productCount: number
   }[]
   attributes: {
@@ -308,12 +309,13 @@ export const adminCatalogOptions = defineOperation({
           position: number
           is_active: boolean
           default_hsn_code: string | null
+          exchange_allowed: boolean
           size_chart_id: string | null
           description: string | null
           product_count: number
         }>(sql`
         select c.id, c.department_id, c.parent_id, c.name, c.slug::text, nlevel(c.path) - 1 as depth, c.position,
-               c.is_active, c.default_hsn_code, c.size_chart_id, c.description,
+               c.is_active, c.default_hsn_code, c.size_chart_id, c.description, c.exchange_allowed,
                (select count(*)::int from product_categories pc where pc.category_id = c.id) as product_count
         from categories c order by c.path`),
         db.execute<{
@@ -353,6 +355,7 @@ export const adminCatalogOptions = defineOperation({
         position: c.position,
         isActive: c.is_active,
         defaultHsnCode: c.default_hsn_code,
+        exchangeAllowed: c.exchange_allowed,
         sizeChartId: c.size_chart_id,
         description: c.description,
         productCount: c.product_count,

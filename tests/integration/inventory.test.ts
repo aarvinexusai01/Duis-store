@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto"
-
 import { and, eq } from "drizzle-orm"
 import { Pool } from "pg"
 import { drizzle } from "drizzle-orm/node-postgres"
@@ -192,20 +190,12 @@ describe("reservations", () => {
     expect(await level(variantId)).toEqual({ onHand: 1, reserved: 0 })
   })
 
-  it("expires reservations whose time ran out, except those held by orders", async () => {
+  it("leaves order holds to the order expiry job", async () => {
     const { variants } = await createProductFixture()
     const variantId = variants[0]!.id
     await adjustStock(system, { variantId, delta: 3, reason: "receive" })
-    // Exchanges (Phase 5) hold stock without an order.
-    const [exchangeHold] = await withTransaction((tx) =>
-      reserveStock(
-        tx,
-        { exchangeId: randomUUID() },
-        [{ variantId, quantity: 2 }],
-        -1,
-      ),
-    )
-    // Order holds are left to orders.expire-pending, which asks the gateway first.
+    // Order holds are left to orders.expire-pending, which asks the gateway
+    // first. Exchange holds last until the replacement ships (exchanges tests).
     const [orderHold] = await withTransaction(async (tx) =>
       reserveStock(
         tx,
@@ -215,7 +205,7 @@ describe("reservations", () => {
       ),
     )
 
-    expect(await expireReservations()).toBeGreaterThanOrEqual(1)
+    await expireReservations()
     const status = async (id: string) =>
       (
         await getDb()
@@ -223,7 +213,6 @@ describe("reservations", () => {
           .from(inventoryReservations)
           .where(and(eq(inventoryReservations.id, id)))
       )[0]!.status
-    expect(await status(exchangeHold!)).toBe("expired")
     expect(await status(orderHold!)).toBe("active")
     expect(await level(variantId)).toEqual({ onHand: 3, reserved: 1 })
 

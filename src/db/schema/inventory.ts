@@ -14,6 +14,7 @@ import {
 
 import { users } from "./auth"
 import { productVariants } from "./catalog"
+import { exchangeRequests } from "./exchanges"
 import { orders } from "./orders"
 import { citext, primaryId, timestamps, timestamptz } from "./columns"
 
@@ -104,8 +105,9 @@ export const inventoryReservations = pgTable(
       .references(() => stockLocations.id, { onDelete: "restrict" }),
     quantity: integer().notNull(),
     orderId: uuid().references(() => orders.id, { onDelete: "restrict" }),
-    // The FK to exchanges is added with that table (Phase 5).
-    exchangeId: uuid(),
+    exchangeId: uuid().references(() => exchangeRequests.id, {
+      onDelete: "restrict",
+    }),
     status: reservationStatus().notNull().default("active"),
     expiresAt: timestamptz().notNull(),
     ...timestamps(),
@@ -116,6 +118,7 @@ export const inventoryReservations = pgTable(
       .on(t.expiresAt)
       .where(sql`${t.status} = 'active'`),
     index("inventory_reservations_order_idx").on(t.orderId),
+    index("inventory_reservations_exchange_idx").on(t.exchangeId),
   ],
 )
 

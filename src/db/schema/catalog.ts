@@ -183,6 +183,10 @@ export const products = pgTable(
       .default(sql`'{}'::text[]`),
     // Category names, colours and tags, kept by the service (weight B).
     searchKeywords: text().notNull().default(""),
+    // Approved reviews, kept by the reviews module. The average is stored
+    // × 100 (4.25 → 425) to stay an integer.
+    ratingCount: integer().notNull().default(0),
+    ratingAverage: integer().notNull().default(0),
     searchVector: tsvector().generatedAlwaysAs(
       (): SQL =>
         sql`setweight(to_tsvector('english', ${products.title}), 'A') || setweight(to_tsvector('english', ${products.searchKeywords}), 'B') || setweight(to_tsvector('english', ${products.descriptionText}), 'C')`,

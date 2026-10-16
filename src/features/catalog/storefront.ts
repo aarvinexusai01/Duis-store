@@ -37,6 +37,8 @@ export type ProductCard = {
   image: MediaRef | null
   hoverImage: MediaRef | null
   colours: { slug: string; label: string; hex: string | null }[]
+  /** Approved reviews only; null when there are none. */
+  rating: { average: number; count: number } | null
 }
 
 export type CategoryNode = {
@@ -415,6 +417,8 @@ type CardRow = {
   hover_height: number | null
   hover_alt: string | null
   colours: { slug: string; label: string; hex: string | null }[] | null
+  rating_count: number
+  rating_average: number
 }
 
 function media(
@@ -433,7 +437,7 @@ export async function loadProductCards(
   if (ids.length === 0) return []
   const result = rows<CardRow>(
     await getDb().execute(sql`
-      select p.id, p.slug::text, p.title,
+      select p.id, p.slug::text, p.title, p.rating_count, p.rating_average,
              lc.min_price_paise as min_price, lc.max_price_paise as max_price, lc.in_stock,
              (select v.mrp_paise from product_variants v
               where v.product_id = p.id and v.status = 'active'
@@ -479,6 +483,10 @@ export async function loadProductCards(
           row.hover_alt,
         ),
         colours: row.colours ?? [],
+        rating:
+          row.rating_count > 0
+            ? { average: row.rating_average / 100, count: row.rating_count }
+            : null,
       },
     ]
   })

@@ -14,6 +14,7 @@ import { readPrivateFile, writePrivateFile } from "@/server/storage/private"
 
 import {
   getShippingProvider,
+  type Consignee,
   type ShipmentRequest,
   type TrackingEvent,
 } from "./provider"
@@ -35,28 +36,46 @@ import {
 export type ShipmentStatusChange = {
   shipmentId: string
   orderId: string
+  direction: "forward" | "reverse" | "replacement"
+  exchangeId: string | null
   from: ShipmentStatus
   to: ShipmentStatus
   occurredAt: Date
   actor: Actor
 }
 
-// Set by the orders module, which owns order status and customer emails.
-let listener:
-  ((tx: Transaction, change: ShipmentStatusChange) => Promise<void>) | null =
-  null
-export function onShipmentStatusChanged(fn: typeof listener) {
-  listener = fn
+// Set by the modules that own what a parcel carries: orders (forward
+// parcels) and exchanges (returns and replacements).
+type Listener = (tx: Transaction, change: ShipmentStatusChange) => Promise<void>
+const listeners: Listener[] = []
+export function onShipmentStatusChanged(fn: Listener) {
+  if (!listeners.includes(fn)) listeners.push(fn)
+}
+// The modules register themselves when loaded; a route bundle may not have
+// loaded them yet, so load them before the first notification (cycle-safe).
+let loaded: Promise<unknown> | null = null
+async function notify(tx: Transaction, change: ShipmentStatusChange) {
+  loaded ??= Promise.all([
+    import("@/features/orders"),
+    import("@/features/exchanges"),
+  ])
+  await loaded
+  for (const listener of listeners) await listener(tx, change)
 }
 
 const LEASE = sql`now() + interval '3 minutes'`
 
-/** Inserts a pending parcel for an order (inside the caller's transaction). */
+/**
+ * Inserts a pending parcel (inside the caller's transaction): an order's
+ * parcel, or an exchange's return pickup or replacement.
+ */
 export async function createShipmentRecord(
   tx: Transaction,
   input: {
     orderId: string
     orderNumber: string
+    direction?: "forward" | "reverse" | "replacement"
+    exchangeId?: string | null
     codAmountPaise: number
     weightGrams: number
     lengthCm: number
@@ -73,9 +92,10 @@ export async function createShipmentRecord(
   const channelOrderId = `${input.orderNumber}-${count.rows[0]!.n + 1}`
   try {
     const created = await tx.execute<{ id: string }>(sql`
-      insert into shipments (order_id, provider, channel_order_id, cod_amount_paise, weight_grams,
-                             length_cm, breadth_cm, height_cm, customs, created_by)
-      values (${input.orderId}, ${getShippingProvider().name}, ${channelOrderId}, ${input.codAmountPaise},
+      insert into shipments (order_id, direction, exchange_id, provider, channel_order_id, cod_amount_paise,
+                             weight_grams, length_cm, breadth_cm, height_cm, customs, created_by)
+      values (${input.orderId}, ${input.direction ?? "forward"}::shipment_direction, ${input.exchangeId ?? null},
+              ${getShippingProvider().name}, ${channelOrderId}, ${input.codAmountPaise},
               ${input.weightGrams}, ${input.lengthCm}, ${input.breadthCm}, ${input.heightCm},
               ${input.customs ? JSON.stringify(input.customs) : null}::jsonb, ${input.createdBy})
       returning id`)
@@ -97,6 +117,8 @@ export async function createShipmentRecord(
 type ShipmentRow = {
   id: string
   order_id: string
+  direction: "forward" | "reverse" | "replacement"
+  exchange_id: string | null
   status: ShipmentStatus
   provider: string
   channel_order_id: string
@@ -114,6 +136,12 @@ type ShipmentRow = {
   last_event_at: Date | null
 }
 
+const VARIANT_LABEL = sql`(select string_agg(av.label, ' / ' order by pa.position)
+  from variant_attribute_values vav
+  join attribute_values av on av.id = vav.attribute_value_id
+  left join product_attributes pa on pa.product_id = v.product_id and pa.attribute_id = vav.attribute_id
+  where vav.variant_id = v.id)`
+
 async function buildRequest(row: ShipmentRow): Promise<ShipmentRequest> {
   const db = getDb()
   const order = await db.execute<{
@@ -123,48 +151,134 @@ async function buildRequest(row: ShipmentRow): Promise<ShipmentRequest> {
     total_paise: number
   }>(sql`
     select placed_at, customer_email, shipping_address, total_paise from orders where id = ${row.order_id}`)
-  const items = await db.execute<{
-    title: string
-    variant_label: string
-    sku: string
-    quantity: number
-    unit_price_paise: number
-    line_total_paise: number
-    hsn_code: string
-  }>(sql`
-    select oi.title, oi.variant_label, oi.sku, si.quantity, oi.unit_price_paise, oi.line_total_paise, oi.hsn_code
-    from shipment_items si join order_items oi on oi.id = si.order_item_id
-    where si.shipment_id = ${row.id} order by oi.position`)
   const o = order.rows[0]!
   const a = o.shipping_address
-  return {
+  const customer: Consignee = {
+    name: a.fullName,
+    phone: a.phone,
+    email: o.customer_email?.endsWith(".invalid") ? null : o.customer_email,
+    line1: [a.line1, a.landmark].filter(Boolean).join(", "),
+    line2: a.line2 ?? null,
+    city: a.city,
+    state: a.region ?? a.stateCode ?? null,
+    postalCode: a.postalCode,
+    countryCode: a.countryCode,
+  }
+  const parcel = {
     channelOrderId: row.channel_order_id,
     orderDate: new Date(o.placed_at),
-    consignee: {
-      name: a.fullName,
-      phone: a.phone,
-      email: o.customer_email?.endsWith(".invalid") ? null : o.customer_email,
-      line1: [a.line1, a.landmark].filter(Boolean).join(", "),
-      line2: a.line2 ?? null,
-      city: a.city,
-      state: a.region ?? a.stateCode ?? null,
-      postalCode: a.postalCode,
-      countryCode: a.countryCode,
-    },
-    items: items.rows.map((i) => ({
-      name: `${i.title} (${i.variant_label})`,
-      sku: i.sku,
-      units: i.quantity,
-      unitPricePaise: i.unit_price_paise,
-      hsn: i.hsn_code,
-    })),
-    subTotalPaise: o.total_paise,
     codAmountPaise: row.cod_amount_paise,
     weightGrams: row.weight_grams,
     lengthCm: row.length_cm,
     breadthCm: row.breadth_cm,
     heightCm: row.height_cm,
     customs: row.customs,
+  }
+
+  if (row.direction === "forward" || !row.exchange_id) {
+    const items = await db.execute<{
+      title: string
+      variant_label: string
+      sku: string
+      quantity: number
+      unit_price_paise: number
+      hsn_code: string
+    }>(sql`
+      select oi.title, oi.variant_label, oi.sku, si.quantity, oi.unit_price_paise, oi.hsn_code
+      from shipment_items si join order_items oi on oi.id = si.order_item_id
+      where si.shipment_id = ${row.id} order by oi.position`)
+    return {
+      ...parcel,
+      direction: "forward",
+      consignee: customer,
+      pickupFrom: null,
+      items: items.rows.map((i) => ({
+        name: `${i.title} (${i.variant_label})`,
+        sku: i.sku,
+        units: i.quantity,
+        unitPricePaise: i.unit_price_paise,
+        hsn: i.hsn_code,
+      })),
+      subTotalPaise: o.total_paise,
+    }
+  }
+
+  // An exchange parcel: the customer's item coming back, or what we send.
+  const found = await db.execute<{
+    status: string
+    quantity: number
+    title: string
+    variant_label: string
+    sku: string
+    unit_price_paise: number
+    hsn_code: string
+    new_label: string | null
+    new_sku: string
+    new_price: number
+  }>(sql`
+    select e.status, e.quantity, oi.title, oi.variant_label, oi.sku, oi.unit_price_paise, oi.hsn_code,
+           ${VARIANT_LABEL} as new_label, v.sku::text as new_sku, v.price_paise as new_price
+    from exchange_requests e
+    join order_items oi on oi.id = e.order_item_id
+    join product_variants v on v.id = e.requested_variant_id
+    where e.id = ${row.exchange_id}`)
+  const e = found.rows[0]!
+  const original = {
+    name: `${e.title} (${e.variant_label})`,
+    sku: e.sku,
+    units: e.quantity,
+    unitPricePaise: e.unit_price_paise,
+    hsn: e.hsn_code,
+  }
+  if (row.direction === "reverse") {
+    const warehouse = await db.execute<{
+      name: string
+      address_line1: string
+      city: string
+      state_code: string
+      postal_code: string
+      country_code: string
+    }>(sql`
+      select name, address_line1, city, state_code, postal_code, country_code
+      from stock_locations where is_default`)
+    const w = warehouse.rows[0]!
+    return {
+      ...parcel,
+      direction: "reverse",
+      consignee: {
+        name: `Duis returns (${w.name})`,
+        phone: customer.phone,
+        email: null,
+        line1: w.address_line1,
+        line2: null,
+        city: w.city,
+        state: w.state_code,
+        postalCode: w.postal_code,
+        countryCode: w.country_code,
+      },
+      pickupFrom: customer,
+      items: [original],
+      subTotalPaise: e.unit_price_paise * e.quantity,
+    }
+  }
+  // A replacement, or the original item sent back after a failed QC.
+  const item =
+    e.status === "qc_failed"
+      ? original
+      : {
+          name: `${e.title} (${e.new_label ?? e.new_sku})`,
+          sku: e.new_sku,
+          units: e.quantity,
+          unitPricePaise: e.new_price,
+          hsn: e.hsn_code,
+        }
+  return {
+    ...parcel,
+    direction: "forward",
+    consignee: customer,
+    pickupFrom: null,
+    items: [item],
+    subTotalPaise: item.unitPricePaise * item.units,
   }
 }
 
@@ -219,7 +333,9 @@ export async function advanceShipment(
     let awb = row.awb
     let courierName = row.courier_name ?? "Courier"
     if (!awb) {
-      const assigned = await provider.assignAwb(providerShipmentId)
+      const assigned = await provider.assignAwb(providerShipmentId, {
+        isReturn: request.direction === "reverse",
+      })
       awb = assigned.awb
       courierName = assigned.courierName
       await getDb().execute(sql`
@@ -246,9 +362,11 @@ export async function advanceShipment(
           steps = steps || '{"pickupRequested": true}'::jsonb,
           last_error = null, lease_until = null, updated_at = now()
         where id = ${shipmentId}`)
-      await listener?.(tx, {
+      await notify(tx, {
         shipmentId,
         orderId: row.order_id,
+        direction: row.direction,
+        exchangeId: row.exchange_id,
         from: "pending",
         to: "ready_to_ship",
         occurredAt: new Date(),
@@ -269,11 +387,18 @@ export async function advanceShipment(
 }
 
 /** Retries a failed parcel in the background (shipping.create-shipment). */
-export async function scheduleShipmentRetry(shipmentId: string) {
+export async function scheduleShipmentRetry(
+  shipmentId: string,
+  options: { tx?: Transaction; now?: boolean } = {},
+) {
   await enqueue(
     QUEUES.createShipment,
     { shipmentId },
-    { singletonKey: `shipment:${shipmentId}`, startAfter: 30 },
+    {
+      singletonKey: `shipment:${shipmentId}`,
+      startAfter: options.now ? 0 : 30,
+      ...(options.tx ? { tx: options.tx } : {}),
+    },
   )
 }
 
@@ -333,9 +458,11 @@ export async function cancelShipmentAtCourier(
     await tx.execute(sql`
       update shipments set status = 'cancelled', cancelled_at = now(), lease_until = null, updated_at = now()
       where id = ${shipmentId}`)
-    await listener?.(tx, {
+    await notify(tx, {
       shipmentId,
       orderId: row.order_id,
+      direction: row.direction,
+      exchangeId: row.exchange_id,
       from: row.status,
       to: "cancelled",
       occurredAt: new Date(),
@@ -393,9 +520,11 @@ export async function ingestTrackingEvent(
         updated_at = now()
       where id = ${row.id}`)
     if (!next) return "recorded"
-    await listener?.(tx, {
+    await notify(tx, {
       shipmentId: row.id,
       orderId: row.order_id,
+      direction: row.direction,
+      exchangeId: row.exchange_id,
       from: row.status,
       to: next,
       occurredAt: event.occurredAt,

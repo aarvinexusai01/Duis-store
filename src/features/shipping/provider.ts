@@ -38,7 +38,12 @@ export type Consignee = {
 export type ShipmentRequest = {
   channelOrderId: string
   orderDate: Date
+  /** "reverse": collected from `pickupFrom` (the customer) and brought to us. */
+  direction: "forward" | "reverse"
+  /** Where the parcel goes. */
   consignee: Consignee
+  /** Where it is collected; null means our own pickup location. */
+  pickupFrom: Consignee | null
   items: {
     name: string
     sku: string
@@ -85,6 +90,7 @@ export interface ShippingProvider {
   createShipment(request: ShipmentRequest): Promise<BookedShipment>
   assignAwb(
     providerShipmentId: string,
+    options?: { isReturn?: boolean },
   ): Promise<{ awb: string; courierName: string }>
   label(request: LabelRequest): Promise<Buffer>
   requestPickup(

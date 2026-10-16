@@ -3,17 +3,21 @@ import pg from "pg"
 
 /** Shared customer steps for end-to-end tests. */
 
-export async function inStockSlug(): Promise<string | undefined> {
+/** A live product under ₹999 with at least `variants` sizes in stock. */
+export async function inStockSlug(variants = 1): Promise<string | undefined> {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
   await client.connect()
   try {
-    const { rows } = await client.query<{ slug: string }>(`
+    const { rows } = await client.query<{ slug: string }>(
+      `
       select p.slug::text from products p
       join product_variants v on v.product_id = p.id and v.status = 'active'
       join inventory_levels l on l.variant_id = v.id
       where p.status = 'active' and l.on_hand - l.reserved >= 5 and v.price_paise < 99900
-      group by p.slug having count(distinct v.id) >= 1
-      order by p.slug limit 1`)
+      group by p.slug having count(distinct v.id) >= $1
+      order by p.slug limit 1`,
+      [variants],
+    )
     return rows[0]?.slug
   } finally {
     await client.end()
@@ -39,8 +43,11 @@ export async function signInWithOtp(page: Page, next: string) {
  * Signs a new customer in, buys one item with the simulated gateway and
  * returns the order number. Skips (returns null) without a seeded catalogue.
  */
-export async function placePrepaidOrder(page: Page): Promise<string | null> {
-  const slug = await inStockSlug()
+export async function placePrepaidOrder(
+  page: Page,
+  options: { variants?: number } = {},
+): Promise<string | null> {
+  const slug = await inStockSlug(options.variants)
   if (!slug) return null
   await signInWithOtp(page, "/account")
   await page.goto(`/products/${slug}`)

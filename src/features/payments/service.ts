@@ -48,7 +48,7 @@ export async function ensureGatewayOrder(input: {
   orderId: string
   orderNumber: string
   amountPaise: number
-  purpose: "full" | "advance"
+  purpose: "full" | "advance" | "exchange_difference"
 }): Promise<{
   providerOrderId: string
   amountPaise: number

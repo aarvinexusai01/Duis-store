@@ -5,6 +5,7 @@ export {
   createStockLocation,
   expireReservations,
   getAvailability,
+  receiveReturnedStock,
   releaseReservations,
   reserveStock,
   restockCommitted,

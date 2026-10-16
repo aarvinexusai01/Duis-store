@@ -209,6 +209,7 @@ function CategoryDialog({
       description: text("description") || null,
       defaultHsnCode: text("hsn") || null,
       sizeChartId: text("sizeChartId") || null,
+      exchangeAllowed: form.get("exchangeAllowed") === "on",
     }
     startTransition(async () => {
       let result
@@ -333,6 +334,15 @@ function CategoryDialog({
                 </select>
               </label>
             </div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="exchangeAllowed"
+                defaultChecked={current?.exchangeAllowed ?? true}
+              />
+              Customers can exchange items in this category (turn off for
+              innerwear)
+            </label>
             {current && (
               <>
                 <label className="flex flex-col gap-1">

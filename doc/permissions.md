@@ -182,4 +182,31 @@ Notes on these operations:
 - **Search:** `staff.search` needs only a signed-in user to call, but it refuses anyone who isn't staff, and it searches only what each role can read.
 - **Staff safety:** there must always be another active Super Admin with 2FA. Nobody can deactivate themselves or reset their own 2FA.
 
+## Operations (Phase 5a, exchanges and reviews)
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `exchanges.adminGet` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `exchanges.adminList` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `exchanges.approve` | ✓ | ✓ | · | · | · | ✓ | · |
+| `exchanges.cancel` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `exchanges.failQc` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `exchanges.markReceived` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `exchanges.options` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `exchanges.passQc` | ✓ | ✓ | · | · | ✓ | ✓ | · |
+| `exchanges.reject` | ✓ | ✓ | · | · | · | ✓ | · |
+| `exchanges.request` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `exchanges.startPayment` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `orders.tracking` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `photos.upload` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `reviews.adminList` | ✓ | ✓ | · | · | · | ✓ | · |
+| `reviews.moderate` | ✓ | ✓ | · | · | · | ✓ | · |
+| `reviews.reviewable` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `reviews.submit` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+How the customer operations are limited:
+- **Customer exchange and review operations** need a signed-in user, and each checks that the order is that person's own.
+- **Tracking** (`orders.tracking`) is public; the signed token in the link is the credential.
+- **Photos:** a customer photo is served only to its owner, to staff with exchange or review read access when it is attached to an exchange or review, and to everyone once its review is approved.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

@@ -16,6 +16,8 @@ import {
   verifyEmailText,
 } from "@/emails/account"
 import {
+  ExchangeUpdateEmail,
+  exchangeUpdateText,
   OrderCancelledEmail,
   orderCancelledText,
   OrderConfirmedEmail,
@@ -25,6 +27,8 @@ import {
   orderNotCompletedText,
   orderShippedText,
   RefundIssuedEmail,
+  ReviewRequestEmail,
+  reviewRequestText,
   refundIssuedText,
 } from "@/emails/orders"
 import {
@@ -72,6 +76,14 @@ const views: {
   "order-shipped": {
     html: (props) => <OrderShippedEmail {...props} />,
     text: orderShippedText,
+  },
+  "exchange-update": {
+    html: (props) => <ExchangeUpdateEmail {...props} />,
+    text: exchangeUpdateText,
+  },
+  "review-request": {
+    html: (props) => <ReviewRequestEmail {...props} />,
+    text: reviewRequestText,
   },
   "staff-invite": {
     html: (props) => <StaffInviteEmail {...props} />,
