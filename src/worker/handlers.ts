@@ -1,7 +1,7 @@
 import type { Job, PgBoss } from "pg-boss"
 
 import { refreshAutomaticCollections } from "@/features/collections"
-import { expireReservations } from "@/features/inventory"
+import { expireReservations, sendLowStockDigest } from "@/features/inventory"
 // Loading the orders module registers the parcel → order listener.
 import {
   expirePendingOrders,
@@ -80,6 +80,10 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
   "shipping.process-tracking": async (job) => {
     await processTrackingWebhook(job.data.webhookEventId)
   },
+  "inventory.low-stock-digest": async () => {
+    const sent = await sendLowStockDigest()
+    if (sent > 0) logger.info({ sent }, "low-stock digest queued")
+  },
   "shipping.sync-tracking": async () => {
     const applied = await syncActiveShipments()
     if (applied > 0) logger.info({ applied }, "parcel tracking synced")
@@ -95,6 +99,7 @@ const SCHEDULES: { queue: QueueName; cron: string }[] = [
   { queue: QUEUES.expireWalletCredits, cron: "15 3 * * *" },
   { queue: QUEUES.refreshAutoCollections, cron: "30 2 * * *" },
   { queue: QUEUES.syncTracking, cron: "*/30 * * * *" },
+  { queue: QUEUES.lowStockDigest, cron: "0 9 * * *" },
 ]
 
 export async function registerHandlers(boss: PgBoss): Promise<void> {

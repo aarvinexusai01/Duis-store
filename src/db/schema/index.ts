@@ -1,6 +1,7 @@
 // Drizzle schema entry point (doc/05-database-design.md). drizzle-kit reads
 // this module; the app imports tables from here.
 export * from "./auth"
+export * from "./staff"
 export * from "./media"
 export * from "./catalog"
 export * from "./inventory"

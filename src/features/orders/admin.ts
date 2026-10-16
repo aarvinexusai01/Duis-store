@@ -70,6 +70,18 @@ export const ORDER_VIEWS = [
   "cod_pending",
   "rto",
 ] as const
+export const ORDER_STATUSES = z.enum([
+  "pending_payment",
+  "confirmed",
+  "processing",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+  "expired",
+  "rto_initiated",
+  "rto_delivered",
+])
 
 export type AdminOrderRow = {
   orderNumber: string
@@ -90,20 +102,7 @@ export const adminListOrders = defineOperation({
   access: { order: ["read"] },
   input: z.object({
     q: z.string().trim().max(100).optional(),
-    status: z
-      .enum([
-        "pending_payment",
-        "confirmed",
-        "processing",
-        "shipped",
-        "out_for_delivery",
-        "delivered",
-        "cancelled",
-        "expired",
-        "rto_initiated",
-        "rto_delivered",
-      ])
-      .optional(),
+    status: ORDER_STATUSES.optional(),
     paymentMode: z.enum(["prepaid", "partial_cod"]).optional(),
     view: z.enum(ORDER_VIEWS).optional(),
     from: z.iso.date().optional(),

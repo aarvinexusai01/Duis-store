@@ -4,9 +4,7 @@ import { TruckIcon } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { STORE_POLICY } from "@/config/store-policy"
 import type { Serviceability } from "@/features/shipping"
-import { formatPaise } from "@/lib/money"
 
 type Result =
   | { status: "idle" | "loading" }
@@ -14,7 +12,8 @@ type Result =
   | { status: "error"; message: string }
 
 /** India PIN-code check; the answer comes from the courier provider. */
-export function PincodeCheck() {
+/** `codAdvance` is "₹100" or "10%", or null when partial COD is off. */
+export function PincodeCheck({ codAdvance }: { codAdvance: string | null }) {
   const [pincode, setPincode] = useState("")
   const [result, setResult] = useState<Result>({ status: "idle" })
 
@@ -90,8 +89,8 @@ export function PincodeCheck() {
                   </li>
                 )}
               <li className="text-muted-foreground">
-                {result.data.codAvailable
-                  ? `Cash on delivery available (${formatPaise(STORE_POLICY.codAdvancePaise)} paid online).`
+                {result.data.codAvailable && codAdvance
+                  ? `Cash on delivery available (${codAdvance} paid online).`
                   : "Prepaid orders only for this PIN code."}
               </li>
             </ul>

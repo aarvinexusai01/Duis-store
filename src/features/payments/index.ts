@@ -4,6 +4,7 @@ export {
   GatewayError,
   getPaymentGateway,
   hmacHex,
+  paymentGatewayFor,
   simulateFakePayment,
   type GatewayPayment,
   type PaymentGateway,

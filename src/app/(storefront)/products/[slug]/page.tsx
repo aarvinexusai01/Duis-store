@@ -15,13 +15,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { STORE_POLICY } from "@/config/store-policy"
 import type { CatalogTree, ProductDetail } from "@/features/catalog"
 import {
   getCatalogTree,
   getProductDetail,
   getRelatedProducts,
 } from "@/features/catalog/queries"
+import { describeCodAdvance, getStorePolicy } from "@/features/settings"
 import { getAvailability } from "@/features/inventory"
 import { WishlistButton } from "@/features/wishlist/ui/wishlist-button"
 import { countryName } from "@/lib/countries"
@@ -91,7 +91,7 @@ async function loadStock(variantIds: string[]): Promise<Stock> {
 async function Product({ params }: Pick<Props, "params">) {
   const product = await load(params)
   if (!product) notFound()
-  const tree = await getCatalogTree()
+  const [tree, policy] = await Promise.all([getCatalogTree(), getStorePolicy()])
   const stock = loadStock(product.variants.map((variant) => variant.id))
 
   return (
@@ -118,21 +118,29 @@ async function Product({ params }: Pick<Props, "params">) {
           }
         >
           <div className="mt-8 flex flex-col gap-6">
-            <PincodeCheck />
+            <PincodeCheck
+              codAdvance={
+                policy.partialCodEnabled ? describeCodAdvance(policy) : null
+              }
+            />
             <ul className="space-y-1 text-sm">
               <li>
                 Free shipping in India on orders over{" "}
-                {formatPaise(STORE_POLICY.freeShippingThresholdPaise)}
+                {formatPaise(policy.freeShippingThresholdPaise)}
               </li>
-              <li>
-                Size or colour exchange within {STORE_POLICY.exchangeWindowDays}{" "}
-                days of delivery, free pickup
-              </li>
-              <li>
-                Cash on delivery in India up to{" "}
-                {formatPaise(STORE_POLICY.codMaxOrderPaise)} (
-                {formatPaise(STORE_POLICY.codAdvancePaise)} paid online)
-              </li>
+              {policy.exchangeWindowDays > 0 && (
+                <li>
+                  Size or colour exchange within {policy.exchangeWindowDays}{" "}
+                  days of delivery, free pickup
+                </li>
+              )}
+              {policy.partialCodEnabled && (
+                <li>
+                  Cash on delivery in India up to{" "}
+                  {formatPaise(policy.codMaxOrderPaise)} (
+                  {describeCodAdvance(policy)} paid online)
+                </li>
+              )}
             </ul>
             <ProductDetails product={product} />
           </div>

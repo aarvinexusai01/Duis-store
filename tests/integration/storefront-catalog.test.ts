@@ -157,8 +157,13 @@ describe("search", () => {
     )
     expect(typo.items.map((i) => i.id)).toContain(fx.productId)
 
+    // Prefix match. Other test files create identical fixture products and
+    // suggestions are capped, so check what matched rather than which one.
     const suggestions = await loadSuggestions("midn", await loadCatalogTree())
-    expect(suggestions.products.map((p) => p.slug)).toContain(slug)
+    expect(suggestions.products.length).toBeGreaterThan(0)
+    expect(
+      suggestions.products.every((p) => p.title.startsWith("Midnight")),
+    ).toBe(true)
     expect(
       (await loadSuggestions("   ", await loadCatalogTree())).products,
     ).toEqual([])

@@ -312,8 +312,15 @@ Tasks:
 >   - **Customers:** COD block and goodwill credit.
 >   - **Discounts:** edit, pause, archive, single-use bulk codes, usage report.
 >   - **Still to do (owner):** the Shiprocket account and one real test shipment (doc/10 A5).
-> - **4c:** settings, staff and the audit log, the system page, reports (including the generic GST CSV).
-> - **Moved from 4a to 4c:** the command palette, column visibility, CSV export and the daily low-stock email.
+> - **4c, built 2026-10-16** ([ADR-024](adr/0024-phase-4c-administration-decisions.md)):
+>   - **Settings:** store and legal, shipping, COD and RTO, policies, emails, tax rules, and integration health with test buttons.
+>   - **Staff:** email invitations, roles, 2FA reset, deactivation, sign-out everywhere.
+>   - **Audit log viewer.**
+>   - **System page:** queues, failed jobs, webhooks, worker heartbeat.
+>   - **Reports:** sales by day and category, COD, and the GST, sales and COD CSVs.
+>   - **Moved from 4a:** CSV export of lists, column visibility, the command palette, and the daily low-stock email.
+> - **Phase 4 status:** built. The exit criteria still waiting on the owner are one real Shiprocket test shipment (doc/10 A5) and the Razorpay test-mode payment (Phase 3).
+> - **Moved from 4a to 4c, now built:** the command palette, column visibility, CSV export and the daily low-stock email.
 
 **Slice 4b plan (orders, shipping, customers, discounts):**
 1. **Schema (migration 0005):**
@@ -351,6 +358,49 @@ Tasks:
      - refund limits;
      - a Fulfilment user sees no amounts, and permissions are checked for every new operation.
    - End-to-end: the Administrator Definition of Done against the fake courier, i.e. order → ship → deliver → reconcile COD.
+
+**Slice 4c plan (settings, staff, system, reports):**
+1. **Settings** (`settings: read/update`, every change audited):
+   - Store and legal: legal name, GSTIN, registered state, IEC, LUT reference.
+   - Shipping: free-shipping threshold, international destinations.
+   - Partial COD: on/off, advance (fixed or percent), order cap, COD fee, RTO advance policy.
+   - Exchange values: window and limit, used in Phase 5.
+   - Stock hold, and promotional credit validity.
+   - Tax rules: HSN slabs, date-ranged; a change adds a new row and never rewrites past orders.
+   - Notifications: as decided below.
+   - Integration health: which providers are live or fake, with a "test connection" button for each.
+2. **Staff** (`staff: manage` is Super Admin only):
+   - Invite staff and assign roles.
+   - See who has 2FA.
+   - Reset a staff member's 2FA.
+   - Revoke sessions and deactivate an account.
+   - The last super admin can't be removed.
+3. **Audit log viewer:** filter by person, action, record and date.
+4. **System page** (`system: read/operate`):
+   - Job queues with counts.
+   - Dead letters: retry or discard.
+   - Recent webhook events, with reprocess.
+   - Worker heartbeat.
+5. **Reports** (`report: read/export`):
+   - Sales by day and by category.
+   - The **generic GST CSV**, one row per line: date, order, HSN, taxable value, CGST/SGST/IGST, place of supply, export flag.
+   - COD remittance report.
+   - All CSV downloads are safe against spreadsheet formula injection.
+6. **Items moved from 4a:** as decided below.
+7. **Tests:**
+   - Integration:
+     - settings validation and audit;
+     - tax rules never change past orders;
+     - staff invitation and role change, and refusing to remove the last super admin;
+     - dead-letter retry;
+     - GST CSV totals equal order totals.
+   - End-to-end: the Super Admin invites staff and reads the audit log; a Content Editor is refused everywhere.
+
+**Owner decisions for 4c (2026-10-16):**
+- **Staff join by email invitation:** a link valid for 72 hours. They set their own password, then set up 2FA.
+- **Notification settings:** turn optional emails on or off (shipped, payment reminder, low-stock digest) and set the sender name and reply-to address. The wording of emails stays in code.
+- **Daily low-stock email:** at 09:00 IST to Store and Super Admins, only when something is at or below its alert level.
+- **Moved items, all built:** command palette (Ctrl/⌘+K), CSV export of lists, column visibility.
 
 **Owner decisions for 4b (2026-10-16):**
 - **One parcel per order:** no split shipments; the schema still allows them later.

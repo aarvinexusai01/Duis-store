@@ -1,7 +1,9 @@
 "use client"
 
 import {
+  ActivityIcon,
   BadgePercentIcon,
+  BarChart3Icon,
   BanknoteIcon,
   BoxesIcon,
   FolderTreeIcon,
@@ -9,6 +11,9 @@ import {
   LayersIcon,
   PackageIcon,
   RulerIcon,
+  ScrollTextIcon,
+  SettingsIcon,
+  ShieldCheckIcon,
   ShirtIcon,
   TagsIcon,
   UsersIcon,
@@ -32,6 +37,11 @@ const ICONS: Record<AdminNavItem["icon"], typeof ShirtIcon> = {
   cod: BanknoteIcon,
   customers: UsersIcon,
   discounts: BadgePercentIcon,
+  reports: BarChart3Icon,
+  staff: ShieldCheckIcon,
+  audit: ScrollTextIcon,
+  system: ActivityIcon,
+  settings: SettingsIcon,
 }
 
 export function AdminNavLinks({

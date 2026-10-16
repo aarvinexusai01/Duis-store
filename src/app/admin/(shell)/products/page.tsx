@@ -19,7 +19,7 @@ import {
 } from "@/features/catalog"
 import { bulkProductAction } from "@/features/catalog/admin-actions"
 import { can, requireStaff } from "@/features/staff"
-import { choice, one, pageOf } from "@/lib/admin-query"
+import { choice, one, pageOf, withParams } from "@/lib/admin-query"
 import { formatPaise } from "@/lib/money"
 import { cn } from "@/lib/utils"
 
@@ -137,6 +137,12 @@ async function Products({
         }
       />
       <DataTable
+        id="products"
+        exportHref={
+          can(actor, { catalog: ["read"], report: ["export"] })
+            ? withParams("/admin/export/products", params)
+            : undefined
+        }
         rows={list.rows}
         columns={columns}
         rowKey={(row) => row.id}

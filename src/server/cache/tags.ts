@@ -14,6 +14,7 @@ export const cacheTags = {
   cmsNavigation: "cms:nav",
   cmsSettings: "cms:settings",
   media: (id: string) => `media:${id}`,
+  storeSettings: "store:settings",
 } as const
 
 /** Tags are short ASCII identifiers; anything else is rejected on receipt. */

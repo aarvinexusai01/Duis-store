@@ -293,4 +293,8 @@ export const shiprocketProvider: ShippingProvider = {
     )
     return parseShiprocketTracking(result)
   },
+  async ping() {
+    // A fresh login proves the credentials, not just a cached token.
+    await login()
+  },
 }

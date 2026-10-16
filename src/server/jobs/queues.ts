@@ -21,6 +21,7 @@ export const QUEUES = {
   createShipment: "shipping.create-shipment",
   processTracking: "shipping.process-tracking",
   syncTracking: "shipping.sync-tracking",
+  lowStockDigest: "inventory.low-stock-digest",
 } as const
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES]
@@ -45,6 +46,7 @@ export type JobPayloads = {
   "shipping.create-shipment": { shipmentId: string }
   "shipping.process-tracking": { webhookEventId: string }
   "shipping.sync-tracking": null
+  "inventory.low-stock-digest": null
 }
 
 type QueuePolicy = Parameters<PgBoss["createQueue"]>[1]
@@ -136,6 +138,13 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
     retryDelay: 15,
     retryBackoff: true,
     expireInSeconds: 120,
+    deadLetter,
+  },
+  "inventory.low-stock-digest": {
+    policy: "stately",
+    retryLimit: 2,
+    retryDelay: 300,
+    expireInSeconds: 300,
     deadLetter,
   },
   // Polls shipments with no courier update for six hours.

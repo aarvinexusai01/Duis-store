@@ -2,6 +2,7 @@ import type { Route } from "next"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
+import { ColumnToggle } from "@/components/admin/column-toggle"
 import { withParams } from "@/lib/admin-query"
 import { cn } from "@/lib/utils"
 
@@ -43,6 +44,8 @@ export function DataTable<T>({
   empty = "Nothing here yet.",
   toolbar,
   fields,
+  id,
+  exportHref,
 }: {
   rows: T[]
   columns: Column<T>[]
@@ -60,13 +63,17 @@ export function DataTable<T>({
   toolbar?: ReactNode
   /** More inputs for the filter form (e.g. a date range). */
   fields?: ReactNode
+  /** Turns on the "Columns" menu, remembered per browser under this name. */
+  id?: string
+  /** A CSV download of the current filtered list. */
+  exportHref?: string
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1
   const to = Math.min(total, page * pageSize)
 
   const table = (
-    <div className="overflow-x-auto rounded-sm border bg-card">
+    <div data-table={id} className="overflow-x-auto rounded-sm border bg-card">
       <table className="w-full text-sm">
         <thead className="border-b bg-secondary/50 text-left text-xs text-muted-foreground uppercase">
           <tr>
@@ -78,6 +85,7 @@ export function DataTable<T>({
             {columns.map((column) => (
               <th
                 key={column.key}
+                data-col={column.key}
                 scope="col"
                 className={cn(
                   "px-3 py-2 font-medium whitespace-nowrap",
@@ -116,6 +124,7 @@ export function DataTable<T>({
                 {columns.map((column) => (
                   <td
                     key={column.key}
+                    data-col={column.key}
                     className={cn("px-3 py-2 align-middle", column.className)}
                   >
                     {column.cell(row)}
@@ -131,7 +140,12 @@ export function DataTable<T>({
 
   return (
     <div className="flex flex-col gap-3">
-      {(search || filters.length > 0 || toolbar || fields) && (
+      {(search ||
+        filters.length > 0 ||
+        toolbar ||
+        fields ||
+        id ||
+        exportHref) && (
         <div className="flex flex-wrap items-end gap-2">
           <form
             method="get"
@@ -178,7 +192,28 @@ export function DataTable<T>({
               Apply
             </button>
           </form>
-          {toolbar && <div className="ml-auto flex gap-2">{toolbar}</div>}
+          {(toolbar || id || exportHref) && (
+            <div className="ml-auto flex gap-2">
+              {toolbar}
+              {exportHref && (
+                <a
+                  href={exportHref}
+                  className="inline-flex h-9 items-center rounded-sm border border-input bg-card px-3 text-sm hover:bg-secondary"
+                >
+                  Export CSV
+                </a>
+              )}
+              {id && (
+                <ColumnToggle
+                  table={id}
+                  columns={columns.map((c) => ({
+                    key: c.key,
+                    header: c.header,
+                  }))}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
 

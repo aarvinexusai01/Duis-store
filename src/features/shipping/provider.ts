@@ -97,6 +97,8 @@ export interface ShippingProvider {
   }): Promise<void>
   /** Every scan the courier has for an AWB (the polling fallback). */
   track(awb: string): Promise<TrackingEvent[]>
+  /** A cheap authenticated call, for the admin "test connection" button. */
+  ping(): Promise<void>
 }
 
 export function getShippingProvider(): ShippingProvider {

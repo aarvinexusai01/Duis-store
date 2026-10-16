@@ -2,6 +2,14 @@ import { renderToStaticMarkup } from "react-dom/server"
 import type { ReactElement } from "react"
 
 import {
+  LowStockDigestEmail,
+  lowStockDigestText,
+  StaffInviteEmail,
+  staffInviteText,
+  TestEmail,
+  testEmailText,
+} from "@/emails/admin"
+import {
   ResetPasswordEmail,
   resetPasswordText,
   VerifyEmail,
@@ -64,6 +72,18 @@ const views: {
   "order-shipped": {
     html: (props) => <OrderShippedEmail {...props} />,
     text: orderShippedText,
+  },
+  "staff-invite": {
+    html: (props) => <StaffInviteEmail {...props} />,
+    text: staffInviteText,
+  },
+  "low-stock-digest": {
+    html: (props) => <LowStockDigestEmail {...props} />,
+    text: lowStockDigestText,
+  },
+  "test-email": {
+    html: (props) => <TestEmail {...props} />,
+    text: testEmailText,
   },
   "newsletter-confirm": {
     html: (props) => <NewsletterConfirmEmail {...props} />,

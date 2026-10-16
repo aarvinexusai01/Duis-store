@@ -124,4 +124,5 @@ export const fakeProvider: ShippingProvider = {
   async track() {
     return []
   },
+  async ping() {},
 }

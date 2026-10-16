@@ -59,3 +59,37 @@ export async function stopSender(): Promise<void> {
   globalForJobs.__duisSender = undefined
   if (pending) await (await pending).stop({ graceful: false })
 }
+
+/** Queue counts for the admin system page (doc/06 Phase 4 §11). */
+export async function getQueueCounts(): Promise<
+  {
+    name: string
+    queued: number
+    active: number
+    failed: number
+    deferred: number
+  }[]
+> {
+  const boss = await getSender()
+  const queues = await boss.getQueues()
+  return queues
+    .filter((q) => !q.name.startsWith("__"))
+    .map((q) => ({
+      name: q.name,
+      queued: q.readyCount,
+      active: q.activeCount,
+      failed: q.failedCount,
+      deferred: q.deferredCount,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Puts a failed job back in its queue (its handler is idempotent). */
+export async function retryJob(queue: QueueName, id: string): Promise<void> {
+  await (await getSender()).retry(queue, id)
+}
+
+/** Deletes a failed job that should not run again. */
+export async function discardJob(queue: QueueName, id: string): Promise<void> {
+  await (await getSender()).deleteJob(queue, id)
+}

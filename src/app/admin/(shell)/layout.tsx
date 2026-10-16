@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav"
+import { CommandPalette } from "@/components/admin/command-palette"
 import { AdminNavLinks } from "@/components/admin/admin-sidebar"
 import { AdminSignOut } from "@/components/admin/sign-out-button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -50,6 +51,14 @@ async function Shell({ children }: { children: React.ReactNode }) {
             </span>
           </p>
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <CommandPalette
+              pages={groups.flatMap((group) =>
+                group.items.map((item) => ({
+                  label: item.label,
+                  href: item.href,
+                })),
+              )}
+            />
             <Link
               href="/"
               className="text-sm whitespace-nowrap underline underline-offset-4"

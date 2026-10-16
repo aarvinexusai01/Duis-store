@@ -50,6 +50,14 @@ export const storeSettings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // Notifications (owner decision 2026-10-16): the sender's display name
+    // and reply-to address, and the optional emails. Order confirmations,
+    // cancellations, refunds and account emails are always sent.
+    emailSenderName: text().notNull().default("Duis"),
+    emailReplyTo: text(),
+    notifyOrderShipped: boolean().notNull().default(true),
+    notifyPaymentReminder: boolean().notNull().default(true),
+    notifyLowStock: boolean().notNull().default(true),
     ...timestamps(),
   },
   (t) => [

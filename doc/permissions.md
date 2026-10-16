@@ -139,4 +139,47 @@ Payment settlement, expiry, reconciliation and refunds run as the system (jobs a
 
 Amounts (order totals, payments, refunds and customer spend) are returned only to roles with `order: read_financials`. `orders.simulateTracking` also needs the fake courier outside production. Courier tracking webhooks are checked against the shared token, and processed as the system.
 
+## Operations (Phase 4c, administration)
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `audit.list` | ✓ | ✓ | · | · | · | · | · |
+| `reports.cod` | ✓ | ✓ | · | · | · | · | · |
+| `reports.exportCod` | ✓ | ✓ | · | · | · | · | · |
+| `reports.exportCustomers` | ✓ | ✓ | · | · | · | · | · |
+| `reports.exportGst` | ✓ | ✓ | · | · | · | · | · |
+| `reports.exportInventory` | ✓ | ✓ | · | · | · | · | · |
+| `reports.exportOrders` | ✓ | ✓ | · | · | · | · | · |
+| `reports.exportProducts` | ✓ | ✓ | · | · | · | · | · |
+| `reports.exportSales` | ✓ | ✓ | · | · | · | · | · |
+| `reports.sales` | ✓ | ✓ | · | · | · | · | · |
+| `settings.addTaxRule` | ✓ | ✓ | · | · | · | · | · |
+| `settings.get` | ✓ | ✓ | · | · | · | · | · |
+| `settings.integrationHealth` | ✓ | ✓ | · | · | · | · | · |
+| `settings.testIntegration` | ✓ | ✓ | · | · | · | · | · |
+| `settings.updateCod` | ✓ | ✓ | · | · | · | · | · |
+| `settings.updateLegal` | ✓ | ✓ | · | · | · | · | · |
+| `settings.updateNotifications` | ✓ | ✓ | · | · | · | · | · |
+| `settings.updatePolicies` | ✓ | ✓ | · | · | · | · | · |
+| `settings.updateShipping` | ✓ | ✓ | · | · | · | · | · |
+| `staff.acceptInvitation` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `staff.getInvitation` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `staff.invite` | ✓ | · | · | · | · | · | · |
+| `staff.list` | ✓ | ✓ | · | · | · | · | · |
+| `staff.resetTwoFactor` | ✓ | · | · | · | · | · | · |
+| `staff.revokeInvitation` | ✓ | · | · | · | · | · | · |
+| `staff.revokeSessions` | ✓ | · | · | · | · | · | · |
+| `staff.search` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `staff.setActive` | ✓ | · | · | · | · | · | · |
+| `staff.setRoles` | ✓ | · | · | · | · | · | · |
+| `system.discardJob` | ✓ | · | · | · | · | · | · |
+| `system.reprocessWebhook` | ✓ | · | · | · | · | · | · |
+| `system.retryJob` | ✓ | · | · | · | · | · | · |
+| `system.status` | ✓ | ✓ | · | · | · | · | · |
+
+Notes on these operations:
+- **Invitations:** `staff.getInvitation` and `staff.acceptInvitation` are public because the single-use token is the credential. Someone who already has an account must also be signed in as it.
+- **Search:** `staff.search` needs only a signed-in user to call, but it refuses anyone who isn't staff, and it searches only what each role can read.
+- **Staff safety:** there must always be another active Super Admin with 2FA. Nobody can deactivate themselves or reset their own 2FA.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

@@ -54,6 +54,9 @@ Staff work at `/admin` (doc/permissions.md has the roles and what each can do).
    ```
 2. The first visit to `/admin` asks for your password, then shows a QR code for an authenticator app. Enter a 6-digit code and **save the backup codes**: they are shown only once.
 3. People who aren't staff get a 404 at `/admin`.
+4. To add colleagues, use **Administration → Staff → Invite**. They get an email link (in Mailpit during development), choose a password and set up 2FA. Don't edit roles in the database for them.
+
+Press **Ctrl/⌘+K** anywhere in the admin to jump to an order, product, customer or page. **Settings** holds the store's policies (free shipping, COD, exchanges, tax rules, emails) and shows which providers are live. **Reports** downloads the GST CSV for your accountant.
 
 ## Shipping
 

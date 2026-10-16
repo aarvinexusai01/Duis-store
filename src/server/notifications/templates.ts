@@ -77,6 +77,35 @@ export const emailTemplates = {
     }),
     subject: () => "Your Duis order wasn't completed",
   },
+  "staff-invite": {
+    props: z.object({
+      invitedBy: z.string().min(1).max(200),
+      roles: z.string().max(200),
+      url: z.url({ protocol: /^https?$/ }),
+      expires: z.string().max(100),
+    }),
+    subject: () => "You're invited to the Duis staff portal",
+  },
+  "low-stock-digest": {
+    props: z.object({
+      url: z.url({ protocol: /^https?$/ }),
+      total: z.number().int().min(1),
+      items: z
+        .array(
+          z.object({
+            title: z.string(),
+            sku: z.string(),
+            available: z.number().int(),
+          }),
+        )
+        .max(50),
+    }),
+    subject: () => "Duis: items low on stock",
+  },
+  "test-email": {
+    props: z.object({ sentBy: z.string().min(1).max(200) }),
+    subject: () => "Duis test email",
+  },
   "newsletter-confirm": {
     props: z.object({ url: z.url({ protocol: /^https?$/ }) }),
     subject: () => "Confirm your Duis subscription",
@@ -84,6 +113,16 @@ export const emailTemplates = {
 } as const
 
 export type EmailTemplateName = keyof typeof emailTemplates
+
+/**
+ * Emails staff can turn off (owner decision 2026-10-16), and the setting
+ * that controls each. Every other email is always sent.
+ */
+export const OPTIONAL_EMAILS = {
+  "order-shipped": "notify_order_shipped",
+  "order-not-completed": "notify_payment_reminder",
+  "low-stock-digest": "notify_low_stock",
+} as const satisfies Partial<Record<EmailTemplateName, string>>
 
 export type EmailProps<Name extends EmailTemplateName> = z.infer<
   (typeof emailTemplates)[Name]["props"]

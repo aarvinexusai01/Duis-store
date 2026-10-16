@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { STORE_POLICY } from "@/config/store-policy"
+import { loadStorePolicy } from "@/features/settings"
 import type { MediaRef } from "@/features/catalog"
 import type { Actor } from "@/server/auth/actor"
 import { getDb } from "@/server/db/client"
@@ -251,7 +252,11 @@ export const getCart = defineOperation({
   async handler({ actor }, { guestToken: token }): Promise<CartView> {
     const db = getDb()
     const cartId = await findCartId(db, actor, token)
-    return buildView(cartId ? await loadLines(db, cartId) : [])
+    const [lines, policy] = await Promise.all([
+      cartId ? loadLines(db, cartId) : Promise.resolve([]),
+      loadStorePolicy(),
+    ])
+    return buildView(lines, policy.freeShippingThresholdPaise)
   },
 })
 
@@ -391,7 +396,10 @@ async function loadLines(db: Db, cartId: string): Promise<CartLine[]> {
 }
 
 /** Totals count only lines that can be bought as they stand. */
-export function buildView(lines: CartLine[]): CartView {
+export function buildView(
+  lines: CartLine[],
+  freeShippingThresholdPaise: number,
+): CartView {
   const buyable = lines.filter((line) => line.issue === null)
   const subtotalPaise = buyable.reduce(
     (sum, line) => sum + line.unitPricePaise * line.quantity,
@@ -410,7 +418,7 @@ export function buildView(lines: CartLine[]): CartView {
     savingsPaise: mrpTotalPaise - subtotalPaise,
     amountToFreeShippingPaise: Math.max(
       0,
-      STORE_POLICY.freeShippingThresholdPaise - subtotalPaise,
+      freeShippingThresholdPaise - subtotalPaise,
     ),
     hasIssues: lines.some((line) => line.issue !== null),
   }

@@ -15,7 +15,7 @@ import {
   type AdminCustomerRow,
 } from "@/features/customers"
 import { can, requireStaff } from "@/features/staff"
-import { choice, one, pageOf } from "@/lib/admin-query"
+import { choice, one, pageOf, withParams } from "@/lib/admin-query"
 import { formatPaise } from "@/lib/money"
 
 export const metadata: Metadata = { title: "Customers" }
@@ -112,6 +112,12 @@ async function Customers({
         description={`${list.total} customers`}
       />
       <DataTable
+        id="customers"
+        exportHref={
+          can(actor, { customer: ["read"], report: ["export"] })
+            ? withParams("/admin/export/customers", params)
+            : undefined
+        }
         rows={list.rows}
         columns={columns}
         rowKey={(row) => row.id}

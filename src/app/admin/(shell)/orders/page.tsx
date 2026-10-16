@@ -195,6 +195,12 @@ async function Orders({
         ))}
       </nav>
       <DataTable
+        id="orders"
+        exportHref={
+          can(actor, { order: ["read", "export"] })
+            ? withParams("/admin/export/orders", params)
+            : undefined
+        }
         rows={list.rows}
         columns={columns}
         rowKey={(row) => row.orderNumber}

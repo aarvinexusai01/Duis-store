@@ -33,16 +33,41 @@ function getMailer(): Transporter {
   return globalForMail.__duisMailer
 }
 
+/**
+ * The sender name and reply-to from the admin settings. The address itself
+ * stays SMTP_FROM's, because the mail server is authorised for it.
+ */
+async function senderFor(smtpFrom: string): Promise<{
+  from: string | { name: string; address: string }
+  replyTo: string | null
+}> {
+  const address = /<([^>]+)>/.exec(smtpFrom)?.[1] ?? smtpFrom
+  const settings = await getDb().execute<{
+    email_sender_name: string
+    email_reply_to: string | null
+  }>(
+    sql`select email_sender_name, email_reply_to from store_settings where id = 1`,
+  )
+  const row = settings.rows[0]
+  if (!row) return { from: smtpFrom, replyTo: null }
+  return {
+    from: { name: row.email_sender_name, address },
+    replyTo: row.email_reply_to,
+  }
+}
+
 /** notify.email handler: render, send, record the outcome. */
 export async function deliverEmail(
   payload: JobPayloads["notify.email"],
 ): Promise<void> {
   const db = getDb()
   const rendered = renderEmail(payload.template, payload.props)
+  const sender = await senderFor(getServerEnv().SMTP_FROM)
 
   try {
     const info = await getMailer().sendMail({
-      from: getServerEnv().SMTP_FROM,
+      from: sender.from,
+      ...(sender.replyTo ? { replyTo: sender.replyTo } : {}),
       to: payload.to,
       subject: rendered.subject,
       html: rendered.html,

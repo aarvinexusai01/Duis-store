@@ -130,6 +130,7 @@ async function Discounts({
         }
       />
       <DataTable
+        id="discounts"
         rows={list.rows}
         columns={columns}
         rowKey={(row) => row.id}

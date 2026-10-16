@@ -26,6 +26,7 @@ export {
 } from "./queries"
 export {
   ADMIN_ORDERS_PAGE_SIZE,
+  ORDER_STATUSES,
   ORDER_VIEWS,
   addOrderNote,
   adminGetOrder,

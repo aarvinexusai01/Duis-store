@@ -6,7 +6,7 @@ import { totp } from "../../helpers/totp"
 /** A fresh staff account per run, so two-factor setup always starts clean. */
 export async function createStaff(
   page: Page,
-  role: "store_admin" | "content_editor" | "fulfilment_staff",
+  role: "super_admin" | "store_admin" | "content_editor" | "fulfilment_staff",
 ) {
   const email = `e2e-${role}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@duis.test`
   const password = "E2e-Staff-Passw0rd!"

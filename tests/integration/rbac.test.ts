@@ -1,3 +1,7 @@
+import { readdirSync, readFileSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
 import { describe, expect, it } from "vitest"
 
 // Importing the modules registers their operations.
@@ -13,7 +17,10 @@ import "@/features/marketing"
 import "@/features/media"
 import "@/features/orders"
 import "@/features/reports"
+import "@/features/settings"
 import "@/features/shipping"
+import "@/features/staff"
+import "@/features/system"
 import "@/features/wallet"
 import "@/features/wishlist"
 import type { Actor } from "@/server/auth/actor"
@@ -59,6 +66,23 @@ async function errorCode(name: string, actor: Actor): Promise<string> {
 describe("role × operation matrix", () => {
   it("covers every service operation", () => {
     expect(operations.length).toBeGreaterThanOrEqual(25)
+  })
+
+  it("imports every feature module that defines operations", () => {
+    const features = path.resolve("src/features")
+    const self = readFileSync(fileURLToPath(import.meta.url), "utf8")
+    const missing = readdirSync(features).filter((dir) => {
+      const files = readdirSync(path.join(features, dir), { recursive: true })
+        .map(String)
+        .filter((file) => /\.tsx?$/.test(file) && !file.endsWith(".test.ts"))
+      const defines = files.some((file) =>
+        readFileSync(path.join(features, dir, file), "utf8").includes(
+          "defineOperation(",
+        ),
+      )
+      return defines && !self.includes(`import "@/features/${dir}"`)
+    })
+    expect(missing).toEqual([])
   })
 
   for (const [name, operation] of operations) {

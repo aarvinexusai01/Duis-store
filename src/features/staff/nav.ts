@@ -15,6 +15,11 @@ export type AdminNavItem = {
     | "cod"
     | "customers"
     | "discounts"
+    | "reports"
+    | "staff"
+    | "audit"
+    | "system"
+    | "settings"
   permission?: PermissionRequest
 }
 
@@ -93,6 +98,41 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         label: "Inventory",
         icon: "inventory",
         permission: { inventory: ["read"] },
+      },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [
+      {
+        href: "/admin/reports",
+        label: "Reports",
+        icon: "reports",
+        permission: { report: ["read"] },
+      },
+      {
+        href: "/admin/staff",
+        label: "Staff",
+        icon: "staff",
+        permission: { staff: ["read"] },
+      },
+      {
+        href: "/admin/audit",
+        label: "Audit log",
+        icon: "audit",
+        permission: { audit: ["read"] },
+      },
+      {
+        href: "/admin/system",
+        label: "System",
+        icon: "system",
+        permission: { system: ["read"] },
+      },
+      {
+        href: "/admin/settings",
+        label: "Settings",
+        icon: "settings",
+        permission: { settings: ["read"] },
       },
     ],
   },

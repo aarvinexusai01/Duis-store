@@ -56,11 +56,11 @@ describe("email notifications", () => {
 
   it("queues, delivers through SMTP and records the outcome", async () => {
     const to = `${unique("verify")}@duis.test`
-    const notificationId = await queueEmail({
+    const notificationId = (await queueEmail({
       template: "verify-email",
       to,
       props: { name: "Asha", url: "https://duis.test/verify?token=abc" },
-    })
+    }))!
 
     const job = await getDb().execute<{
       data: Parameters<typeof deliverEmail>[0]

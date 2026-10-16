@@ -16,7 +16,7 @@ import {
   type StockRow,
 } from "@/features/inventory"
 import { can, requireStaff } from "@/features/staff"
-import { one, pageOf } from "@/lib/admin-query"
+import { one, pageOf, withParams } from "@/lib/admin-query"
 import { cn } from "@/lib/utils"
 
 import { StockRowActions } from "./stock-row-actions"
@@ -129,6 +129,12 @@ async function Inventory({
         }
       />
       <DataTable
+        id="inventory"
+        exportHref={
+          can(actor, { inventory: ["read"], report: ["export"] })
+            ? withParams("/admin/export/inventory", params)
+            : undefined
+        }
         rows={list.rows}
         columns={columns}
         rowKey={(row) => row.variantId}

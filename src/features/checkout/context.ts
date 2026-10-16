@@ -96,7 +96,8 @@ async function loadTaxRules(): Promise<TaxRule[]> {
     rate_above_bp: number
   }>(sql`
     select hsn_prefix, price_threshold_paise, rate_below_bp, rate_above_bp from tax_rules
-    where effective_from <= current_date and (effective_to is null or effective_to >= current_date)`)
+    where effective_from <= (now() at time zone 'Asia/Kolkata')::date
+      and (effective_to is null or effective_to >= (now() at time zone 'Asia/Kolkata')::date)`)
   return result.rows.map((r) => ({
     hsnPrefix: r.hsn_prefix,
     priceThresholdPaise: r.price_threshold_paise,

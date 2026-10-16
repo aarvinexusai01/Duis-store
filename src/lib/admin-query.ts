@@ -34,3 +34,21 @@ export function withParams(
   const query = search.toString()
   return query ? `${basePath}?${query}` : basePath
 }
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * A report's date range from the URL, defaulting to this month so far (IST).
+ */
+export function dateRange(
+  raw: RawSearch,
+  now: Date = new Date(),
+): { from: string; to: string } {
+  const today = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+  const from = one(raw.from)
+  const to = one(raw.to)
+  return {
+    from: from && ISO_DATE.test(from) ? from : `${today.slice(0, 8)}01`,
+    to: to && ISO_DATE.test(to) ? to : today,
+  }
+}

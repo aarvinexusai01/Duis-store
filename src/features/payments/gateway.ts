@@ -61,6 +61,8 @@ export interface PaymentGateway {
   ): boolean
   /** HMAC(raw body) on webhooks. */
   verifyWebhookSignature(rawBody: string, signature: string): boolean
+  /** A cheap authenticated call, for the admin "test connection" button. */
+  ping(): Promise<void>
 }
 
 export function hmacHex(secret: string, message: string): string {
@@ -143,6 +145,9 @@ function razorpay(
 
   return {
     name: "razorpay",
+    async ping() {
+      await call("GET", "/orders?count=1")
+    },
     publicKey: keyId,
     async createOrder({ amountPaise, receipt, notes }) {
       const order = await call<{
@@ -255,6 +260,7 @@ function fakeState(): FakeState {
 const fake: PaymentGateway = {
   name: "fake",
   publicKey: "fake_key",
+  async ping() {},
   async createOrder({ amountPaise }) {
     const order = {
       id: `fake_order_${crypto.randomUUID().replace(/-/g, "")}`,
@@ -342,4 +348,27 @@ export function getPaymentGateway(): PaymentGateway {
     )
   }
   return fake
+}
+
+/**
+ * The gateway that took a stored payment, which may differ from today's
+ * PAYMENT_PROVIDER (e.g. test orders paid with the fake gateway before
+ * switching to Razorpay). Null when that gateway can't be used here: the
+ * fake one never in production, Razorpay only with its keys.
+ */
+export function paymentGatewayFor(provider: string): PaymentGateway | null {
+  const env = getServerEnv()
+  if (provider === "razorpay") {
+    return env.RAZORPAY_KEY_ID &&
+      env.RAZORPAY_KEY_SECRET &&
+      env.RAZORPAY_WEBHOOK_SECRET
+      ? razorpay(
+          env.RAZORPAY_KEY_ID,
+          env.RAZORPAY_KEY_SECRET,
+          env.RAZORPAY_WEBHOOK_SECRET,
+        )
+      : null
+  }
+  if (provider === "fake") return env.APP_ENV === "production" ? null : fake
+  return null
 }

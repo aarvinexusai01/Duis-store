@@ -8,7 +8,11 @@ import { enqueue } from "@/server/jobs/enqueue"
 import { QUEUES } from "@/server/jobs/queues"
 import { logger } from "@/server/observability/logger"
 
-import { getPaymentGateway, type GatewayPayment } from "./gateway"
+import {
+  getPaymentGateway,
+  paymentGatewayFor,
+  type GatewayPayment,
+} from "./gateway"
 
 /**
  * Payment rows and refunds. Order state changes live in the orders module;
@@ -194,8 +198,9 @@ export async function processRefund(
     idempotency_key: string
     provider_payment_id: string | null
     provider_refund_id: string | null
+    provider: string
   }>(sql`
-    select r.id, r.status, r.amount_paise, r.idempotency_key, r.provider_refund_id, p.provider_payment_id
+    select r.id, r.status, r.amount_paise, r.idempotency_key, r.provider_refund_id, p.provider_payment_id, p.provider
     from refunds r join payments p on p.id = r.payment_id where r.id = ${refundId}`)
   const refund = loaded.rows[0]
   if (!refund || refund.status !== "pending" || refund.provider_refund_id)
@@ -203,7 +208,13 @@ export async function processRefund(
   if (!refund.provider_payment_id)
     throw new Error(`refund ${refundId}: payment has no gateway payment id`)
 
-  const gateway = getPaymentGateway()
+  // Refund through the gateway that took the payment.
+  const gateway = paymentGatewayFor(refund.provider)
+  if (!gateway) {
+    throw new Error(
+      `refund ${refundId}: the ${refund.provider} gateway isn't available here`,
+    )
+  }
   // Razorpay limits receipts to 40 characters.
   const receipt = refund.idempotency_key.slice(0, 40)
   const previous = (

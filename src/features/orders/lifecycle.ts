@@ -12,7 +12,7 @@ import {
 } from "@/features/inventory"
 import {
   captureIfAuthorized,
-  getPaymentGateway,
+  paymentGatewayFor,
   lockPaymentByProviderOrder,
   markCaptured,
   onRefundProcessed,
@@ -402,9 +402,9 @@ async function capturedOnGateway(
     provider: string
   }>(sql`
     select provider_order_id, provider from payments where order_id = ${orderId} and status in ('created', 'failed', 'authorized')`)
-  const gateway = getPaymentGateway()
   for (const row of rows.rows) {
-    if (row.provider !== gateway.name) continue
+    const gateway = paymentGatewayFor(row.provider)
+    if (!gateway) continue
     const payments = await gateway.fetchOrderPayments(row.provider_order_id)
     const paid = payments.find(
       (p) => p.status === "captured" || p.status === "authorized",

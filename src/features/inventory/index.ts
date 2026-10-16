@@ -20,3 +20,4 @@ export {
   type MovementRow,
   type StockRow,
 } from "./admin"
+export { sendLowStockDigest } from "./digest"
