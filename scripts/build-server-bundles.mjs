@@ -25,6 +25,7 @@ await build({
     worker: "src/worker/index.ts",
     migrate: "src/db/migrate.ts",
     seed: "src/db/seed/index.ts",
+    "swap-photos": "src/db/seed/swap-photos.ts",
     "create-super-admin": "src/cli/create-super-admin.ts",
   },
   outdir: OUT_DIR,

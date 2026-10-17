@@ -26,6 +26,7 @@
     "check": "npm run lint && npm run typecheck && npm run format:check && npm test",
     "auth:generate": "npx --yes auth@1.7.9 generate --config src/server/auth/cli-config.ts --output src/db/schema/auth.ts --yes && node scripts/postprocess-auth-schema.mjs && prettier --write src/db/schema/auth.ts",
     "db:seed": "npm run build:server && LOG_LEVEL=warn node --env-file-if-exists=.env dist/seed.mjs",
+    "db:seed:photos": "npm run build:server && LOG_LEVEL=warn node --env-file-if-exists=.env dist/swap-photos.mjs",
     "db:reset": "docker compose -f compose.dev.yaml down -v && node -e \"require('node:fs').rmSync('storage/media',{recursive:true,force:true})\" && npm run db:up && npm run db:migrate",
     "admin:create": "npm run build:server && node --env-file-if-exists=.env dist/create-super-admin.mjs"
   },

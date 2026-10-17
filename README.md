@@ -132,6 +132,7 @@ Turn off **exchangeable** on categories such as innerwear (in **Admin → Catego
 | `npm run db:migrate`                         | Apply migrations (as the `duis_owner` role)                                                              |
 | `npm run db:studio`                          | Drizzle Studio                                                                                           |
 | `npm run db:seed`                            | Load deterministic demo data (refuses staging/production, and refuses to run twice)                      |
+| `npm run db:seed:photos`                     | Swap the demo photos into an existing development database (see `src/db/seed/photos/CREDITS.md`)         |
 | `npm run db:reset`                           | **Local only:** delete the dev database volume and media, then recreate and migrate                      |
 | `npm run admin:create -- --email … --name …` | Create the first super admin (password from `ADMIN_PASSWORD`, or generated and shown once)               |
 | `npm run auth:generate`                      | Regenerate `src/db/schema/auth.ts` with the Better Auth CLI after changing auth plugins                  |

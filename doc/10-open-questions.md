@@ -87,7 +87,7 @@ These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-c
 | A13 | **Legal content:** legal entity name, registered address, GSTIN, grievance officer, privacy, terms, shipping, exchange and cancellation policies (lawyer-reviewed) | 1–2 weeks | Phase 6 content / before Razorpay live KYC | You |
 | A14 | **GST:** your CA to confirm HSN codes per category, the slab interpretation (₹2,500 per piece, before or after tax, effect of discounts), and that tax on shipping and COD fees is handled correctly | 1 week | Phase 3 | You + CA |
 | A15 | Brand assets: logo (SVG source), any colours or fonts you want kept. Otherwise we propose a bold-streetwear identity for approval. | — | Phase 2 | You |
-| A16 | Real catalogue: product data, size charts, photography (to replace the demo seed) | Ongoing | Phase 8 | You |
+| A16 | Real catalogue: product data, size charts, photography (to replace the demo seed). The demo uses Pexels stock photos for development only (`src/db/seed/photos/CREDITS.md`) | Ongoing | Phase 8 | You |
 | A17 | **Razorpay international payments:** request activation of international cards for INR checkout | Days to weeks | Phase 3 | You |
 | A18 | **IEC** (Importer-Exporter Code) from DGFT, needed on export shipping documents | Days | Phase 4 | You |
 | A19 | **LUT** filed on the GST portal for zero-rated exports (with your CA) | Days | Phase 4 | You + CA |

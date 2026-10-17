@@ -56,6 +56,7 @@ import {
   WAIST_SIZES,
 } from "./data"
 import { bannerImage, garmentImage } from "./images"
+import { bannerPhoto, productPhotos } from "./photos"
 
 /**
  * Deterministic demo data for development (doc/06 Phase 1, task 10):
@@ -315,35 +316,56 @@ async function main() {
           skuPrefix: `DU-${SKU_CODES[group.category]}-${String(groupIndex + 1).padStart(3, "0")}`,
         })
 
-        const media: { mediaId: string; colorValueId: string }[] = []
+        const media: {
+          mediaId: string
+          colorValueId: string
+          altOverride?: string
+        }[] = []
+        const used = new Set<number>()
         for (const [colourIndex, slugValue] of seed.colours.entries()) {
           const colour = COLOURS.find((c) => c.slug === slugValue)!
+          const photos = productPhotos(group.garment, slugValue, used)
+          for (const photo of photos) used.add(photo.id)
+          // A photo can be shared by several products, so each names it.
+          const frontAlt = `${seed.name} in ${colour.label}, front`
           const front = await uploadImage(actor, {
-            bytes: await garmentImage({
-              garment: group.garment,
-              hex: colour.hex,
-              seed: index * 7 + colourIndex,
-              graphic: seed.pattern === "graphic",
-            }),
-            altText: `${seed.name} in ${colour.label}, front`,
+            bytes:
+              photos[0]?.bytes ??
+              (await garmentImage({
+                garment: group.garment,
+                hex: colour.hex,
+                seed: index * 7 + colourIndex,
+                graphic: seed.pattern === "graphic",
+              })),
+            altText: frontAlt,
           })
           media.push({
             mediaId: front.id,
             colorValueId: values.color![slugValue]!,
+            ...(photos[0] ? { altOverride: frontAlt } : {}),
           })
-          if (colourIndex === 0) {
+          // A second view for the first colour: a second photo when there
+          // is one, else the drawn back only when the front is drawn too.
+          if (colourIndex === 0 && (photos[1] || !photos[0])) {
             const back = await uploadImage(actor, {
-              bytes: await garmentImage({
-                garment: group.garment,
-                hex: colour.hex,
-                seed: index * 7,
-                back: true,
-              }),
-              altText: `${seed.name} in ${colour.label}, back`,
+              bytes:
+                photos[1]?.bytes ??
+                (await garmentImage({
+                  garment: group.garment,
+                  hex: colour.hex,
+                  seed: index * 7,
+                  back: true,
+                })),
+              altText: `${seed.name} in ${colour.label}, ${photos[1] ? "another view" : "back"}`,
             })
             media.push({
               mediaId: back.id,
               colorValueId: values.color![slugValue]!,
+              ...(photos[1]
+                ? {
+                    altOverride: `${seed.name} in ${colour.label}, another view`,
+                  }
+                : {}),
             })
           }
         }
@@ -383,9 +405,10 @@ async function main() {
       ["#556b2f", "#d8c3a5", "#111111"],
     ]
     for (const [i, palette] of palettes.entries()) {
+      const photo = bannerPhoto(i)
       const banner = await uploadImage(actor, {
-        bytes: await bannerImage(i, palette),
-        altText: "Duis campaign banner",
+        bytes: photo ?? (await bannerImage(i, palette)),
+        altText: photo ? "Duis campaign photo" : "Duis campaign banner",
       })
       ;(i < 2 ? heroMedia : promoMedia).push(banner.id)
     }

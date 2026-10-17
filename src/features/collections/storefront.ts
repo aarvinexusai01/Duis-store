@@ -42,7 +42,16 @@ const SELECT = sql`
          im.storage_key as image_key, im.width as image_width, im.height as image_height, im.alt_text as image_alt,
          bm.storage_key as banner_key, bm.width as banner_width, bm.height as banner_height, bm.alt_text as banner_alt
   from collections c
-  left join media_assets im on im.id = c.image_media_id and im.deleted_at is null
+  -- Without its own image, a collection shows its first in-stock product's.
+  left join media_assets im on im.id = coalesce(c.image_media_id, (
+      select lc.primary_media_id
+      from collection_products cp
+      join products p on p.id = cp.product_id and p.status = 'active'
+      join product_listing_cache lc on lc.product_id = p.id
+      where cp.collection_id = c.id and lc.primary_media_id is not null
+      order by lc.in_stock desc, cp.position
+      limit 1
+    )) and im.deleted_at is null
   left join media_assets bm on bm.id = c.banner_media_id and bm.deleted_at is null
 `
 
