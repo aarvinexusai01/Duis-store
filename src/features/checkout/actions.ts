@@ -1,5 +1,13 @@
 "use server"
 
+import { cookies, headers } from "next/headers"
+
+import {
+  CONSENT_COOKIE,
+  marketingContextSchema,
+  parseConsent,
+} from "@/features/analytics"
+import type { MarketingContext } from "@/db/schema"
 import { getActor } from "@/server/auth/session"
 import { toActionError, type ActionError } from "@/server/action"
 
@@ -27,6 +35,22 @@ function failure(
   return { ok: false, ...mapped, ...(quote ? { quote } : {}) }
 }
 
+/**
+ * What the Conversions API will need once the order is paid, only when this
+ * browser gave marketing consent (ADR-0027). Null: nothing goes to Meta
+ * from the server for this order.
+ */
+async function readMarketingContext(): Promise<MarketingContext | null> {
+  const jar = await cookies()
+  if (!parseConsent(jar.get(CONSENT_COOKIE)?.value)?.marketing) return null
+  const userAgent = (await headers()).get("user-agent")
+  return marketingContextSchema.parse({
+    fbp: jar.get("_fbp")?.value,
+    fbc: jar.get("_fbc")?.value,
+    userAgent: userAgent ? userAgent.slice(0, 500) : undefined,
+  })
+}
+
 export async function quoteAction(
   choices: CheckoutChoices,
 ): Promise<Result<{ view: CheckoutView }>> {
@@ -41,7 +65,13 @@ export async function placeOrderAction(
   input: CheckoutChoices & { quoteHash: string; idempotencyKey: string },
 ): Promise<Result<{ result: PlaceResult }>> {
   try {
-    return { ok: true, result: await placeOrder(await getActor(), input) }
+    return {
+      ok: true,
+      result: await placeOrder(await getActor(), {
+        ...input,
+        marketingContext: await readMarketingContext(),
+      }),
+    }
   } catch (error) {
     return failure(error)
   }

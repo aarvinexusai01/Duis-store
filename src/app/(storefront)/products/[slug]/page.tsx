@@ -34,6 +34,8 @@ import { absoluteUrl } from "@/server/site-url"
 
 import { PincodeCheck } from "./_components/pincode-check"
 import { ProductReviews } from "./_components/product-reviews"
+import { TrackEvent } from "@/features/analytics/ui/track-event"
+
 import { ProductView } from "./_components/product-view"
 import { SizeGuide } from "./_components/size-guide"
 
@@ -149,6 +151,17 @@ async function Product({ params }: Pick<Props, "params">) {
         </ProductView>
       </div>
 
+      <TrackEvent
+        event={{
+          name: "view_item",
+          item: {
+            id: product.id,
+            name: product.title,
+            pricePaise: Math.min(...product.variants.map((v) => v.pricePaise)),
+            quantity: 1,
+          },
+        }}
+      />
       <Suspense fallback={null}>
         <ProductReviews productId={product.id} />
       </Suspense>

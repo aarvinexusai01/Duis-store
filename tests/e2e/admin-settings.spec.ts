@@ -126,3 +126,39 @@ test("content editor is refused on settings, staff, reports and orders", async (
   const csv = await page.request.get("/admin/export/orders")
   expect(csv.status()).toBe(404)
 })
+
+test("support answers a contact message from the inbox", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "admin flows are covered on desktop")
+  const email = `inbox-${Date.now()}@duis.test`
+  await page.goto("/contact")
+  const form = page.getByRole("form", { name: "Send us a message" })
+  await form.getByRole("textbox", { name: "Name" }).fill("Inbox Visitor")
+  await form.getByRole("textbox", { name: "Email" }).fill(email)
+  await form
+    .getByRole("combobox", { name: "What's it about?" })
+    .selectOption("order")
+  await form
+    .getByRole("textbox", { name: "Message" })
+    .fill("Can I change the delivery address on my order?")
+  await form.getByRole("button", { name: "Send message" }).click()
+  await expect(page.getByText("Thanks, we've got it")).toBeVisible()
+
+  const agent = await createStaff(page, "support_agent")
+  await signInAndSetUpTwoFactor(page, agent)
+  await page.goto(`/admin/messages?q=${encodeURIComponent(email)}`)
+  await page.getByRole("link", { name: /Inbox Visitor/ }).click()
+  await expect(
+    page.getByRole("heading", { name: "Inbox Visitor" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Reply by email" }),
+  ).toHaveAttribute("href", new RegExp(`^mailto:${encodeURIComponent(email)}`))
+  await page.getByRole("textbox", { name: "Staff note" }).fill("Updated it.")
+  await page.getByRole("button", { name: "Mark replied" }).click()
+  await expect(page.getByText("Saved")).toBeVisible()
+  // Once replied, the desk offers Close and Reopen instead.
+  await expect(page.getByRole("button", { name: "Reopen" })).toBeVisible()
+})

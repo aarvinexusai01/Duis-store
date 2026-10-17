@@ -528,6 +528,31 @@ Tasks:
   - **WhatsApp updates:** checkout opt-in and an account switch; order and exchange messages; back-in-stock alerts with quiet hours; STOP replies.
   - **Back-in-stock alerts:** "Notify me" on a sold-out size; one batched email per address.
   - **Bag reminders:** emails at 1 hour and 24 hours, with a signed unsubscribe.
+- **5c plan and owner decisions (2026-10-16):**
+  - **Contact form:** on `/contact`, below the page's content.
+    - Each message is saved to a new **Admin → Messages** inbox (new, replied or closed; who handled it; an internal note).
+    - It is also emailed to the support address set in Settings, with reply-to set to the customer, so staff answer from their mail client.
+    - Spam protection: Turnstile once its keys are set, a hidden honeypot field and a per-IP limit.
+  - **Consent banner:** "Accept all", "Reject all" and "Choose", equally visible.
+    - "Choose" offers separate Analytics and Marketing switches.
+    - Only essential cookies are set until the visitor answers.
+    - It asks again after 12 months, or when the categories change.
+    - "Cookie settings" in the footer reopens it.
+    - Each answer is appended to `consent_records`: a random visitor ID, the account if signed in, the choices and the banner version. No IP address.
+  - **GA4:** `gtag.js` loads only after analytics consent (Consent Mode "basic", so nothing is sent before consent). Events: page views, `view_item`, `add_to_cart`, `begin_checkout` and `purchase`.
+  - **Meta Pixel:** loads only after marketing consent. Events: `PageView`, `ViewContent`, `AddToCart`, `InitiateCheckout` and `Purchase`.
+  - **Conversions API:**
+    - The server sends `Purchase` once the payment is confirmed, only if the buyer had given marketing consent at checkout.
+    - It uses the same `event_id` as the browser Pixel, so Meta counts it once.
+    - Email, phone and account ID are SHA-256 hashed. No IP address is sent.
+  - **IDs at runtime:** `GA4_MEASUREMENT_ID`, `META_PIXEL_ID` and `META_CAPI_ACCESS_TOKEN` are read by the server at request time, so one Docker image serves every environment. Each feature is off while its value is unset (doc/10 A11).
+  - **Exit check:** a Playwright test records every request and fails if any goes to Google or Meta before consent, then checks that the scripts load after "Accept all".
+- **5c, built 2026-10-16** ([ADR-027](adr/0027-phase-5c-consent-analytics-contact-decisions.md)):
+  - **Consent banner:** Accept all, Reject all and Choose; "Cookie settings" in the footer; append-only `consent_records`.
+  - **GA4 and Meta Pixel:** loaded only after consent; product view, add to bag, checkout and purchase events.
+  - **Conversions API:** server-side Purchase for consenting buyers, deduplicated with the Pixel (unverified until A11).
+  - **Contact form:** on `/contact`, with the Admin → Messages inbox and an email to the support address.
+  - **Phase 5 is complete.** Every exit criterion has a test: the exchange journey (E2E), no trackers before consent (E2E, desktop and mobile), and the OTP limits (integration).
 - **Assumptions** (tell me if any is wrong):
   - Categories get an "exchangeable" switch; innerwear is off.
   - Customers request an exchange from the order page, within the window, once the parcel is delivered.

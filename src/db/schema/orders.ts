@@ -59,6 +59,16 @@ export const orderNumberSeq = pgSequence("order_number_seq", {
   startWith: 100001,
 })
 
+/**
+ * Set at checkout only when the buyer had given marketing consent: what the
+ * server needs to send the Meta Conversions API purchase (ADR-0027).
+ */
+export type MarketingContext = {
+  fbp?: string
+  fbc?: string
+  userAgent?: string
+}
+
 export type ShippingAddressSnapshot = {
   fullName: string
   phone: string
@@ -120,6 +130,7 @@ export const orders = pgTable(
     placeIdempotencyKey: text().notNull().unique(),
     quote: jsonb().notNull(),
     quoteHash: text().notNull(),
+    marketingContext: jsonb().$type<MarketingContext>(),
 
     placedAt: timestamptz().notNull().defaultNow(),
     reservationExpiresAt: timestamptz(),

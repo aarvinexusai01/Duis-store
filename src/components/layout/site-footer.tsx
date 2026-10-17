@@ -4,6 +4,7 @@ import { connection } from "next/server"
 import { Suspense } from "react"
 
 import { Wordmark } from "@/components/brand/wordmark"
+import { CookieSettingsButton } from "@/features/analytics/ui/cookie-settings-button"
 import {
   getPublishedSiteSettings,
   getResolvedNavigation,
@@ -105,7 +106,8 @@ async function FooterLegal() {
       <div className="page-container flex flex-col gap-2 py-6 text-xs text-chrome-muted sm:flex-row sm:justify-between">
         <p>
           © {new Date().getFullYear()} {settings?.brandName ?? "Duis"}. All
-          prices in INR, inclusive of all taxes.
+          prices in INR, inclusive of all taxes.{" "}
+          <CookieSettingsButton className="underline hover:text-paper" />
         </p>
         {officer && (
           <p>

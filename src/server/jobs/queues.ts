@@ -26,6 +26,7 @@ export const QUEUES = {
   reviewRequests: "reviews.request",
   backInStock: "alerts.back-in-stock",
   cartReminders: "marketing.cart-reminders",
+  metaPurchase: "analytics.meta-purchase",
 } as const
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES]
@@ -38,6 +39,7 @@ export type JobPayloads = {
     template: EmailTemplateName
     to: string
     props: Record<string, unknown>
+    replyTo?: string
   }
   "notify.whatsapp": {
     notificationId: string
@@ -60,6 +62,7 @@ export type JobPayloads = {
   "reviews.request": null
   "alerts.back-in-stock": { variantId: string }
   "marketing.cart-reminders": null
+  "analytics.meta-purchase": { orderId: string }
 }
 
 type QueuePolicy = Parameters<PgBoss["createQueue"]>[1]
@@ -174,6 +177,15 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
     retryLimit: 1,
     retryDelay: 120,
     expireInSeconds: 600,
+    deadLetter,
+  },
+  // Meta deduplicates by event_id, so a retry never counts twice.
+  "analytics.meta-purchase": {
+    retryLimit: 5,
+    retryDelay: 60,
+    retryBackoff: true,
+    expireInSeconds: 60,
+    deleteAfterSeconds: 7 * 24 * 3600,
     deadLetter,
   },
   "reviews.request": {

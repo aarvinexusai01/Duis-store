@@ -67,7 +67,9 @@ export async function deliverEmail(
   try {
     const info = await getMailer().sendMail({
       from: sender.from,
-      ...(sender.replyTo ? { replyTo: sender.replyTo } : {}),
+      ...((payload.replyTo ?? sender.replyTo)
+        ? { replyTo: payload.replyTo ?? sender.replyTo! }
+        : {}),
       to: payload.to,
       subject: rendered.subject,
       html: rendered.html,

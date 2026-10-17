@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 
 import { sql } from "drizzle-orm"
 
+import type { MarketingContext } from "@/db/schema"
 import { addCartItem } from "@/features/cart"
 import { publishProduct, setProductMedia } from "@/features/catalog"
 import {
@@ -74,6 +75,7 @@ export async function paidOrder(
     quantity?: number
     paymentMode?: "prepaid" | "partial_cod"
     couponCode?: string
+    marketingContext?: MarketingContext | null
   } = {},
 ): Promise<string> {
   await addCartItem(customer, {
@@ -91,6 +93,7 @@ export async function paidOrder(
     ...choices,
     quoteHash: view.hash,
     idempotencyKey: randomUUID(),
+    marketingContext: options.marketingContext ?? null,
   })
   if (result.status !== "pay") return result.orderNumber
   const { paymentId, signature } = await simulatePayment(customer, {

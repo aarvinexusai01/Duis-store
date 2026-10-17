@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server"
 import type { ReactElement } from "react"
 
 import {
+  ContactMessageEmail,
+  contactMessageText,
   LowStockDigestEmail,
   lowStockDigestText,
   StaffInviteEmail,
@@ -96,6 +98,10 @@ const views: {
   "low-stock-digest": {
     html: (props) => <LowStockDigestEmail {...props} />,
     text: lowStockDigestText,
+  },
+  "contact-message": {
+    html: (props) => <ContactMessageEmail {...props} />,
+    text: contactMessageText,
   },
   "test-email": {
     html: (props) => <TestEmail {...props} />,

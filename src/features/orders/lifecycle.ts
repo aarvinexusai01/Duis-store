@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { getServerEnv } from "@/config/env"
+import { queueMetaPurchase } from "@/features/analytics"
 import { redeemCoupon, reverseCouponRedemption } from "@/features/discounts"
 import {
   commitReservations,
@@ -201,6 +202,7 @@ export async function confirmInTransaction(
     where cart_id in (select id from carts where user_id = ${order.user_id} and status = 'active')
       and variant_id in (select variant_id from order_items where order_id = ${order.id} and variant_id is not null)`)
   await emailConfirmation(tx, order)
+  await queueMetaPurchase(tx, order.id)
   await queueWhatsApp(tx, {
     template: "order_confirmed",
     userId: order.user_id,

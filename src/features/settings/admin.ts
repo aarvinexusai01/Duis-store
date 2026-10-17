@@ -40,6 +40,7 @@ export type AdminSettings = {
   promoCreditValidityDays: number
   emailSenderName: string
   emailReplyTo: string | null
+  supportEmail: string | null
   notifyOrderShipped: boolean
   notifyPaymentReminder: boolean
   notifyLowStock: boolean
@@ -78,6 +79,7 @@ const COLUMNS: Record<
   promoCreditValidityDays: "promo_credit_validity_days",
   emailSenderName: "email_sender_name",
   emailReplyTo: "email_reply_to",
+  supportEmail: "support_email",
   notifyOrderShipped: "notify_order_shipped",
   notifyPaymentReminder: "notify_payment_reminder",
   notifyLowStock: "notify_low_stock",
@@ -289,6 +291,10 @@ export const updateNotificationSettings = defineOperation({
       .max(60)
       .regex(/^[^<>"\r\n]+$/, "No quotes or angle brackets."),
     emailReplyTo: z
+      .union([z.email(), z.literal("")])
+      .transform((v) => v || null)
+      .nullable(),
+    supportEmail: z
       .union([z.email(), z.literal("")])
       .transform((v) => v || null)
       .nullable(),

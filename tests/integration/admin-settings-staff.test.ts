@@ -130,6 +130,7 @@ describe("settings", () => {
     await updateNotificationSettings(admin, {
       emailSenderName: "Duis Store",
       emailReplyTo: "help@duis.test",
+      supportEmail: null,
       notifyOrderShipped: false,
       notifyPaymentReminder: true,
       notifyLowStock: true,

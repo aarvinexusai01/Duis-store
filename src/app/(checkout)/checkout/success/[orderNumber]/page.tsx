@@ -6,6 +6,8 @@ import { Suspense } from "react"
 import { PageSkeleton } from "@/components/page-skeleton"
 import { buttonVariants } from "@/components/ui/button"
 import { SHOP_HREF } from "@/config/routes"
+import { purchaseEventId } from "@/features/analytics"
+import { TrackEvent } from "@/features/analytics/ui/track-event"
 import { requireUser } from "@/features/auth/session-guard"
 import { getMyOrder } from "@/features/orders"
 import { formatPaise } from "@/lib/money"
@@ -69,6 +71,27 @@ async function Success({ params }: Pick<Props, "params">) {
   }
   return (
     <div className="max-w-xl">
+      <TrackEvent
+        onceKey={`purchase:${order.orderNumber}`}
+        event={{
+          name: "purchase",
+          orderNumber: order.orderNumber,
+          eventId: purchaseEventId(order.orderNumber),
+          valuePaise: order.totalPaise,
+          taxPaise: order.taxTotalPaise,
+          shippingPaise: order.shippingFeePaise,
+          ...(order.couponCode ? { coupon: order.couponCode } : {}),
+          items: order.items
+            .filter((item) => item.productId)
+            .map((item) => ({
+              id: item.productId!,
+              name: item.title,
+              variant: item.sku,
+              pricePaise: item.unitPricePaise,
+              quantity: item.quantity,
+            })),
+        }}
+      />
       <p className="text-sm font-semibold tracking-wider text-rust uppercase">
         Thank you
       </p>

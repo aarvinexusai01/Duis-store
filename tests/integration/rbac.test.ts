@@ -6,11 +6,13 @@ import { describe, expect, it } from "vitest"
 
 // Importing the modules registers their operations.
 import "@/features/alerts"
+import "@/features/analytics"
 import "@/features/cart"
 import "@/features/catalog"
 import "@/features/checkout"
 import "@/features/cms"
 import "@/features/collections"
+import "@/features/contact"
 import "@/features/customers"
 import "@/features/discounts"
 import "@/features/exchanges"

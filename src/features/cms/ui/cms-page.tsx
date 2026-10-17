@@ -1,4 +1,5 @@
 import type { Metadata, Route } from "next"
+import type { ReactNode } from "react"
 import { notFound, permanentRedirect } from "next/navigation"
 import { connection } from "next/server"
 
@@ -14,14 +15,17 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 /**
  * A published CMS page at its one canonical URL (pageHref): /about,
  * /policies/privacy-policy, /pages/<slug>. Any other path that names the
- * page redirects there, so no page is reachable twice.
+ * page redirects there, so no page is reachable twice. `children` render
+ * after the content (e.g. the contact form).
  */
 export async function CmsPageView({
   slug,
   path,
+  children,
 }: {
   slug: string
   path: string
+  children?: ReactNode
 }) {
   await connection()
   if (!SLUG.test(slug)) notFound()
@@ -39,6 +43,9 @@ export async function CmsPageView({
         </h1>
       </header>
       <Blocks blocks={page.blocks} />
+      {children && (
+        <div className="page-container max-w-3xl pb-16">{children}</div>
+      )}
     </article>
   )
 }

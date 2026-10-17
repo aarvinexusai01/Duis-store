@@ -455,6 +455,7 @@ export function NotificationsForm({ settings, canEdit }: Props) {
         updateNotificationSettingsAction({
           emailSenderName: text(form, "sender"),
           emailReplyTo: text(form, "replyTo"),
+          supportEmail: text(form, "support"),
           notifyOrderShipped: checked(form, "shipped"),
           notifyPaymentReminder: checked(form, "reminder"),
           notifyLowStock: checked(form, "lowStock"),
@@ -482,6 +483,18 @@ export function NotificationsForm({ settings, canEdit }: Props) {
                 name="replyTo"
                 type="email"
                 defaultValue={settings.emailReplyTo ?? ""}
+                className={field}
+              />
+            </Field>
+            <Field
+              label="Contact-form messages go to"
+              hint="Leave empty to use the reply address. Messages are always in Admin → Messages."
+              error={errors.supportEmail}
+            >
+              <input
+                name="support"
+                type="email"
+                defaultValue={settings.supportEmail ?? ""}
                 className={field}
               />
             </Field>

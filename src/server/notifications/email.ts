@@ -20,6 +20,8 @@ type QueueEmailInput = {
   props: Record<string, unknown>
   userId?: string | null
   reference?: { type: string; id: string }
+  // Replaces the settings' reply-to (e.g. the customer, on contact messages).
+  replyTo?: string
 }
 
 /**
@@ -62,6 +64,7 @@ export async function queueEmail(
         template: input.template,
         to: input.to,
         props: input.props,
+        ...(input.replyTo ? { replyTo: input.replyTo } : {}),
       },
       { tx },
     )

@@ -22,7 +22,15 @@ import { defineOperation } from "@/server/operation"
  */
 
 export type IntegrationStatus = {
-  key: "payments" | "shipping" | "email" | "sms" | "storage" | "worker"
+  key:
+    | "payments"
+    | "shipping"
+    | "email"
+    | "sms"
+    | "whatsapp"
+    | "analytics"
+    | "storage"
+    | "worker"
   label: string
   provider: string
   mode: "live" | "test" | "demo" | "problem"
@@ -111,10 +119,46 @@ export const getIntegrationHealth = defineOperation({
       {
         key: "sms",
         label: "SMS (OTP)",
-        provider: "Logged only",
-        mode: "demo",
+        provider: env.SMS_PROVIDER === "msg91" ? "MSG91" : "Logged only",
+        mode: env.SMS_PROVIDER === "msg91" ? "live" : "demo",
         detail:
-          "Codes are written to the server log until a DLT-registered provider is added.",
+          env.SMS_PROVIDER === "msg91"
+            ? "DLT template set. Not yet verified with a real code."
+            : "Codes are written to the server log (development only).",
+        testable: false,
+      },
+      {
+        key: "whatsapp",
+        label: "WhatsApp updates",
+        provider:
+          env.WHATSAPP_PROVIDER === "msg91"
+            ? "MSG91"
+            : env.WHATSAPP_PROVIDER === "fake"
+              ? "Logged only"
+              : "Off",
+        mode: env.WHATSAPP_PROVIDER === "msg91" ? "live" : "demo",
+        detail:
+          env.WHATSAPP_PROVIDER === "msg91"
+            ? "Sent to customers who opted in. Not yet verified with a real message."
+            : "No WhatsApp messages are sent.",
+        testable: false,
+      },
+      {
+        key: "analytics",
+        label: "Analytics",
+        provider:
+          [
+            env.GA4_MEASUREMENT_ID && "GA4",
+            env.META_PIXEL_ID && "Meta Pixel",
+            env.META_CAPI_ACCESS_TOKEN && "Conversions API",
+          ]
+            .filter(Boolean)
+            .join(", ") || "None",
+        mode: env.GA4_MEASUREMENT_ID || env.META_PIXEL_ID ? "live" : "demo",
+        detail:
+          env.GA4_MEASUREMENT_ID || env.META_PIXEL_ID
+            ? "Loads only for visitors who accept cookies."
+            : "No measurement IDs set.",
         testable: false,
       },
       {

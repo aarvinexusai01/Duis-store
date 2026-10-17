@@ -43,10 +43,10 @@ function loadScript(): Promise<void> {
 }
 
 /**
- * Cloudflare Turnstile for forms that send codes or create accounts
- * (doc/06 Phase 5 §4). Invisible for most people. With no site key (not
- * configured) it renders nothing and sends no header. The token is single
- * use: call reset() after each request.
+ * Cloudflare Turnstile for forms that send codes, create accounts or send
+ * messages (doc/06 Phase 5 §4). Invisible for most people. With no site key
+ * (not configured) it renders nothing and sends no header. The token is
+ * single use: call reset() after each request.
  */
 export function useTurnstile(siteKey: string | null) {
   const container = useRef<HTMLDivElement>(null)
@@ -86,6 +86,8 @@ export function useTurnstile(siteKey: string | null) {
     fetchOptions: token
       ? { headers: { "x-captcha-response": token } }
       : undefined,
+    /** The token itself, for forms that post it to a Server Action. */
+    token,
     ready: !siteKey || token !== null,
     reset,
   }

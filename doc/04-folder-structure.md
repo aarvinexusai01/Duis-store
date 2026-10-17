@@ -179,6 +179,7 @@ src/features/
 ├── notifications/   # templates registry, channel routing, logs
 ├── marketing/       # back-in-stock, abandoned cart, newsletter
 ├── analytics/       # consent-aware GA4/Meta events, CAPI payloads
+├── contact/         # contact form and the admin Messages inbox
 ├── cms/             # pages, blocks registry, revisions, workflow, nav, site settings, redirects, blog
 ├── settings/        # store settings (commerce config)
 ├── reports/         # dashboard metrics, exports (GST, sales, COD)

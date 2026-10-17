@@ -14,6 +14,7 @@ export type AdminNavItem = {
     | "orders"
     | "cod"
     | "customers"
+    | "messages"
     | "discounts"
     | "exchanges"
     | "reviews"
@@ -64,6 +65,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/customers",
         label: "Customers",
         icon: "customers",
+        permission: { customer: ["read"] },
+      },
+      {
+        href: "/admin/messages",
+        label: "Messages",
+        icon: "messages",
         permission: { customer: ["read"] },
       },
       {

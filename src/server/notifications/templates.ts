@@ -120,6 +120,18 @@ export const emailTemplates = {
     }),
     subject: () => "Duis: items low on stock",
   },
+  "contact-message": {
+    props: z.object({
+      name: z.string().min(1).max(100),
+      email: z.email(),
+      phone: z.string().max(20).optional(),
+      orderNumber: z.string().max(30).optional(),
+      topic: z.string().max(50),
+      message: z.string().min(1).max(5000),
+      url: z.url({ protocol: /^https?$/ }),
+    }),
+    subject: () => "New message from the Duis contact form",
+  },
   "test-email": {
     props: z.object({ sentBy: z.string().min(1).max(200) }),
     subject: () => "Duis test email",

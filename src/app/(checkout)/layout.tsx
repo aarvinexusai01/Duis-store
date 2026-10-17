@@ -1,8 +1,10 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Suspense } from "react"
 import { LockIcon } from "lucide-react"
 
 import { Wordmark } from "@/components/brand/wordmark"
+import { AnalyticsRoot } from "@/features/analytics/ui/analytics-root"
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -26,6 +28,9 @@ export default function CheckoutLayout({ children }: LayoutProps<"/">) {
       <main id="main" className="flex-1">
         <div className="page-container py-8">{children}</div>
       </main>
+      <Suspense fallback={null}>
+        <AnalyticsRoot />
+      </Suspense>
     </>
   )
 }

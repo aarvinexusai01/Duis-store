@@ -19,7 +19,7 @@ import {
   SubmitButton,
   TextField,
 } from "./form-bits"
-import { useTurnstile } from "./turnstile"
+import { useTurnstile } from "@/components/turnstile"
 
 /** Phone OTP first (doc/01), then email and password, then Google. */
 export function LoginForm({

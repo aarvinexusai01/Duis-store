@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { STORE_POLICY } from "@/config/store-policy"
 import type { ProductDetail } from "@/features/catalog"
 import { addToCart } from "@/features/cart/actions"
+import { track } from "@/features/analytics/ui/trackers"
 import { setCartDrawerOpen } from "@/features/cart/ui/drawer-store"
 import { cn } from "@/lib/utils"
 
@@ -177,6 +178,16 @@ function Purchase({
         toast.error(result.message)
         return
       }
+      track({
+        name: "add_to_cart",
+        item: {
+          id: product.id,
+          name: product.title,
+          variant: variant.sku,
+          pricePaise: variant.pricePaise,
+          quantity: 1,
+        },
+      })
       if (thenCheckout) router.push("/cart")
       else setCartDrawerOpen(true)
     })

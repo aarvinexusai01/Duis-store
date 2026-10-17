@@ -87,3 +87,48 @@ export function TestEmail({ sentBy }: TestProps) {
 export function testEmailText({ sentBy }: TestProps): string {
   return `This test was sent by ${sentBy} from the admin settings. Email delivery is working.`
 }
+
+type ContactProps = {
+  name: string
+  email: string
+  phone?: string
+  orderNumber?: string
+  topic: string
+  message: string
+  url: string
+}
+
+function contactDetails(props: ContactProps): string[] {
+  return [
+    `From: ${props.name} <${props.email}>`,
+    ...(props.phone ? [`Phone: ${props.phone}`] : []),
+    `Topic: ${props.topic}`,
+    ...(props.orderNumber ? [`Order: ${props.orderNumber}`] : []),
+  ]
+}
+
+export function ContactMessageEmail(props: ContactProps) {
+  return (
+    <EmailLayout preview={`${props.name}: ${props.message.slice(0, 80)}`}>
+      {contactDetails(props).map((line) => (
+        <EmailText key={line}>{line}</EmailText>
+      ))}
+      <p style={{ margin: "0 0 16px", whiteSpace: "pre-wrap" }}>
+        {props.message}
+      </p>
+      <EmailText>
+        Reply to this email to answer {props.name} directly, then mark it
+        replied in the inbox.
+      </EmailText>
+      <EmailButton href={props.url}>Open in the inbox</EmailButton>
+    </EmailLayout>
+  )
+}
+
+export function contactMessageText(props: ContactProps): string {
+  return [
+    contactDetails(props).join("\n"),
+    props.message,
+    `Reply to this email to answer ${props.name} directly, then mark it replied in the inbox: ${props.url}`,
+  ].join("\n\n")
+}

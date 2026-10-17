@@ -223,4 +223,19 @@ How these are limited:
 - **`customers.setWhatsAppUpdates`** changes only the signed-in customer's own setting.
 - **Login codes** are limited per phone and per IP before Better Auth sends them.
 
+## Operations (Phase 5c, consent and contact)
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `analytics.recordConsent` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `contact.adminGet` | ✓ | ✓ | · | · | · | ✓ | · |
+| `contact.adminList` | ✓ | ✓ | · | · | · | ✓ | · |
+| `contact.send` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `contact.update` | ✓ | ✓ | · | · | · | ✓ | · |
+
+How these are limited:
+- **`analytics.recordConsent`** is public (visitors answer before signing in), and rate-limited per IP in its Server Action.
+- **`contact.send`** is public: a honeypot field, Turnstile once configured, 5 per IP per 10 minutes and 5 per address per hour.
+- **The inbox** uses the customer permissions: reading needs `customer: read`, handling needs `customer: update`.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

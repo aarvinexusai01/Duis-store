@@ -127,7 +127,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | `stock_alert_subscriptions` | `user_id`, `variant_id`, `channel` (`email`, `whatsapp`), `status` (`active`, `notified`, `cancelled`). Partial unique index on (`user_id`, `variant_id`) where active. |
 | `cart_reminders` | `cart_id`, `sequence_no`, `channel`, `sent_at`. Unique (`cart_id`, `sequence_no`). |
 | `newsletter_subscribers` | `email` (citext, unique), `status` (`pending`, `confirmed`, `unsubscribed`), `confirm_token_hash`, `consent_at`, `confirmed_at`, `unsubscribed_at`, `source` |
-| `contact_messages` | `name`, `email`, `phone`, `subject`, `message`, `status` (`new`, `handled`), `handled_by` |
+| `contact_messages` | `name`, `email` (citext), `phone`, `order_number`, `topic` (`order`, `exchange`, `product`, `other`), `message` (1–5,000 chars), `user_id`, `status` (`new`, `replied`, `closed`), `handled_by`, `handled_at`, `note` (staff only) |
 
 ## 11. CMS
 
@@ -147,7 +147,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 
 | Table | Key columns / notes |
 |---|---|
-| `store_settings` | Singleton (`id = 1`, CHECK): `free_shipping_threshold_paise`, `partial_cod_enabled`, `cod_advance_type` / `cod_advance_value`, `cod_max_order_paise`, `cod_fee_paise`, `exchange_window_days`, `max_exchanges_per_item`, `reservation_ttl_minutes` (5–60), `promo_credit_validity_days` (30), `gstin`, `legal_name`, `registered_state_code` (`IN-UP`), `rto_advance_policy`, `iec_code` and `lut_reference` (exports, ADR-018), `international_country_codes` (an allow-list rather than a blocklist). No flat fee: below the threshold the live courier rate applies. |
+| `store_settings` | Singleton (`id = 1`, CHECK): `free_shipping_threshold_paise`, `partial_cod_enabled`, `cod_advance_type` / `cod_advance_value`, `cod_max_order_paise`, `cod_fee_paise`, `exchange_window_days`, `max_exchanges_per_item`, `reservation_ttl_minutes` (5–60), `promo_credit_validity_days` (30), `gstin`, `legal_name`, `registered_state_code` (`IN-UP`), `rto_advance_policy`, `iec_code` and `lut_reference` (exports, ADR-018), `international_country_codes` (an allow-list rather than a blocklist), `support_email` (where contact-form messages are emailed). No flat fee: below the threshold the live courier rate applies. |
 | `tax_rules` | `hsn_prefix`, `price_threshold_paise`, `rate_below_bp`, `rate_above_bp`, `effective_from`, `effective_to` |
 
 ## 12. Operations
@@ -158,7 +158,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | `webhook_events` | `provider`, `event_id`, `event_type`, `payload jsonb`, `received_at`, `processed_at`, `status`, `attempts`, `last_error`. **Unique (`provider`, `event_id`).** |
 | `idempotency_keys` | `key` (PK), `scope`, `request_hash`, `response jsonb`, `expires_at` |
 | `notification_logs` | `user_id`, `channel`, `template`, `recipient` (masked), `status` (`queued`, `sent`, `failed`), `provider_message_id`, `error`, `reference_type`/`reference_id`, `sent_at` |
-| `consent_records` | `user_id` or `anonymous_id`, `purpose` (`analytics`, `marketing`), `granted`, `policy_version`, `ip_hash`, `created_at` (DPDP evidence) |
+| `consent_records` *(append-only)* | `visitor_id` (random, from the consent cookie), `user_id` (if signed in), `analytics`, `marketing`, `version`, `source` (`banner`, `settings`), `user_agent`, `created_at`. No IP address (DPDP evidence, ADR-0027). |
 | `export_files` | `type` (`gst`, `sales`, `cod`), `params jsonb`, `status`, `file_key` (private storage), `created_by`, `expires_at` |
 
 ## 13. Migration workflow

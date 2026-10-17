@@ -12,6 +12,8 @@ import { getCheckoutQuote, type CheckoutChoices } from "@/features/checkout"
 import { getAccountOverview, listAddresses } from "@/features/customers"
 import { cn } from "@/lib/utils"
 
+import { TrackEvent } from "@/features/analytics/ui/track-event"
+
 import { CheckoutForm } from "./_components/checkout-form"
 
 export const metadata: Metadata = { title: "Checkout" }
@@ -60,14 +62,29 @@ async function Checkout() {
     getAccountOverview(actor, {}),
   ])
   return (
-    <CheckoutForm
-      addresses={addresses}
-      initial={initial}
-      initialChoices={choices}
-      whatsapp={{
-        offered: getServerEnv().WHATSAPP_PROVIDER !== "off",
-        enabled: account.whatsappUpdates,
-      }}
-    />
+    <>
+      <TrackEvent
+        event={{
+          name: "begin_checkout",
+          valuePaise: cart.subtotalPaise,
+          items: cart.lines.map((line) => ({
+            id: line.productId,
+            name: line.title,
+            variant: line.sku,
+            pricePaise: line.unitPricePaise,
+            quantity: line.quantity,
+          })),
+        }}
+      />
+      <CheckoutForm
+        addresses={addresses}
+        initial={initial}
+        initialChoices={choices}
+        whatsapp={{
+          offered: getServerEnv().WHATSAPP_PROVIDER !== "off",
+          enabled: account.whatsappUpdates,
+        }}
+      />
+    </>
   )
 }

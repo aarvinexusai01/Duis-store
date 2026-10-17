@@ -14,6 +14,8 @@ test("admin books a parcel and follows it to delivery", async ({
   isMobile,
 }) => {
   test.skip(isMobile, "admin flows are covered on desktop")
+  // A long journey: checkout, staff 2FA, booking and every courier scan.
+  test.setTimeout(120_000)
   const shopper = await browser.newContext()
   const customerPage = await shopper.newPage()
   const orderNumber = await placePrepaidOrder(customerPage)

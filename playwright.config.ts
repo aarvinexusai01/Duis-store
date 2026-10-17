@@ -1,6 +1,8 @@
 import { loadEnvConfig } from "@next/env"
 import { defineConfig, devices } from "@playwright/test"
 
+import { answeredConsent } from "./tests/e2e/support/consent"
+
 // Tests read the same .env as the server (secrets for signed requests, DB).
 loadEnvConfig(process.cwd())
 
@@ -25,6 +27,7 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    storageState: answeredConsent(baseURL),
   },
   projects: [
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
@@ -42,6 +45,10 @@ export default defineConfig({
           APP_ENV: "test",
           // Never real payments in automated tests, whatever .env says.
           PAYMENT_PROVIDER: "fake",
+          // Placeholder IDs: the consent spec intercepts both scripts, so
+          // nothing reaches Google or Meta.
+          GA4_MEASUREMENT_ID: "G-E2ETEST000",
+          META_PIXEL_ID: "1000000000000",
           INTERNAL_REVALIDATE_URLS: baseURL,
         },
         url: `${baseURL}/api/health`,

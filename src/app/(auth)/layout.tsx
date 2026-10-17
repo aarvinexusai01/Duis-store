@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Suspense } from "react"
 
 import { Wordmark } from "@/components/brand/wordmark"
+import { AnalyticsRoot } from "@/features/analytics/ui/analytics-root"
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -22,6 +24,9 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
       <main id="main" className="flex flex-1 justify-center px-4 py-12">
         <div className="w-full max-w-md">{children}</div>
       </main>
+      <Suspense fallback={null}>
+        <AnalyticsRoot />
+      </Suspense>
     </>
   )
 }

@@ -2,6 +2,7 @@ import { Suspense } from "react"
 
 import { SiteFooter } from "@/components/layout/site-footer"
 import { SiteHeader } from "@/components/layout/site-header"
+import { AnalyticsRoot } from "@/features/analytics/ui/analytics-root"
 import { WishlistSync } from "@/features/wishlist/ui/wishlist-sync-server"
 
 export default function StorefrontLayout({ children }: LayoutProps<"/">) {
@@ -20,6 +21,9 @@ export default function StorefrontLayout({ children }: LayoutProps<"/">) {
       <SiteFooter />
       <Suspense fallback={null}>
         <WishlistSync />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AnalyticsRoot />
       </Suspense>
     </>
   )

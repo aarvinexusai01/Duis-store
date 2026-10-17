@@ -12,7 +12,7 @@ import {
   SubmitButton,
   TextField,
 } from "./form-bits"
-import { useTurnstile } from "./turnstile"
+import { useTurnstile } from "@/components/turnstile"
 
 export function RegisterForm({
   next,

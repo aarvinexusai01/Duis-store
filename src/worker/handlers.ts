@@ -1,5 +1,6 @@
 import type { Job, PgBoss } from "pg-boss"
 
+import { sendMetaPurchase } from "@/features/analytics"
 import { refreshAutomaticCollections } from "@/features/collections"
 import { expireReservations, sendLowStockDigest } from "@/features/inventory"
 // Loading these registers the parcel and payment listeners.
@@ -95,6 +96,9 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
   "marketing.cart-reminders": async () => {
     const sent = await sendCartReminders()
     if (sent > 0) logger.info({ sent }, "cart reminders queued")
+  },
+  "analytics.meta-purchase": async (job) => {
+    await sendMetaPurchase(job.data.orderId)
   },
   "reviews.request": async () => {
     const sent = await sendReviewRequests()

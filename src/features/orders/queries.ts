@@ -93,6 +93,7 @@ export type OrderDetail = {
   /** A signed link to the public tracking page. */
   trackingPath: string
   items: {
+    productId: string | null
     title: string
     variantLabel: string
     sku: string
@@ -128,6 +129,7 @@ export const getMyOrder = defineOperation({
     const [items, history, refundRows] = await Promise.all([
       db
         .select({
+          productId: orderItems.productId,
           title: orderItems.title,
           variantLabel: orderItems.variantLabel,
           sku: orderItems.sku,

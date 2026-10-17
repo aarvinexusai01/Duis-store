@@ -55,6 +55,8 @@ export const storeSettings = pgTable(
     // cancellations, refunds and account emails are always sent.
     emailSenderName: text().notNull().default("Duis"),
     emailReplyTo: text(),
+    // Where contact-form messages are emailed (falls back to emailReplyTo).
+    supportEmail: text(),
     notifyOrderShipped: boolean().notNull().default(true),
     notifyPaymentReminder: boolean().notNull().default(true),
     notifyLowStock: boolean().notNull().default(true),

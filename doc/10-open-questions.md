@@ -82,7 +82,7 @@ These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-c
 | A8 | VPS provisioning (8 vCPU / 16 GB, Ubuntu LTS) | Hours | Phase 7 (staging earlier) | You |
 | A9 | S3-compatible backup bucket plus access keys. Store the restic and pgBackRest passwords in a password manager. | Hours | Phase 7 | You |
 | A10 | Cloudflare Origin CA certificate, Turnstile keys, WAF and cache rules | Hours | Phase 7 | Us |
-| A11 | GA4 property, Meta Pixel and Conversions API access token | Hours | Phase 5 | You |
+| A11 | GA4 property, Meta Pixel and Conversions API access token. Set `GA4_MEASUREMENT_ID`, `META_PIXEL_ID`, `META_CAPI_ACCESS_TOKEN`; check one test purchase with `META_CAPI_TEST_EVENT_CODE` (ADR-0027) | Hours | Phase 5 | You |
 | A12 | Sentry (or GlitchTip) project and DSN | Hours | Phase 1 | Us |
 | A13 | **Legal content:** legal entity name, registered address, GSTIN, grievance officer, privacy, terms, shipping, exchange and cancellation policies (lawyer-reviewed) | 1–2 weeks | Phase 6 content / before Razorpay live KYC | You |
 | A14 | **GST:** your CA to confirm HSN codes per category, the slab interpretation (₹2,500 per piece, before or after tax, effect of discounts), and that tax on shipping and COD fees is handled correctly | 1 week | Phase 3 | You + CA |

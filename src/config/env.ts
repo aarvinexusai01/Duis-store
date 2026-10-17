@@ -71,6 +71,20 @@ export const serverEnvSchema = z
     // until both are set (doc/10 A10).
     TURNSTILE_SITE_KEY: z.string().min(10).optional(),
     TURNSTILE_SECRET_KEY: z.string().min(10).optional(),
+    // Analytics (ADR-0027): read per request, so one image serves every
+    // environment. Each is off while unset, and loads only after consent.
+    GA4_MEASUREMENT_ID: z
+      .string()
+      .regex(/^G-[A-Z0-9]{4,20}$/)
+      .optional(),
+    META_PIXEL_ID: z
+      .string()
+      .regex(/^\d{10,20}$/)
+      .optional(),
+    // Server-side Purchase events (Conversions API); needs META_PIXEL_ID.
+    META_CAPI_ACCESS_TOKEN: z.string().min(20).optional(),
+    // Routes Conversions API events to Events Manager → Test events.
+    META_CAPI_TEST_EVENT_CODE: z.string().min(3).max(40).optional(),
     // Courier rates, shipments and tracking (doc/03 §6). "fake" answers from
     // fixed rules for development; "shiprocket" uses the account below and is
     // unverified until one real test shipment (doc/10 A5).
@@ -164,6 +178,13 @@ export const serverEnvSchema = z
         path: ["TURNSTILE_SITE_KEY"],
         message:
           "TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY must be set together",
+      })
+    }
+    if (env.META_CAPI_ACCESS_TOKEN && !env.META_PIXEL_ID) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["META_CAPI_ACCESS_TOKEN"],
+        message: "META_CAPI_ACCESS_TOKEN needs META_PIXEL_ID",
       })
     }
     if (

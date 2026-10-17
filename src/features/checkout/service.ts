@@ -2,6 +2,7 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { z } from "zod"
 
+import { marketingContextSchema } from "@/features/analytics"
 import { redeemCoupon } from "@/features/discounts"
 import { reserveStock } from "@/features/inventory"
 import {
@@ -181,6 +182,8 @@ export const placeOrder = defineOperation({
   input: choicesSchema.extend({
     quoteHash: z.string().regex(/^[0-9a-f]{32}$/),
     idempotencyKey: z.uuid(),
+    // Only with marketing consent (ADR-0027); read by the action.
+    marketingContext: marketingContextSchema.nullable().default(null),
   }),
   async handler({ actor, log }, input): Promise<PlaceResult> {
     const user = userOf(actor)
@@ -221,7 +224,7 @@ export const placeOrder = defineOperation({
             wallet_applied_paise, online_amount_paise, cod_due_paise,
             fee_tax_rate_bp, fee_taxable_paise, fee_cgst_paise, fee_sgst_paise, fee_igst_paise,
             coupon_code, shipping_address, customer_name, customer_email, customer_phone,
-            place_idempotency_key, quote, quote_hash, reservation_expires_at)
+            place_idempotency_key, quote, quote_hash, reservation_expires_at, marketing_context)
           values (${user.userId}, ${q.paymentMode}, ${ctx.address.countryCode}, ${q.isExport},
             ${q.subtotalPaise}, ${q.discountPaise}, ${q.shippingFeePaise}, ${q.codFeePaise}, ${q.taxTotalPaise}, ${q.totalPaise},
             ${q.walletAppliedPaise}, ${q.onlineAmountPaise}, ${q.codDuePaise},
@@ -229,7 +232,8 @@ export const placeOrder = defineOperation({
             ${q.couponCode}, ${JSON.stringify(ctx.address)}::jsonb, ${ctx.address.fullName},
             ${ctx.customer.email}, ${ctx.address.phone},
             ${key}, ${JSON.stringify(q)}::jsonb, ${ctx.hash},
-            now() + make_interval(mins => ${ctx.settings.reservationTtlMinutes}))
+            now() + make_interval(mins => ${ctx.settings.reservationTtlMinutes}),
+            ${input.marketingContext ? JSON.stringify(input.marketingContext) : null}::jsonb)
           returning id`)
         const id = inserted.rows[0]!.id
         for (const line of q.lines) {

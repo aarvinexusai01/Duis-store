@@ -187,3 +187,20 @@ test("a sold-out size offers a back-in-stock alert", async ({ page }) => {
   await page.getByRole("button", { name: "Notify me" }).click()
   await expect(page.getByText(/We'll email you once/)).toBeVisible()
 })
+
+test("the contact form saves a message for the team", async ({ page }) => {
+  await page.goto("/contact")
+  const form = page.getByRole("form", { name: "Send us a message" })
+  await form.getByRole("textbox", { name: "Name" }).fill("E2E Visitor")
+  await form
+    .getByRole("textbox", { name: "Email" })
+    .fill(`visitor-${Date.now()}@duis.test`)
+  await form
+    .getByRole("combobox", { name: "What's it about?" })
+    .selectOption("product")
+  await form
+    .getByRole("textbox", { name: "Message" })
+    .fill("Does the oversized tee run large? I'm usually a medium.")
+  await form.getByRole("button", { name: "Send message" }).click()
+  await expect(page.getByText("Thanks, we've got it")).toBeVisible()
+})
