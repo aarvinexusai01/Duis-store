@@ -238,4 +238,33 @@ How these are limited:
 - **`contact.send`** is public: a honeypot field, Turnstile once configured, 5 per IP per 10 minutes and 5 per address per hour.
 - **The inbox** uses the customer permissions: reading needs `customer: read`, handling needs `customer: update`.
 
+## Operations (Phase 6a, page builder and workflow)
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `cms.adminListPages` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `cms.archivePage` | ✓ | · | ✓ | · | · | · | · |
+| `cms.autosavePageDraft` | ✓ | · | ✓ | ✓ | · | · | · |
+| `cms.cancelSchedule` | ✓ | · | ✓ | · | · | · | · |
+| `cms.createPreviewLink` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `cms.getPageEditor` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `cms.listPageRevisions` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `cms.listScheduled` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `cms.publishPage` | ✓ | · | ✓ | · | · | · | · |
+| `cms.renamePage` | ✓ | · | ✓ | ✓ | · | · | · |
+| `cms.requestChanges` | ✓ | · | ✓ | · | · | · | · |
+| `cms.restorePage` | ✓ | · | ✓ | · | · | · | · |
+| `cms.restoreRevision` | ✓ | · | ✓ | ✓ | · | · | · |
+| `cms.schedulePage` | ✓ | · | ✓ | · | · | · | · |
+| `cms.submitForReview` | ✓ | · | ✓ | ✓ | · | · | · |
+| `cms.unpublishPage` | ✓ | · | ✓ | · | · | · | · |
+| `cms.withdrawSubmission` | ✓ | · | ✓ | ✓ | · | · | · |
+| `media.adminList` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+
+How these are limited:
+- **Content Editors** create pages, edit drafts, submit for review and withdraw a submission. They can't publish, schedule, send back, unpublish or archive (ADR-0028).
+- **Store Admins** can read every page and its history, but not change content.
+- **Preview links** are created by anyone who can read content, and work without signing in until they expire (24 hours). The signed token is the credential.
+- **The `cms.publish-scheduled` job** publishes as the system, not as a person. Who scheduled it is in the audit log.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

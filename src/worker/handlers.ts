@@ -1,6 +1,7 @@
 import type { Job, PgBoss } from "pg-boss"
 
 import { sendMetaPurchase } from "@/features/analytics"
+import { publishScheduled } from "@/features/cms"
 import { refreshAutomaticCollections } from "@/features/collections"
 import { expireReservations, sendLowStockDigest } from "@/features/inventory"
 // Loading these registers the parcel and payment listeners.
@@ -97,6 +98,10 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
     const sent = await sendCartReminders()
     if (sent > 0) logger.info({ sent }, "cart reminders queued")
   },
+  "cms.publish-scheduled": async () => {
+    const published = await publishScheduled()
+    if (published > 0) logger.info({ published }, "scheduled content published")
+  },
   "analytics.meta-purchase": async (job) => {
     await sendMetaPurchase(job.data.orderId)
   },
@@ -126,16 +131,31 @@ const SCHEDULES: { queue: QueueName; cron: string }[] = [
   { queue: QUEUES.lowStockDigest, cron: "0 9 * * *" },
   { queue: QUEUES.reviewRequests, cron: "0 11 * * *" },
   { queue: QUEUES.cartReminders, cron: "*/15 * * * *" },
+  { queue: QUEUES.publishScheduledContent, cron: "* * * * *" },
 ]
 
+/**
+ * WORKER_QUEUES (comma-separated) limits a worker to some queues, e.g. the
+ * E2E suite's cache-only worker. Unset: every queue (production).
+ */
+function selectedQueues(): Set<QueueName> | null {
+  const list = process.env.WORKER_QUEUES?.split(",")
+    .map((name) => name.trim())
+    .filter(Boolean)
+  return list?.length ? new Set(list as QueueName[]) : null
+}
+
 export async function registerHandlers(boss: PgBoss): Promise<void> {
+  const only = selectedQueues()
   for (const queue of Object.keys(handlers) as QueueName[]) {
+    if (only && !only.has(queue)) continue
     const handler = handlers[queue] as Handler<QueueName>
     await boss.work<JobPayloads[QueueName]>(queue, async ([job]) => {
       if (job) await handler(job)
     })
   }
   for (const { queue, cron } of SCHEDULES) {
+    if (only && !only.has(queue)) continue
     await boss.schedule(queue, cron, null, { tz: "Asia/Kolkata" })
   }
 }

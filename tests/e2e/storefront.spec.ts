@@ -126,6 +126,8 @@ test("browse → filter → variant → bag → OTP sign-in keeps the bag", asyn
 })
 
 test("listing and product pages pass axe", async ({ page }) => {
+  // Two full-page scans; slow on a busy machine.
+  test.setTimeout(60_000)
   const target = await findTarget()
   test.skip(!target, "no seeded catalogue")
   await page.goto("/shop/men")

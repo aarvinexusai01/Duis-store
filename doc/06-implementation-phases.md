@@ -599,6 +599,44 @@ Tasks:
 
 ## Phase 6: CMS portal
 
+**Plan (written 2026-10-17, before building):**
+- **Owner decisions (2026-10-17):**
+  - **Delivery:** three slices with a review stop after each:
+    - 6a: page builder, revisions and workflow, preview, scheduling;
+    - 6b: media library, navigation, site settings, pages and SEO, redirects;
+    - 6c: blog and RSS.
+  - **Publishing:** Content Managers and Super Admins publish or schedule directly. Content Editors submit for review, and a manager publishes or sends it back.
+  - **Blog:** in this phase (6c).
+- **6a plan:**
+  - **Pages list** (`/admin/cms`): every page with its status, a "needs review" filter, and a "new page" form (landing or static; policy pages arrive in 6b).
+  - **Page builder** (`/admin/cms/pages/[id]`):
+    - sections reordered by drag and drop (dnd-kit, keyboard accessible) or up/down buttons;
+    - add, duplicate, hide and delete sections;
+    - a form for each of the 12 block types, with pickers for media (choose or upload), products, collections and categories;
+    - errors shown on the section they belong to, checked with the same rules the server uses.
+  - **Autosave:** changes save as the working draft about 2 seconds after typing stops. The working draft is edited in place; submitting, publishing or scheduling freezes it as a numbered revision. If someone else saved in the meantime, the editor is told to reload rather than overwrite.
+  - **Workflow:**
+    - draft → submitted for review → published or scheduled (managers), or sent back with a note;
+    - unpublish, archive (not the home page);
+    - restore: copy any revision into a new draft.
+
+    Every step is audited and checked against the role.
+  - **Revision history:** each version with its author, date, status and note, and a summary of what changed (sections added, removed, edited or moved; SEO changed).
+  - **Preview:** a signed link (valid 24 hours, no sign-in needed) that renders exactly that revision with the storefront's own components. The builder shows it side by side, with a desktop and mobile toggle.
+  - **Scheduling:** pick a date and time in IST. A `cms.publish-scheduled` job runs every minute, publishes what is due and clears the caches on every replica. A "Scheduled" page lists what is coming up.
+  - **Exit check (E2E):** a manager edits the home page and publishes; both web replicas show the change within 10 seconds, with no rebuild. Playwright starts a second replica and a worker that only clears caches.
+- **6a, built 2026-10-17** ([ADR-028](adr/0028-phase-6a-page-builder-workflow-decisions.md)):
+  - **Pages list** with "needs review" and "scheduled" views, and a new-page form.
+  - **Builder:** drag-and-drop or button reordering; add, duplicate, hide and delete; forms for all 12 section types with media, product, collection and category pickers; errors shown on their section; autosave with conflict detection.
+  - **Workflow:** submit, withdraw, send back, publish, schedule, cancel, unpublish, archive and restore pages, and restore old versions. All audited and role-checked.
+  - **History** with a change summary per version. **Preview** side by side (desktop and mobile) and as a shareable 24-hour link.
+  - **Scheduling:** a job every minute, and a "Scheduled" overview.
+  - **Exit check passes:** an E2E test publishes twice and sees each change on both replicas within 10 seconds.
+- **Assumptions** (tell me if any is wrong):
+  - There are no review emails yet. Pending reviews show as a count on the CMS pages list.
+  - Preview links can be opened by anyone holding them until they expire, so they can be shared with someone outside the admin.
+  - Store Admins keep read-only access to the CMS, as now.
+
 Tasks:
 1. **Page builder** (`/admin/cms/pages/[id]`):
    - Section list with dnd-kit reordering

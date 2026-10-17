@@ -27,6 +27,7 @@ export const QUEUES = {
   backInStock: "alerts.back-in-stock",
   cartReminders: "marketing.cart-reminders",
   metaPurchase: "analytics.meta-purchase",
+  publishScheduledContent: "cms.publish-scheduled",
 } as const
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES]
@@ -63,6 +64,7 @@ export type JobPayloads = {
   "alerts.back-in-stock": { variantId: string }
   "marketing.cart-reminders": null
   "analytics.meta-purchase": { orderId: string }
+  "cms.publish-scheduled": null
 }
 
 type QueuePolicy = Parameters<PgBoss["createQueue"]>[1]
@@ -186,6 +188,14 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
     retryBackoff: true,
     expireInSeconds: 60,
     deleteAfterSeconds: 7 * 24 * 3600,
+    deadLetter,
+  },
+  // Runs every minute; "stately" keeps a slow run from piling up.
+  "cms.publish-scheduled": {
+    policy: "stately",
+    retryLimit: 1,
+    retryDelay: 15,
+    expireInSeconds: 120,
     deadLetter,
   },
   "reviews.request": {

@@ -1,0 +1,1 @@
+ALTER TABLE "cms_revisions" ADD COLUMN "review_note" text;

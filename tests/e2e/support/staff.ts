@@ -9,6 +9,7 @@ export async function createStaff(
   role:
     | "super_admin"
     | "store_admin"
+    | "content_manager"
     | "content_editor"
     | "fulfilment_staff"
     | "support_agent",

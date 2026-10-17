@@ -113,29 +113,29 @@ Turn off **exchangeable** on categories such as innerwear (in **Admin → Catego
 
 ## Commands
 
-| Command                                      | What it does                                                                                             |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `npm run dev`                                | Development server (Turbopack)                                                                           |
-| `npm run build`                              | Production build (`.next/standalone`)                                                                    |
-| `npm start`                                  | Run the standalone production build, as the Docker image does                                            |
-| `npm run build:server`                       | Bundle the worker, migrate, seed and admin CLI entry points into `dist/` (esbuild)                       |
-| `npm run worker`                             | Run the background worker (`dist/worker.mjs`)                                                            |
-| `npm run lint` / `lint:fix`                  | ESLint, including import-boundary rules                                                                  |
-| `npm run typecheck`                          | Generate route types and run `tsc`                                                                       |
-| `npm run format` / `format:check`            | Prettier (with Tailwind class sorting)                                                                   |
-| `npm test`                                   | Unit tests (Vitest)                                                                                      |
-| `npm run test:integration`                   | Integration tests on a fresh `duis_test` database (rebuilt every run) and Mailpit                        |
-| `npm run test:e2e`                           | Playwright against the production build on port 3100 (`npm run build` first; `npm run e2e:install` once) |
-| `npm run check`                              | Lint, types, format check and unit tests                                                                 |
-| `npm run db:up` / `db:down`                  | Start / stop local services (data kept in a Docker volume)                                               |
-| `npm run db:generate`                        | Generate a SQL migration from `src/db/schema`                                                            |
-| `npm run db:migrate`                         | Apply migrations (as the `duis_owner` role)                                                              |
-| `npm run db:studio`                          | Drizzle Studio                                                                                           |
-| `npm run db:seed`                            | Load deterministic demo data (refuses staging/production, and refuses to run twice)                      |
-| `npm run db:seed:photos`                     | Swap the demo photos into an existing development database (see `src/db/seed/photos/CREDITS.md`)         |
-| `npm run db:reset`                           | **Local only:** delete the dev database volume and media, then recreate and migrate                      |
-| `npm run admin:create -- --email … --name …` | Create the first super admin (password from `ADMIN_PASSWORD`, or generated and shown once)               |
-| `npm run auth:generate`                      | Regenerate `src/db/schema/auth.ts` with the Better Auth CLI after changing auth plugins                  |
+| Command                                      | What it does                                                                                                                                                                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                                | Development server (Turbopack)                                                                                                                                                                                           |
+| `npm run build`                              | Production build (`.next/standalone`)                                                                                                                                                                                    |
+| `npm start`                                  | Run the standalone production build, as the Docker image does                                                                                                                                                            |
+| `npm run build:server`                       | Bundle the worker, migrate, seed and admin CLI entry points into `dist/` (esbuild)                                                                                                                                       |
+| `npm run worker`                             | Run the background worker (`dist/worker.mjs`)                                                                                                                                                                            |
+| `npm run lint` / `lint:fix`                  | ESLint, including import-boundary rules                                                                                                                                                                                  |
+| `npm run typecheck`                          | Generate route types and run `tsc`                                                                                                                                                                                       |
+| `npm run format` / `format:check`            | Prettier (with Tailwind class sorting)                                                                                                                                                                                   |
+| `npm test`                                   | Unit tests (Vitest)                                                                                                                                                                                                      |
+| `npm run test:integration`                   | Integration tests on a fresh `duis_test` database (rebuilt every run) and Mailpit                                                                                                                                        |
+| `npm run test:e2e`                           | Playwright against the production build on ports 3100 and 3102 plus a cache-only worker (`npm run build && npm run build:server` first; `npm run e2e:install` once; stop any other worker on the database while it runs) |
+| `npm run check`                              | Lint, types, format check and unit tests                                                                                                                                                                                 |
+| `npm run db:up` / `db:down`                  | Start / stop local services (data kept in a Docker volume)                                                                                                                                                               |
+| `npm run db:generate`                        | Generate a SQL migration from `src/db/schema`                                                                                                                                                                            |
+| `npm run db:migrate`                         | Apply migrations (as the `duis_owner` role)                                                                                                                                                                              |
+| `npm run db:studio`                          | Drizzle Studio                                                                                                                                                                                                           |
+| `npm run db:seed`                            | Load deterministic demo data (refuses staging/production, and refuses to run twice)                                                                                                                                      |
+| `npm run db:seed:photos`                     | Swap the demo photos into an existing development database (see `src/db/seed/photos/CREDITS.md`)                                                                                                                         |
+| `npm run db:reset`                           | **Local only:** delete the dev database volume and media, then recreate and migrate                                                                                                                                      |
+| `npm run admin:create -- --email … --name …` | Create the first super admin (password from `ADMIN_PASSWORD`, or generated and shown once)                                                                                                                               |
+| `npm run auth:generate`                      | Regenerate `src/db/schema/auth.ts` with the Better Auth CLI after changing auth plugins                                                                                                                                  |
 
 ## Project structure
 

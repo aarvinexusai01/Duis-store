@@ -35,6 +35,8 @@ test("delivered order: track, exchange, review; staff approve and publish", asyn
   test.skip(isMobile, "admin flows are covered on desktop")
   // A long journey: checkout, staff 2FA, delivery, exchange and review.
   test.setTimeout(120_000)
+  // Unique per run: earlier runs leave reviews in the development database.
+  const reviewText = `Heavy cotton, true to size, washes well. (${Date.now()})`
   const shopper = await (await browser.newContext()).newPage()
   const orderNumber = await placePrepaidOrder(shopper, { variants: 2 })
   test.skip(!orderNumber, "no seeded catalogue")
@@ -85,19 +87,15 @@ test("delivered order: track, exchange, review; staff approve and publish", asyn
   await shopper.goto(`/account/orders/${orderNumber}#reviews`)
   await shopper.waitForLoadState("networkidle")
   await shopper.getByRole("radio", { name: "5 stars" }).check({ force: true })
-  await shopper
-    .getByLabel("Your review")
-    .fill("Heavy cotton, true to size, washes well.")
+  await shopper.getByLabel("Your review").fill(reviewText)
   await shopper.getByRole("button", { name: "Submit review" }).click()
   await expect(shopper.getByText("Thanks for your review!")).toBeVisible()
 
   await page.goto("/admin/reviews")
   await page.waitForLoadState("networkidle")
-  await expect(
-    page.getByText("Heavy cotton, true to size, washes well."),
-  ).toBeVisible()
+  await expect(page.getByText(reviewText)).toBeVisible()
   await page
-    .locator("li", { hasText: "Heavy cotton, true to size, washes well." })
+    .locator("li", { hasText: reviewText })
     .first()
     .getByRole("button", { name: "Publish" })
     .click()

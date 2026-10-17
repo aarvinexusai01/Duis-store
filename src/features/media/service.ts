@@ -152,6 +152,60 @@ export const updateMediaDetails = defineOperation({
 })
 
 /** Where an image is used; deletion is blocked while any of these exist. */
+export type MediaListItem = {
+  id: string
+  key: string
+  width: number
+  height: number
+  alt: string
+  filename: string | null
+  createdAt: Date
+}
+
+export const MEDIA_PAGE_SIZE = 48
+
+/** The media library, newest first; search matches alt text and file name. */
+export const adminListMedia = defineOperation({
+  name: "media.adminList",
+  access: { media: ["read"] },
+  input: z.object({
+    q: z.string().trim().max(100).optional(),
+    page: z.number().int().min(1).max(10_000).default(1),
+  }),
+  async handler(_ctx, { q, page }) {
+    const like = q ? `%${q.replace(/[%_\\]/g, "\\$&")}%` : null
+    const rows = await getDb().execute<{
+      id: string
+      storage_key: string
+      width: number
+      height: number
+      alt_text: string
+      original_filename: string | null
+      created_at: Date
+      total: number
+    }>(sql`
+      select id, storage_key, width, height, alt_text, original_filename, created_at,
+             count(*) over ()::int as total
+      from media_assets
+      where deleted_at is null
+        and (${like}::text is null or alt_text ilike ${like} or original_filename ilike ${like})
+      order by created_at desc, id desc
+      limit ${MEDIA_PAGE_SIZE} offset ${(page - 1) * MEDIA_PAGE_SIZE}`)
+    return {
+      total: rows.rows[0]?.total ?? 0,
+      items: rows.rows.map((r): MediaListItem => ({
+        id: r.id,
+        key: r.storage_key,
+        width: r.width,
+        height: r.height,
+        alt: r.alt_text,
+        filename: r.original_filename,
+        createdAt: new Date(r.created_at),
+      })),
+    }
+  },
+})
+
 export async function mediaUsage(mediaId: string) {
   const result = await getDb().execute<{ kind: string; count: number }>(sql`
     select 'product' as kind, count(*)::int as count from product_media where media_id = ${mediaId}

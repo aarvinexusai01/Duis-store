@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+
 import { sql } from "drizzle-orm"
 import { beforeAll, describe, expect, it } from "vitest"
 
@@ -44,15 +46,16 @@ describe("login code limits", () => {
     const phone = randomPhone()
     expect(await guardOtpRequest(phone, null)).toBeNull()
     expect(await guardOtpRequest(phone, null)).toMatch(/wait 30 seconds/)
-    // Pretend the earlier requests were spread over the last hour.
+    // Pretend the earlier requests were spread over the last hour. Only
+    // this number's rows: other test files send codes at the same time.
+    const phoneHash = createHash("sha256").update(`otp:${phone}`).digest("hex")
     await db().execute(sql`
       update otp_requests set created_at = now() - interval '10 minutes'
-      where created_at > now() - interval '1 minute'`)
+      where phone_hash = ${phoneHash}`)
     for (let i = 1; i < OTP_LIMITS.perPhoneHour; i += 1) {
       await db().execute(sql`
         insert into otp_requests (phone_hash, created_at)
-        select phone_hash, now() - interval '5 minutes' from otp_requests
-        where created_at > now() - interval '11 minutes' limit 1`)
+        values (${phoneHash}, now() - interval '5 minutes')`)
     }
     expect(await guardOtpRequest(phone, null)).toMatch(/Too many codes/)
   })

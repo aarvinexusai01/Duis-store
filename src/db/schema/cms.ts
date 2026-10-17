@@ -54,6 +54,8 @@ export const cmsRevisions = pgTable(
     data: jsonb().notNull(),
     workflowStatus: cmsWorkflowStatus().notNull().default("draft"),
     note: text(),
+    // Why a reviewer sent the revision back (shown to its author).
+    reviewNote: text(),
     scheduledFor: timestamptz(),
     publishedAt: timestamptz(),
     createdBy: uuid().references(() => users.id, { onDelete: "set null" }),

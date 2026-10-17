@@ -25,6 +25,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         "/api/",
         "/admin",
         "/newsletter/",
+        "/preview/",
       ],
     },
     sitemap: absoluteUrl("/sitemap.xml"),

@@ -34,7 +34,7 @@ import {
 
 type EntityType = "page" | "navigation" | "site_settings"
 
-function pageRefs(data: PageData): ContentRefs {
+export function pageRefs(data: PageData): ContentRefs {
   const refs = emptyRefs()
   data.sections.forEach((section) => collectBlockRefs(section, refs))
   if (data.seo.ogMediaId) refs.mediaIds.add(data.seo.ogMediaId)
@@ -64,7 +64,7 @@ function settingsRefs(data: SiteSettingsData): ContentRefs {
 }
 
 /** Inserts a numbered revision and its reference rows. */
-async function insertRevision(
+export async function insertRevision(
   tx: Transaction,
   entityType: EntityType,
   entityId: string,
@@ -101,23 +101,24 @@ async function insertRevision(
     })
     .returning({ id: cmsRevisions.id, version: cmsRevisions.version })
 
+  await insertRefs(tx, revision!.id, refs)
+  return { revisionId: revision!.id, version: revision!.version }
+}
+
+/** Indexes what a revision points at (cms_revision_refs). */
+export async function insertRefs(
+  tx: Transaction,
+  revisionId: string,
+  refs: ContentRefs,
+) {
   const rows = [
-    ...[...refs.productIds].map((productId) => ({
-      revisionId: revision!.id,
-      productId,
-    })),
+    ...[...refs.productIds].map((productId) => ({ revisionId, productId })),
     ...[...refs.collectionIds].map((collectionId) => ({
-      revisionId: revision!.id,
+      revisionId,
       collectionId,
     })),
-    ...[...refs.categoryIds].map((categoryId) => ({
-      revisionId: revision!.id,
-      categoryId,
-    })),
-    ...[...refs.mediaIds].map((mediaId) => ({
-      revisionId: revision!.id,
-      mediaId,
-    })),
+    ...[...refs.categoryIds].map((categoryId) => ({ revisionId, categoryId })),
+    ...[...refs.mediaIds].map((mediaId) => ({ revisionId, mediaId })),
   ]
   if (rows.length > 0) {
     await tx
@@ -133,7 +134,6 @@ async function insertRevision(
         throw err
       })
   }
-  return { revisionId: revision!.id, version: revision!.version }
 }
 
 const actorId = (actor: { kind: string; userId?: string }) =>

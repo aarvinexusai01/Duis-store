@@ -15,6 +15,8 @@ export type AdminNavItem = {
     | "cod"
     | "customers"
     | "messages"
+    | "pages"
+    | "scheduled"
     | "discounts"
     | "exchanges"
     | "reviews"
@@ -119,6 +121,23 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         label: "Inventory",
         icon: "inventory",
         permission: { inventory: ["read"] },
+      },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      {
+        href: "/admin/cms",
+        label: "Pages",
+        icon: "pages",
+        permission: { cms: ["read"] },
+      },
+      {
+        href: "/admin/cms/scheduled",
+        label: "Scheduled",
+        icon: "scheduled",
+        permission: { cms: ["read"] },
       },
     ],
   },

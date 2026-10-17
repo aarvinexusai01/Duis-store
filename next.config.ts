@@ -43,7 +43,15 @@ const nextConfig: NextConfig = {
   // server so web and worker share one pg-boss build.
   serverExternalPackages: ["pg-boss"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }]
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The CMS builder shows previews in a frame on our own origin. Later
+      // entries override earlier ones for the same header.
+      {
+        source: "/preview/:token",
+        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+      },
+    ]
   },
   turbopack: {
     rules: {
