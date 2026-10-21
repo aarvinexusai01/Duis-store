@@ -28,7 +28,8 @@
     "db:seed": "npm run build:server && LOG_LEVEL=warn node --env-file-if-exists=.env dist/seed.mjs",
     "db:seed:photos": "npm run build:server && LOG_LEVEL=warn node --env-file-if-exists=.env dist/swap-photos.mjs",
     "db:reset": "docker compose -f compose.dev.yaml down -v && node -e \"require('node:fs').rmSync('storage/media',{recursive:true,force:true})\" && npm run db:up && npm run db:migrate",
-    "admin:create": "npm run build:server && node --env-file-if-exists=.env dist/create-super-admin.mjs"
+    "admin:create": "npm run build:server && node --env-file-if-exists=.env dist/create-super-admin.mjs",
+    "test:race": "playwright test -c playwright.race.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -84,7 +85,7 @@
     "typescript": "^5",
     "vitest": "^5.0.4"
   },
-  "description": "Duis — self-hosted men's fashion e-commerce platform (storefront, admin, CMS)",
+  "description": "Duis \u2014 self-hosted men's fashion e-commerce platform (storefront, admin, CMS)",
   "engines": {
     "node": ">=24.11.0 <25"
   }

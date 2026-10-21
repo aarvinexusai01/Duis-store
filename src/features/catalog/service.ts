@@ -556,7 +556,7 @@ export const updateProduct = defineOperation({
   input: updateProductSchema,
   async handler(
     { actor },
-    { id, categoryIds, descriptiveValueIds, ...fields },
+    { id, categoryIds, descriptiveValueIds, expectedVersion, ...fields },
   ) {
     return withTransaction(async (tx) => {
       const [current] = await tx
@@ -564,17 +564,33 @@ export const updateProduct = defineOperation({
           departmentId: products.departmentId,
           slug: products.slug,
           publishedAt: products.publishedAt,
+          updatedAt: products.updatedAt,
         })
         .from(products)
         .where(eq(products.id, id))
         .for("update")
       if (!current) throw new DomainError("NOT_FOUND", "Product not found.")
+      // Two staff editing at once: the later save must not silently undo the
+      // earlier one (race test A3).
+      if (
+        expectedVersion &&
+        current.updatedAt.getTime() !== new Date(expectedVersion).getTime()
+      ) {
+        throw new DomainError(
+          "CONFLICT",
+          "Someone else saved this product after you opened it. Reload to see their changes, then make yours again.",
+        )
+      }
 
-      const changes: Partial<typeof products.$inferInsert> = { ...fields }
+      // Every save moves the version on, even one that only changes categories.
+      const changes: Partial<typeof products.$inferInsert> = {
+        ...fields,
+        updatedAt: new Date(),
+      }
       if (fields.description !== undefined) {
         changes.descriptionText = richTextToPlainText(fields.description)
       }
-      if (Object.keys(changes).length > 0) {
+      {
         await tx
           .update(products)
           .set(changes)
@@ -611,7 +627,7 @@ export const updateProduct = defineOperation({
         entityId: id,
         changes: { ...fields, categoryIds, descriptiveValueIds },
       })
-      return { id }
+      return { id, version: (changes.updatedAt as Date).toISOString() }
     })
   },
 })

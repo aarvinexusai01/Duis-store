@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import pg from "pg"
 
 import { createStaff, signInAndSetUpTwoFactor } from "./support/staff"
 
@@ -80,4 +81,51 @@ test("content editor sees no catalogue editing and no inventory", async ({
   await expect(
     page.getByText("You don't have access to this page."),
   ).toBeVisible()
+})
+
+test("product editor: saves twice in a row, and refuses a save from a stale tab", async ({
+  page,
+  context,
+  isMobile,
+}) => {
+  test.skip(isMobile, "admin flows are covered on desktop")
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
+  await client.connect()
+  const { rows } = await client.query<{ id: string; title: string }>(
+    "select id, title from products where status = 'active' order by created_at limit 1",
+  )
+  await client.end()
+  test.skip(!rows[0], "no seeded catalogue")
+  const product = rows[0]!
+
+  await page.goto("/")
+  const admin = await createStaff(page, "store_admin")
+  await signInAndSetUpTwoFactor(page, admin)
+
+  const open = async (tab: typeof page) => {
+    await tab.goto(`/admin/products/${product.id}`)
+    await tab.waitForLoadState("networkidle")
+  }
+  const save = async (tab: typeof page, title: string) => {
+    await tab.getByLabel("Title", { exact: true }).fill(title)
+    await tab.getByRole("button", { name: "Save changes" }).click()
+  }
+
+  // A second tab opens the product before the first one saves.
+  const stale = await context.newPage()
+  await open(stale)
+  await open(page)
+
+  // Two saves in a row from one tab: the form keeps the new version.
+  await save(page, `${product.title} (edited)`)
+  await expect(page.getByText("Product saved")).toBeVisible()
+  await save(page, product.title)
+  await expect(page.getByText("Product saved").last()).toBeVisible()
+
+  // The stale tab is told to reload instead of overwriting the edits.
+  await save(stale, `${product.title} (stale)`)
+  await expect(
+    stale.getByText(/Someone else saved this product after you opened it/),
+  ).toBeVisible()
+  await stale.close()
 })

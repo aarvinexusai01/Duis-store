@@ -151,6 +151,11 @@ export async function redeemCoupon(
   },
 ): Promise<void> {
   // The discount row is locked too: its total limit spans all its codes.
+  // NO KEY UPDATE, not UPDATE: the order's discount lines were inserted
+  // earlier in this transaction, and their foreign keys hold KEY SHARE locks
+  // on these rows in every competing checkout. FOR UPDATE conflicts with
+  // those and deadlocked concurrent checkouts; NO KEY UPDATE still lets only
+  // one redemption run at a time (race test M1).
   const locked = await tx.execute<{
     times_used: number
     code_limit: number | null
@@ -161,7 +166,7 @@ export async function redeemCoupon(
     select c.times_used, c.usage_limit as code_limit, c.discount_id, d.usage_limit_total, d.usage_limit_per_customer
     from coupons c join discounts d on d.id = c.discount_id
     where c.id = ${input.couponId}
-    for update of c, d`)
+    for no key update of c, d`)
   const row = locked.rows[0]
   if (!row)
     throw new DomainError("CONFLICT", "That coupon is no longer available.")

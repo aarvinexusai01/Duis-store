@@ -832,6 +832,75 @@ Tasks:
       - R2 itself;
       - the Sentry DSN;
       - UptimeRobot.
+- **Race-condition test campaign (plan written 2026-10-21, before building):**
+  - **Owner decisions (2026-10-21):**
+    - test at both levels: integration tests on a real Postgres (in CI), and an HTTP suite against the production stack (Nginx and both app copies) with separate signed-in customers firing at the same moment;
+    - cover stock, payments, money limits, and accounts and admin;
+    - fix every real bug found, each with the test that proves it;
+    - work on branch `phase-7a-race-tests` (7a is committed).
+  - **The rule every scenario checks:** whatever the timing, the end state is one that could have happened if the requests had come one after another. In particular:
+    - stock is never negative and never sold twice;
+    - money is never taken without an order or a refund;
+    - a limit is never exceeded;
+    - every losing request gets a clear message, never a 500.
+  - **Stock:**
+    - **S1:** 3 customers, 1 unit: exactly one order is placed, the other two are told it's sold out.
+    - **S2:** 20 customers, 1 unit: the same.
+    - **S3:** 3 customers, 2 units, one buying 2: never more than 2 committed.
+    - **S4:** A's reservation expires, B buys the last unit, then A's payment arrives: A is refunded in full automatically and B keeps the order.
+    - **S5:** the same, but stock is still there: A's order is confirmed late.
+    - **S6:** staff set stock to 0 while 3 checkouts are running: no order beyond the stock on hand, and stock never negative.
+    - **S7:** two exchanges want the last replacement size: one gets it, the other is told it's unavailable.
+  - **Payments:**
+    - **P1:** the webhook and the browser confirmation arrive at the same instant: confirmed once (one stock commit, one email, no refund).
+    - **P2:** the same webhook delivered 5 times at once: processed once.
+    - **P3:** "Pay" double-clicked: one gateway order. If two payments are captured anyway, the second is refunded automatically.
+    - **P4:** the customer cancels while the payment captures: the order ends cancelled with a refund, or confirmed. Never cancelled with the money kept.
+    - **P5:** two staff refund the same order in full at once: total refunds never exceed what was paid.
+    - **P6:** the reconciliation job and the webhook settle the same payment at once: settled once.
+    - **P7:** the order-expiry job and a capture at the same instant: confirmed, or expired with a refund.
+  - **Money limits:**
+    - **M1:** a coupon with 1 use left, 3 customers at once: 1 redemption.
+    - **M2:** the per-customer limit, same customer, two orders at once: 1 redemption.
+    - **M3:** a single-use code typed by two customers at once: 1 redemption.
+    - **M4:** a ₹500 wallet balance spent by two orders at once: one succeeds, the other is told the balance changed. The balance never goes negative and the ledger adds up.
+    - **M5:** an order with wallet credit expires while being cancelled: the credit comes back once.
+    - **M6:** a redeemed coupon's order expires while the last use is being taken: the use is released once and the limit still holds.
+    - **COD:** there is no cap on the number of COD orders, only a per-order value limit with nothing shared to race on, so there's nothing to test.
+  - **Accounts and admin:**
+    - **A1:** the same OTP submitted twice at once: one sign-in, the other rejected.
+    - **A2:** two sign-ups with the same email (and the same phone) at once: one account, and the other gets a clear error.
+    - **A3:** two staff save the same product at once. **Expected finding:** the later save silently overwrites the earlier one. Planned fix: a stale save is refused with "changed by someone else, reload", as in the CMS.
+    - **A4:** two managers publish the same CMS draft at once: one publish, one revision.
+    - **A5:** two staff adjust the same variant's stock (+5 and −3) at once: both apply (net +2), with two movements.
+    - **A6:** a staff invite accepted twice at once: one account.
+    - **A7:** two restocks of the same size at once: each waiting customer is emailed once.
+  - **How:**
+    - **Integration (CI):** `tests/integration/races/*.test.ts`. Requests start together behind a barrier and run on separate database connections. Afterwards the test checks the stock, money and limit invariants in SQL, not only the responses. Each race runs 3 times per test run to catch timing luck.
+    - **Production stack:** `npm run test:race` (Playwright project `race`) against the local production stack (`ops/local/init.sh --test-mode`: fake payment, SMS and courier providers).
+      - Customers are created with email and password and sign in, in separate browser contexts.
+      - Each scenario waits until every customer is on the checkout page, then they all press "Place order" or "Pay" together.
+      - Nginx's log must show requests served by both copies.
+      - Covers S1, S2, M1, M4, P1 and P3, plus A1 and A3 through the real forms.
+    - **Findings:** every bug gets a failing test first, then the fix. Each is listed in ADR-0032 and in the summary.
+  - **Exit criteria:**
+    - every scenario passes 3 runs in a row at both levels (A2, A6, A7 and S7 at integration level only);
+    - the invariant checks find nothing;
+    - `npm run check`, integration and E2E stay green.
+  - **Not in scope:** the product page opens on the first colour even when it is sold out (seen in E2E). That's a small UX fix to do separately if wanted.
+- **Race campaign, built and passing on 2026-10-21** ([ADR-032](adr/0032-race-condition-campaign.md)):
+  - **Integration:** 83 tests (`tests/integration/races/`), every scenario 3 times per run, three full runs in a row. Invariants clean.
+  - **Proof that the tests catch bugs:** removing the stock reservation's condition, or the payment row locks, fails the matching scenarios every time.
+  - **Production stack:** 5 scenarios through Nginx and both app copies (S1, S2 with 20 customers, M1, M4, P1), three runs in a row. Both copies served the checkouts, and invariants were clean afterwards. P3, A1 and A3 are covered at integration level only (ADR-032 says why); A3's form also has an end-to-end test.
+  - **Bugs found and fixed:**
+    - concurrent checkouts with the same coupon deadlocked (customers saw an error page);
+    - a lock conflict could surface as an error page;
+    - a staff invitation accepted twice gave a raw database error;
+    - a stale product save silently overwrote a newer one;
+    - Nginx dropped the port from `Host`, which broke every Server Action on a non-443 port;
+    - a used-up coupon at checkout only said "the total changed";
+    - the fake payment gateway was per-process (now shared, in the database).
+  - **Still last-write-wins:** categories, collections, discounts and settings. The same version pattern applies when needed.
 
 Tasks:
 1. **Production `compose.yaml`:**

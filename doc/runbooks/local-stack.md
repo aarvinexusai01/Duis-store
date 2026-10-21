@@ -39,6 +39,14 @@ Everything in the other runbooks works the same here:
 - `ops/restore-drill.sh`;
 - `ops/host-check.sh`.
 
+The race-condition suite runs against this stack (ADR-0032). It creates
+its own customers, stock and coupons:
+
+```sh
+# from your development checkout
+DUIS_STACK_DIR=~/duis-server npm run test:race
+```
+
 The ufw and systemd parts (`bootstrap.sh`, `install-timers.sh`) only run
 on the server.
 

@@ -7,6 +7,8 @@
 | Static | TypeScript strict, ESLint (with boundary rules), Prettier | Whole repository | Pre-commit (lint-staged) and CI |
 | Unit | Vitest | Pure logic: pricing engine, discount rules, tax and slab calculation, pro-rata allocation, shipping fee, COD eligibility, state machines, Zod schemas, CMS block schemas and reference extraction, money and format utilities | CI, on every push |
 | Integration | Vitest + **real PostgreSQL 18** (Docker) | Services, transactions, constraints, concurrency, RBAC, webhooks, jobs (pg-boss against the same database), with fake providers | CI, on every push |
+| Races | Vitest, `tests/integration/races/` (ADR-0032) | Competing requests started together on separate connections: stock, payments, coupons, wallet, accounts, admin. Each scenario runs 3 times, then whole-database invariants are checked in SQL (`src/server/db/invariants.ts`) | CI, on every push |
+| Races, production stack | Playwright, `tests/race/` (`npm run test:race`) | Signed-in customers in separate browsers press "Place order & pay" together, through Nginx and both app copies; fixtures from `dist/race-fixtures.mjs` | Against a local production stack (runbook: local-stack), and on staging before launch |
 | Contract | Vitest + recorded fixtures | Razorpay signature and webhook verification against official test vectors. Shiprocket client request/response mapping from saved payloads. WhatsApp and SMS payload shapes. | CI |
 | End-to-end | Playwright (Chromium + mobile WebKit viewport) | Customer, admin and CMS journeys on a running app with seeded data and fake providers | CI, on PRs to `main` |
 | Accessibility | `@axe-core/playwright` | Every page template. No serious or critical violations. | CI (inside E2E) |

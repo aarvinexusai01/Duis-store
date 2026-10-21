@@ -267,62 +267,62 @@ export const acceptInvitation = defineOperation({
     password: z.string().min(10).max(128).optional(),
   }),
   async handler({ actor }, input) {
-    const invitation = await findInvitation(getDb(), input.token)
-    if (
-      !invitation ||
-      invitation.revoked_at ||
-      invitation.accepted_at ||
-      new Date(invitation.expires_at).getTime() < Date.now()
-    ) {
-      throw new DomainError(
-        "INVALID_STATE",
-        "This invitation has expired or was already used. Ask for a new one.",
-      )
-    }
-    const existing = await getDb().execute<{ id: string }>(
-      sql`select id from users where lower(email) = ${invitation.email}`,
-    )
-    let userId = existing.rows[0]?.id
-    if (userId) {
-      if (actor.kind !== "user" || actor.userId !== userId) {
-        throw new DomainError(
-          "UNAUTHENTICATED",
-          `Sign in as ${invitation.email} first, then open the link again.`,
-        )
-      }
-    } else {
-      if (!input.name || !input.password) {
-        throw new DomainError(
-          "VALIDATION_FAILED",
-          "Choose your name and a password.",
-          {
-            issues: {
-              ...(input.name ? {} : { name: ["Enter your name."] }),
-              ...(input.password
-                ? {}
-                : { password: ["At least 10 characters."] }),
-            },
-          },
-        )
-      }
-      const created = await getAuth().api.createUser({
-        body: {
-          email: invitation.email,
-          password: input.password,
-          name: input.name,
-          role: "customer",
-          data: { emailVerified: true },
-        },
-      })
-      userId = created.user.id
-    }
-    await withTransaction(async (tx) => {
-      const locked = await findInvitation(tx, input.token, true)
-      if (!locked || locked.accepted_at || locked.revoked_at) {
+    // The invitation stays locked until it is accepted, so a link opened
+    // twice at once (two tabs, a double click) creates one account and the
+    // second attempt is told it was used (race test A6). The account itself
+    // is created by Better Auth on its own connection while the lock is held.
+    return withTransaction(async (tx) => {
+      const invitation = await findInvitation(tx, input.token, true)
+      if (!invitation || invitation.revoked_at || invitation.accepted_at) {
         throw new DomainError(
           "INVALID_STATE",
-          "This invitation was already used.",
+          invitation?.accepted_at
+            ? "This invitation was already used."
+            : "This invitation has expired or was already used. Ask for a new one.",
         )
+      }
+      if (new Date(invitation.expires_at).getTime() < Date.now()) {
+        throw new DomainError(
+          "INVALID_STATE",
+          "This invitation has expired or was already used. Ask for a new one.",
+        )
+      }
+      const existing = await tx.execute<{ id: string }>(
+        sql`select id from users where lower(email) = ${invitation.email}`,
+      )
+      let userId = existing.rows[0]?.id
+      if (userId) {
+        if (actor.kind !== "user" || actor.userId !== userId) {
+          throw new DomainError(
+            "UNAUTHENTICATED",
+            `Sign in as ${invitation.email} first, then open the link again.`,
+          )
+        }
+      } else {
+        if (!input.name || !input.password) {
+          throw new DomainError(
+            "VALIDATION_FAILED",
+            "Choose your name and a password.",
+            {
+              issues: {
+                ...(input.name ? {} : { name: ["Enter your name."] }),
+                ...(input.password
+                  ? {}
+                  : { password: ["At least 10 characters."] }),
+              },
+            },
+          )
+        }
+        const created = await getAuth().api.createUser({
+          body: {
+            email: invitation.email,
+            password: input.password,
+            name: input.name,
+            role: "customer",
+            data: { emailVerified: true },
+          },
+        })
+        userId = created.user.id
       }
       await tx.execute(sql`
         update users set role = ${invitation.roles.join(",")}, email_verified = true, updated_at = now()
@@ -332,16 +332,16 @@ export const acceptInvitation = defineOperation({
         where id = ${invitation.id}`)
       await writeAudit(
         tx,
-        { ...actorFor(actor, userId!) },
+        { ...actorFor(actor, userId) },
         {
           action: "staff.accept_invitation",
           entityType: "user",
-          entityId: userId!,
+          entityId: userId,
           changes: { roles: invitation.roles },
         },
       )
+      return { email: invitation.email, newAccount: !existing.rows[0] }
     })
-    return { email: invitation.email, newAccount: !existing.rows[0] }
   },
 })
 

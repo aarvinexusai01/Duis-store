@@ -27,6 +27,8 @@ await build({
     seed: "src/db/seed/index.ts",
     "swap-photos": "src/db/seed/swap-photos.ts",
     "create-super-admin": "src/cli/create-super-admin.ts",
+    // Fixtures for the HTTP race suite; refuses to run without fake payments.
+    "race-fixtures": "src/cli/race-fixtures.ts",
   },
   outdir: OUT_DIR,
   outExtension: { ".js": ".mjs" },

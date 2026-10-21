@@ -234,27 +234,54 @@ function razorpay(
 
 // --- Fake --------------------------------------------------------------------------
 
-type FakeState = {
-  orders: Map<string, GatewayOrder>
-  payments: Map<string, GatewayPayment>
-  refunds: Map<
-    string,
-    (GatewayRefund & { receipt: string | null; amountPaise: number })[]
-  >
-}
-const globalForFake = globalThis as typeof globalThis & {
-  __duisFakeGateway?: FakeState
-}
-
 /** Development/test secret for fake signatures; never used with real money. */
 export const FAKE_GATEWAY_SECRET = "fake-gateway-secret-development-only"
 
-function fakeState(): FakeState {
-  return (globalForFake.__duisFakeGateway ??= {
-    orders: new Map(),
-    payments: new Map(),
-    refunds: new Map(),
-  })
+type FakeRefund = RecordedRefund & { paymentId: string }
+
+/**
+ * The fake gateway keeps its records in fake_gateway_records, so both web
+ * replicas and the worker see the same payments, as they would with
+ * Razorpay. (Loaded lazily: the gateway module is also used where no
+ * database is configured.)
+ */
+async function fakeDb() {
+  const [{ getDb }, { sql }] = await Promise.all([
+    import("@/server/db/client"),
+    import("drizzle-orm"),
+  ])
+  return { db: getDb(), sql }
+}
+
+async function fakePut(
+  kind: "order" | "payment" | "refund",
+  id: string,
+  data: unknown,
+): Promise<void> {
+  const { db, sql } = await fakeDb()
+  await db.execute(sql`
+    insert into fake_gateway_records (id, kind, data) values (${id}, ${kind}, ${JSON.stringify(data)}::jsonb)
+    on conflict (id) do update set data = excluded.data`)
+}
+
+async function fakeGet<T>(id: string): Promise<T | null> {
+  const { db, sql } = await fakeDb()
+  const found = await db.execute<{ data: T }>(
+    sql`select data from fake_gateway_records where id = ${id}`,
+  )
+  return found.rows[0]?.data ?? null
+}
+
+async function fakeList<T>(
+  kind: "payment" | "refund",
+  field: "orderId" | "paymentId",
+  value: string,
+): Promise<T[]> {
+  const { db, sql } = await fakeDb()
+  const found = await db.execute<{ data: T }>(sql`
+    select data from fake_gateway_records
+    where kind = ${kind} and data->>${field} = ${value} order by created_at`)
+  return found.rows.map((r) => r.data)
 }
 
 const fake: PaymentGateway = {
@@ -267,38 +294,42 @@ const fake: PaymentGateway = {
       amountPaise,
       currency: "INR",
     }
-    fakeState().orders.set(order.id, order)
+    await fakePut("order", order.id, order)
     return order
   },
   async fetchOrderPayments(orderId) {
-    return [...fakeState().payments.values()].filter(
-      (p) => p.orderId === orderId,
-    )
+    return fakeList<GatewayPayment>("payment", "orderId", orderId)
   },
   async fetchPayment(paymentId) {
-    const payment = fakeState().payments.get(paymentId)
+    const payment = await fakeGet<GatewayPayment>(paymentId)
     if (!payment) throw new GatewayError("fake payment not found", 404)
     return payment
   },
   async capture(paymentId) {
     const payment = await this.fetchPayment(paymentId)
-    payment.status = "captured"
-    return payment
+    const captured = { ...payment, status: "captured" as const }
+    await fakePut("payment", paymentId, captured)
+    return captured
   },
   async refund({ paymentId, amountPaise, receipt }) {
-    const refund: RecordedRefund = {
+    const refund: FakeRefund = {
       id: `fake_rfnd_${crypto.randomUUID().replace(/-/g, "")}`,
       status: "processed",
       receipt,
       amountPaise,
+      paymentId,
     }
-    const list = fakeState().refunds.get(paymentId) ?? []
-    list.push(refund)
-    fakeState().refunds.set(paymentId, list)
+    await fakePut("refund", refund.id, refund)
     return { id: refund.id, status: refund.status }
   },
   async fetchRefunds(paymentId) {
-    return fakeState().refunds.get(paymentId) ?? []
+    const refunds = await fakeList<FakeRefund>("refund", "paymentId", paymentId)
+    return refunds.map((r) => ({
+      id: r.id,
+      status: r.status,
+      receipt: r.receipt,
+      amountPaise: r.amountPaise,
+    }))
   },
   verifyCheckoutSignature(orderId, paymentId, signature) {
     return safeEqualHex(
@@ -315,11 +346,11 @@ const fake: PaymentGateway = {
  * Fake gateway only: records a payment attempt as the hosted checkout would,
  * and returns the callback fields (including a valid signature).
  */
-export function simulateFakePayment(
+export async function simulateFakePayment(
   orderId: string,
   outcome: "captured" | "failed",
-): { paymentId: string; signature: string } {
-  const order = fakeState().orders.get(orderId)
+): Promise<{ paymentId: string; signature: string }> {
+  const order = await fakeGet<GatewayOrder>(orderId)
   if (!order) throw new GatewayError("fake order not found", 404)
   const payment: GatewayPayment = {
     id: `fake_pay_${crypto.randomUUID().replace(/-/g, "")}`,
@@ -331,7 +362,7 @@ export function simulateFakePayment(
     errorCode: outcome === "failed" ? "BAD_REQUEST_ERROR" : null,
     errorReason: outcome === "failed" ? "Payment declined (simulated)" : null,
   }
-  fakeState().payments.set(payment.id, payment)
+  await fakePut("payment", payment.id, payment)
   return {
     paymentId: payment.id,
     signature: hmacHex(FAKE_GATEWAY_SECRET, `${orderId}|${payment.id}`),

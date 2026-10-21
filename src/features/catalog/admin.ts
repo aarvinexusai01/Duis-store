@@ -111,6 +111,8 @@ export const adminListProducts = defineOperation({
 
 export type AdminProduct = {
   id: string
+  /** When it was last saved; sent back on save to catch overlapping edits. */
+  version: string
   departmentId: string
   slug: string
   title: string
@@ -206,6 +208,7 @@ export const adminGetProduct = defineOperation({
     ])
     return {
       id: p.id,
+      version: p.updatedAt.toISOString(),
       departmentId: p.departmentId,
       slug: p.slug,
       title: p.title,

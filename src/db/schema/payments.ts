@@ -117,3 +117,16 @@ export const webhookEvents = pgTable(
     index("webhook_events_status_idx").on(t.status, t.receivedAt),
   ],
 )
+
+/**
+ * The fake payment gateway's own records (orders, payments, refunds), used
+ * only when PAYMENT_PROVIDER=fake, which production refuses. Kept in the
+ * database so every process (both web replicas and the worker) sees the same
+ * "gateway", as they would with Razorpay.
+ */
+export const fakeGatewayRecords = pgTable("fake_gateway_records", {
+  id: text().primaryKey(),
+  kind: text().notNull(),
+  data: jsonb().notNull(),
+  createdAt: timestamptz().notNull().defaultNow(),
+})

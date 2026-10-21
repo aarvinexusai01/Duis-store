@@ -205,13 +205,15 @@ export const placeOrder = defineOperation({
     }
     // The customer must have seen exactly these amounts.
     if (ctx.hash !== input.quoteHash) {
-      throw new DomainError(
-        "CONFLICT",
-        "Your order total has changed. Please review it before paying.",
-        {
-          quote: view(ctx),
-        },
-      )
+      // Most often because their coupon was used up a moment ago (race test
+      // M1): say so, rather than only that the total changed.
+      const reason =
+        input.couponCode && ctx.couponError
+          ? `${ctx.couponError} Your total has been updated; please review it before paying.`
+          : "Your order total has changed. Please review it before paying."
+      throw new DomainError("CONFLICT", reason, {
+        quote: view(ctx),
+      })
     }
     const q = ctx.quote
 

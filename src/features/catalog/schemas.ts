@@ -125,7 +125,12 @@ export const updateProductSchema = z
   .omit({ departmentId: true, axisAttributeIds: true })
   .partial()
   .extend(seoSchema.shape)
-  .extend({ id })
+  .extend({
+    id,
+    // The version the editor loaded (AdminProduct.version). A save based on
+    // an older version is refused instead of overwriting someone else's.
+    expectedVersion: z.iso.datetime({ offset: true }).optional(),
+  })
 
 export const generateVariantsSchema = z.object({
   productId: id,

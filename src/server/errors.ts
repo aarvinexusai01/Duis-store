@@ -44,6 +44,17 @@ export function isDomainError(error: unknown): error is DomainError {
 }
 
 /** Postgres unique-violation on a named constraint (23505). */
+/**
+ * Postgres gave up on a transaction because of a lock conflict with another
+ * one (deadlock, or a serialization failure). Nothing was written; trying
+ * again usually succeeds.
+ */
+export function isLockConflict(error: unknown): boolean {
+  const cause = (error as { cause?: unknown })?.cause ?? error
+  const code = (cause as { code?: string })?.code
+  return code === "40P01" || code === "40001"
+}
+
 export function isUniqueViolation(
   error: unknown,
   constraint?: string,
