@@ -78,6 +78,13 @@
       "when": 1792222172262,
       "tag": "0010_cms_review_note",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792230831619,
+      "tag": "0011_redirects",
+      "breakpoints": true
     }
   ]
 }

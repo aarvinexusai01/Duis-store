@@ -2,6 +2,7 @@ import "server-only"
 import { and, eq, inArray, ne, sql, type SQL } from "drizzle-orm"
 
 import { collectionProducts, collections, products } from "@/db/schema"
+import { recordAddressChange, releaseAddress } from "@/features/redirects"
 import { systemActor } from "@/server/auth/actor"
 import { writeAudit } from "@/server/audit"
 import { requestRevalidation } from "@/server/cache/revalidate"
@@ -189,9 +190,14 @@ export const updateCollection = defineOperation({
   async handler({ actor }, { id, ...changes }) {
     return withTransaction(async (tx) => {
       const [current] = await tx
-        .select({ type: collections.type })
+        .select({
+          type: collections.type,
+          slug: collections.slug,
+          publishedAt: collections.publishedAt,
+        })
         .from(collections)
         .where(eq(collections.id, id))
+        .for("update")
       if (!current) throw new DomainError("NOT_FOUND", "Collection not found.")
       if (current.type === "manual" && (changes.rules || changes.ruleMatch)) {
         throw new DomainError(
@@ -205,6 +211,16 @@ export const updateCollection = defineOperation({
         .set(changes)
         .where(eq(collections.id, id))
         .catch(conflict)
+      // A collection that has been live keeps its old address working.
+      if (changes.slug && changes.slug !== current.slug) {
+        if (current.publishedAt)
+          await recordAddressChange(
+            tx,
+            `/collections/${current.slug}`,
+            `/collections/${changes.slug}`,
+          )
+        else await releaseAddress(tx, `/collections/${changes.slug}`)
+      }
       if (current.type === "automatic") await refreshOne(tx, id)
       await requestRevalidation(
         [cacheTags.collection(id), cacheTags.collectionsList],
@@ -314,12 +330,54 @@ export const publishCollection = defineOperation({
   },
 })
 
+/**
+ * Pages and menus (live, or waiting to go live) that use a collection.
+ * Archiving is refused while any do (owner decision 2026-10-17).
+ */
+export async function collectionUsage(
+  db: Transaction,
+  collectionId: string,
+): Promise<{ kind: string; label: string; href: string }[]> {
+  const found = await db.execute<{
+    kind: string
+    label: string
+    href: string
+  }>(sql`
+    select distinct
+      case rev.entity_type when 'page' then 'Page' when 'navigation' then 'Menu' else 'Content' end as kind,
+      coalesce(pg.title, nm.name, 'Content') as label,
+      case rev.entity_type when 'page' then '/admin/cms/pages/' || pg.id
+        when 'navigation' then '/admin/cms/navigation/' || nm.key else '/admin/cms' end as href
+    from cms_revision_refs r
+    join cms_revisions rev on rev.id = r.revision_id
+    left join cms_pages pg on rev.entity_type = 'page' and pg.id = rev.entity_id
+    left join navigation_menus nm on rev.entity_type = 'navigation' and nm.id = rev.entity_id
+    where r.collection_id = ${collectionId}
+      and (rev.workflow_status in ('draft', 'in_review', 'approved', 'scheduled')
+           and (pg.draft_revision_id = rev.id or nm.draft_revision_id = rev.id)
+        or pg.published_revision_id = rev.id or nm.published_revision_id = rev.id)`)
+  return found.rows
+}
+
 export const archiveCollection = defineOperation({
   name: "collections.archiveCollection",
   access: { collection: ["archive"] },
   input: collectionIdSchema,
   async handler({ actor }, { id }) {
     return withTransaction(async (tx) => {
+      const usage = await collectionUsage(tx, id)
+      if (usage.length > 0) {
+        const names = usage
+          .slice(0, 3)
+          .map((use) => `${use.kind} "${use.label}"`)
+          .join(", ")
+        const more = usage.length > 3 ? ` and ${usage.length - 3} more` : ""
+        throw new DomainError(
+          "CONFLICT",
+          `This collection is still used by ${names}${more}. Remove it there first.`,
+          { usage },
+        )
+      }
       const [row] = await tx
         .update(collections)
         .set({ status: "archived" })

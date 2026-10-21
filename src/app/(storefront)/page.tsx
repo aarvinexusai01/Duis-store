@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
       page?.data.seo.description ??
       settings?.defaultSeo.description ??
       SITE.defaultDescription,
-    alternates: { canonical: "/" },
+    alternates: { canonical: page?.data.seo.canonical ?? "/" },
   }
 }
 

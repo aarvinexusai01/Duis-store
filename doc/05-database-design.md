@@ -141,7 +141,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 | `blog_authors` · `blog_categories` · `blog_tags` · `blog_post_tags` | Standard blog taxonomy. Authors are optionally linked to a `user`. |
 | `navigation_menus` | `key` (unique: `header`, `footer`, `mobile`, `social`), `draft_revision_id`, `published_revision_id`. Items (label, link type and target, badge, promo image, children) are stored in the revision data and their targets indexed in `cms_revision_refs`. |
 | `site_settings` | Singleton row (`id = 1`, CHECK) with an `entity_id` for its revisions and `draft_revision_id` / `published_revision_id`: brand name, logo, contact details, social links, announcement bar, default SEO, grievance officer details |
-| `redirects` | `from_path` (unique), `to_path`, `status_code` (301, 302), `hits`, `created_by` |
+| `redirects` | `from_path` (unique; lower case, no trailing slash or query), `to_path` (site path or https URL), `status_code` (301, 302), `source` (`auto`, `manual`), `hits`, `last_hit_at`, `created_by`. CHECKs forbid self-loops and unsafe targets. Served by the request proxy (ADR-0029). |
 
 **Commerce settings** (free-shipping threshold, flat fee, partial-COD rules, exchange window, GSTIN and warehouse state) live in `store_settings` and `tax_rules`. These belong to the admin portal, not the CMS:
 

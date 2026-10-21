@@ -151,18 +151,32 @@ export const updateMediaDetails = defineOperation({
   },
 })
 
-/** Where an image is used; deletion is blocked while any of these exist. */
 export type MediaListItem = {
   id: string
   key: string
   width: number
   height: number
   alt: string
+  caption: string | null
+  focalX: number
+  focalY: number
   filename: string | null
+  bytes: number
+  used: boolean
   createdAt: Date
 }
 
 export const MEDIA_PAGE_SIZE = 48
+
+/** True while anything (catalogue, collections, live or pending content) uses `m`. */
+const IN_USE = sql`(
+  exists (select 1 from product_media pm where pm.media_id = m.id)
+  or exists (select 1 from products p where p.og_media_id = m.id)
+  or exists (select 1 from categories c where c.image_media_id = m.id)
+  or exists (select 1 from collections c where c.image_media_id = m.id or c.banner_media_id = m.id)
+  or exists (select 1 from cms_revision_refs r join cms_revisions rev on rev.id = r.revision_id
+             where r.media_id = m.id and rev.workflow_status <> 'archived')
+)`
 
 /** The media library, newest first; search matches alt text and file name. */
 export const adminListMedia = defineOperation({
@@ -170,9 +184,10 @@ export const adminListMedia = defineOperation({
   access: { media: ["read"] },
   input: z.object({
     q: z.string().trim().max(100).optional(),
+    filter: z.enum(["all", "unused"]).default("all"),
     page: z.number().int().min(1).max(10_000).default(1),
   }),
-  async handler(_ctx, { q, page }) {
+  async handler(_ctx, { q, filter, page }) {
     const like = q ? `%${q.replace(/[%_\\]/g, "\\$&")}%` : null
     const rows = await getDb().execute<{
       id: string
@@ -180,16 +195,23 @@ export const adminListMedia = defineOperation({
       width: number
       height: number
       alt_text: string
+      caption: string | null
+      focal_x: number
+      focal_y: number
       original_filename: string | null
+      bytes: number
+      used: boolean
       created_at: Date
       total: number
     }>(sql`
-      select id, storage_key, width, height, alt_text, original_filename, created_at,
+      select m.id, m.storage_key, m.width, m.height, m.alt_text, m.caption, m.focal_x, m.focal_y,
+             m.original_filename, m.bytes, ${IN_USE} as used, m.created_at,
              count(*) over ()::int as total
-      from media_assets
-      where deleted_at is null
-        and (${like}::text is null or alt_text ilike ${like} or original_filename ilike ${like})
-      order by created_at desc, id desc
+      from media_assets m
+      where m.deleted_at is null
+        and (${like}::text is null or m.alt_text ilike ${like} or m.original_filename ilike ${like})
+        ${filter === "unused" ? sql`and not ${IN_USE}` : sql``}
+      order by m.created_at desc, m.id desc
       limit ${MEDIA_PAGE_SIZE} offset ${(page - 1) * MEDIA_PAGE_SIZE}`)
     return {
       total: rows.rows[0]?.total ?? 0,
@@ -199,27 +221,60 @@ export const adminListMedia = defineOperation({
         width: r.width,
         height: r.height,
         alt: r.alt_text,
+        caption: r.caption,
+        focalX: r.focal_x,
+        focalY: r.focal_y,
         filename: r.original_filename,
+        bytes: r.bytes,
+        used: r.used,
         createdAt: new Date(r.created_at),
       })),
     }
   },
 })
 
-export async function mediaUsage(mediaId: string) {
-  const result = await getDb().execute<{ kind: string; count: number }>(sql`
-    select 'product' as kind, count(*)::int as count from product_media where media_id = ${mediaId}
-    union all select 'product_og', count(*)::int from products where og_media_id = ${mediaId}
-    union all select 'category', count(*)::int from categories where image_media_id = ${mediaId}
-    union all select 'collection', count(*)::int from collections
-      where image_media_id = ${mediaId} or banner_media_id = ${mediaId}
-    union all select 'content', count(distinct r.revision_id)::int
+export type MediaUse = { kind: string; label: string; href: string }
+
+/**
+ * Where an image is used, by name and with a link to fix it; deletion is
+ * refused while this list isn't empty (owner decision 2026-10-17).
+ */
+export async function mediaUsage(mediaId: string): Promise<MediaUse[]> {
+  const result = await getDb().execute<MediaUse>(sql`
+    select 'Product' as kind, p.title as label, '/admin/products/' || p.id as href
+      from products p
+      where exists (select 1 from product_media pm where pm.product_id = p.id and pm.media_id = ${mediaId})
+         or p.og_media_id = ${mediaId}
+    union all
+    select 'Category', c.name, '/admin/categories' from categories c where c.image_media_id = ${mediaId}
+    union all
+    select 'Collection', c.title, '/admin/collections/' || c.id from collections c
+      where c.image_media_id = ${mediaId} or c.banner_media_id = ${mediaId}
+    union all
+    select distinct
+      case rev.entity_type when 'page' then 'Page' when 'navigation' then 'Menu'
+        when 'site_settings' then 'Site settings' else 'Content' end,
+      coalesce(pg.title, nm.name, 'Site settings'),
+      case rev.entity_type when 'page' then '/admin/cms/pages/' || pg.id
+        when 'navigation' then '/admin/cms/navigation/' || nm.key
+        else '/admin/cms/settings' end
       from cms_revision_refs r
       join cms_revisions rev on rev.id = r.revision_id
+      left join cms_pages pg on rev.entity_type = 'page' and pg.id = rev.entity_id
+      left join navigation_menus nm on rev.entity_type = 'navigation' and nm.id = rev.entity_id
       where r.media_id = ${mediaId} and rev.workflow_status <> 'archived'
   `)
-  return result.rows.filter((row) => row.count > 0)
+  return result.rows
 }
+
+export const getMediaUsage = defineOperation({
+  name: "media.usage",
+  access: { media: ["read"] },
+  input: z.object({ id: z.uuid() }),
+  async handler(_ctx, { id }) {
+    return { usage: await mediaUsage(id) }
+  },
+})
 
 /**
  * Soft delete: the asset disappears from the library but its files stay on
@@ -232,9 +287,16 @@ export const deleteMedia = defineOperation({
   async handler({ actor }, { id }) {
     const usage = await mediaUsage(id)
     if (usage.length > 0) {
-      throw new DomainError("CONFLICT", "This image is still in use.", {
-        usage,
-      })
+      const names = usage
+        .slice(0, 3)
+        .map((use) => `${use.kind} "${use.label}"`)
+        .join(", ")
+      const more = usage.length > 3 ? ` and ${usage.length - 3} more` : ""
+      throw new DomainError(
+        "CONFLICT",
+        `This image is still used by ${names}${more}. Remove it there first.`,
+        { usage },
+      )
     }
     return withTransaction(async (tx) => {
       const [row] = await tx

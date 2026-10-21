@@ -41,6 +41,15 @@ export async function CmsPageView({
         <h1 className="mt-6 display-heading text-5xl sm:text-6xl">
           {page.title}
         </h1>
+        {page.type === "policy" && page.publishedAt && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Last updated{" "}
+            {new Date(page.publishedAt).toLocaleDateString("en-IN", {
+              dateStyle: "long",
+              timeZone: "Asia/Kolkata",
+            })}
+          </p>
+        )}
       </header>
       <Blocks blocks={page.blocks} />
       {children && (
@@ -58,7 +67,7 @@ export async function cmsPageMetadata(slug: string): Promise<Metadata> {
   return {
     title: seo.title ?? page.title,
     description: seo.description,
-    alternates: { canonical: pageHref(page.slug) },
+    alternates: { canonical: seo.canonical ?? pageHref(page.slug) },
     robots: seo.noindex ? { index: false, follow: true } : undefined,
   }
 }

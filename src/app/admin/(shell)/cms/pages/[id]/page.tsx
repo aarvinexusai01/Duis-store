@@ -5,10 +5,11 @@ import { Suspense } from "react"
 import { AdminPageHeader, NoAccess } from "@/components/admin/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  getPageEditor,
-  listPageRevisions,
-  loadEditorLabels,
+  editorLabelsFor,
+  getEditor,
+  listRevisions,
   pageHref,
+  type PageEditorState,
 } from "@/features/cms"
 import { can, requireStaff } from "@/features/staff"
 import { isDomainError } from "@/server/errors"
@@ -34,13 +35,14 @@ async function Editor({ params }: Pick<Props, "params">) {
   const actor = await requireStaff(`/admin/cms/pages/${id}`)
   if (!can(actor, { cms: ["read"] })) return <NoAccess />
   if (!UUID.test(id)) notFound()
-  const state = await getPageEditor(actor, { pageId: id }).catch((error) => {
+  const target = { type: "page" as const, id }
+  const state = (await getEditor(actor, { target }).catch((error: unknown) => {
     if (isDomainError(error)) notFound()
     throw error
-  })
+  })) as PageEditorState
   const [revisions, labels] = await Promise.all([
-    listPageRevisions(actor, { pageId: id }),
-    loadEditorLabels(state.data),
+    listRevisions(actor, { target }),
+    editorLabelsFor("page", state.data),
   ])
   const address = state.page.type === "home" ? "/" : pageHref(state.page.slug)
 

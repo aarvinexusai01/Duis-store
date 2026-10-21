@@ -21,6 +21,11 @@ export async function removeTestPages(slugOrPrefix: string) {
          and entity_id in (select id from cms_pages where slug::text like $1)`,
       [pattern],
     )
+    // Redirects to or from the test page's addresses.
+    await client.query(
+      `delete from redirects where from_path like '/pages/' || $1 or to_path like '/pages/' || $1`,
+      [pattern],
+    )
     await client.query(`delete from cms_pages where slug::text like $1`, [
       pattern,
     ])

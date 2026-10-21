@@ -19,7 +19,7 @@ export function NewPageForm() {
   const [title, setTitle] = useState("")
   const [slug, setSlug] = useState("")
   const [slugTouched, setSlugTouched] = useState(false)
-  const [type, setType] = useState<"landing" | "static">("landing")
+  const [type, setType] = useState<"landing" | "static" | "policy">("landing")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -87,12 +87,15 @@ export function NewPageForm() {
               <select
                 value={type}
                 onChange={(event) =>
-                  setType(event.target.value as "landing" | "static")
+                  setType(event.target.value as "landing" | "static" | "policy")
                 }
                 className="h-9 rounded-sm border bg-card px-2"
               >
                 <option value="landing">Landing page (campaigns, edits)</option>
                 <option value="static">Information page</option>
+                <option value="policy">
+                  Policy (shows &ldquo;Last updated&rdquo;)
+                </option>
               </select>
             </label>
             <Button

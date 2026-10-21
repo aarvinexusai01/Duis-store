@@ -55,6 +55,8 @@ export type ResolvedNavItem = {
   label: string
   href: string
   badge?: string
+  /** A promo image beside a top-level item's mega menu. */
+  promo?: MediaRef
   children: ResolvedNavItem[]
 }
 
@@ -64,7 +66,9 @@ export async function resolveNavigation(
 ): Promise<ResolvedNavItem[]> {
   const collectionIds: string[] = []
   const productIds: string[] = []
+  const mediaIds: string[] = []
   const visit = (item: NavItem) => {
+    if (item.promoMediaId) mediaIds.push(item.promoMediaId)
     if (item.link.type === "collection")
       collectionIds.push(item.link.collectionId)
     if (item.link.type === "product") productIds.push(item.link.productId)
@@ -72,9 +76,10 @@ export async function resolveNavigation(
   }
   data.items.forEach(visit)
 
-  const [collections, products] = await Promise.all([
+  const [collections, products, media] = await Promise.all([
     loadCollectionsByIds(collectionIds),
     loadProductSlugs(productIds),
+    loadMediaRefs(mediaIds),
   ])
   const categoryHref = new Map(tree.categories.map((c) => [c.id, c.href]))
 
@@ -107,6 +112,9 @@ export async function resolveNavigation(
       label: item.label,
       href,
       ...(item.badge ? { badge: item.badge } : {}),
+      ...(item.promoMediaId && media.get(item.promoMediaId)
+        ? { promo: media.get(item.promoMediaId)! }
+        : {}),
       children: (item.children ?? [])
         .map(resolve)
         .filter((child): child is ResolvedNavItem => child !== null),

@@ -46,10 +46,10 @@ async function Scheduled() {
                 })}
               </span>
               <Link
-                href={`/admin/cms/pages/${item.pageId}` as Route}
+                href={item.href as Route}
                 className="underline underline-offset-4"
               >
-                {item.title}
+                {item.label}
               </Link>
               <span className="text-muted-foreground">
                 version {item.version}

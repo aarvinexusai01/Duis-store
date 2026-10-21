@@ -10,8 +10,12 @@ import {
   getResolvedNavigation,
 } from "@/features/cms/queries"
 import { NewsletterForm } from "@/components/newsletter-form"
+import { loadCatalogTree } from "@/features/catalog"
+import { resolveNavigation } from "@/features/cms"
 
-export function SiteFooter() {
+import type { ChromeDraft } from "./site-header"
+
+export function SiteFooter({ draft }: { draft?: ChromeDraft } = {}) {
   return (
     <footer className="mt-16 bg-ink text-paper">
       <div className="page-container grid gap-12 py-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:py-16">
@@ -23,21 +27,24 @@ export function SiteFooter() {
           <NewsletterForm className="mt-4" />
         </div>
         <Suspense fallback={null}>
-          <FooterLinks />
+          <FooterLinks draft={draft} />
         </Suspense>
       </div>
       <Suspense fallback={null}>
-        <FooterLegal />
+        <FooterLegal draft={draft} />
       </Suspense>
     </footer>
   )
 }
 
-async function FooterLinks() {
+async function FooterLinks({ draft }: { draft?: ChromeDraft }) {
   await connection()
+  const override = draft?.navigation?.key === "footer" ? draft.navigation : null
   const [columns, settings] = await Promise.all([
-    getResolvedNavigation("footer"),
-    getPublishedSiteSettings(),
+    override
+      ? loadCatalogTree().then((tree) => resolveNavigation(override.data, tree))
+      : getResolvedNavigation("footer"),
+    draft?.settings ?? getPublishedSiteSettings(),
   ])
   const social = Object.entries(settings?.social ?? {}).filter(
     (entry): entry is [string, string] => Boolean(entry[1]),
@@ -97,9 +104,9 @@ async function FooterLinks() {
   )
 }
 
-async function FooterLegal() {
+async function FooterLegal({ draft }: { draft?: ChromeDraft }) {
   await connection()
-  const settings = await getPublishedSiteSettings()
+  const settings = draft?.settings ?? (await getPublishedSiteSettings())
   const officer = settings?.grievanceOfficer
   return (
     <div className="border-t border-white/10">

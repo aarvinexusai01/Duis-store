@@ -16,6 +16,7 @@ import {
   sizeCharts,
   variantAttributeValues,
 } from "@/db/schema"
+import { recordAddressChange, releaseAddress } from "@/features/redirects"
 import { richTextToPlainText } from "@/lib/rich-text"
 import { writeAudit } from "@/server/audit"
 import { requestRevalidation } from "@/server/cache/revalidate"
@@ -27,6 +28,7 @@ import { QUEUES } from "@/server/jobs/queues"
 import { defineOperation } from "@/server/operation"
 
 import { refreshListingCache, refreshSearchKeywords } from "./derived"
+import { loadCatalogTree } from "./storefront"
 import {
   createAttributeSchema,
   createAttributeValueSchema,
@@ -159,12 +161,36 @@ export const createCategory = defineOperation({
   },
 })
 
+/** Every category's shop address, for redirecting the ones that move. */
+async function categoryHrefs(): Promise<Map<string, string>> {
+  const tree = await loadCatalogTree()
+  return new Map(tree.categories.map((c) => [c.id, c.href]))
+}
+
+/**
+ * After a category is renamed or moved, its old address (and those of the
+ * categories inside it) redirect to the new ones (owner decision
+ * 2026-10-17). Runs after the change commits, since the tree is read fresh.
+ */
+async function redirectMovedCategories(before: Map<string, string>) {
+  const after = await categoryHrefs()
+  const moved = [...before].filter(
+    ([id, href]) => after.has(id) && after.get(id) !== href,
+  )
+  if (moved.length === 0) return
+  await withTransaction(async (tx) => {
+    for (const [id, href] of moved)
+      await recordAddressChange(tx, href, after.get(id)!)
+  })
+}
+
 export const updateCategory = defineOperation({
   name: "catalog.updateCategory",
   access: { catalog: ["update"] },
   input: updateCategorySchema,
   async handler({ actor }, { id, ...changes }) {
-    return withTransaction(async (tx) => {
+    const before = changes.slug ? await categoryHrefs() : null
+    const result = await withTransaction(async (tx) => {
       const [row] = await tx
         .update(categories)
         .set(changes)
@@ -191,6 +217,8 @@ export const updateCategory = defineOperation({
       )
       return { id }
     })
+    if (before) await redirectMovedCategories(before)
+    return result
   },
 })
 
@@ -200,7 +228,8 @@ export const moveCategory = defineOperation({
   access: { catalog: ["update"] },
   input: moveCategorySchema,
   async handler({ actor }, { id, parentId }) {
-    return withTransaction(async (tx) => {
+    const before = await categoryHrefs()
+    const result = await withTransaction(async (tx) => {
       const [category] = await tx
         .select({
           path: categories.path,
@@ -271,6 +300,8 @@ export const moveCategory = defineOperation({
       await requestRevalidation([cacheTags.categoriesTree], { tx })
       return { id }
     })
+    await redirectMovedCategories(before)
+    return result
   },
 })
 
@@ -529,7 +560,11 @@ export const updateProduct = defineOperation({
   ) {
     return withTransaction(async (tx) => {
       const [current] = await tx
-        .select({ departmentId: products.departmentId })
+        .select({
+          departmentId: products.departmentId,
+          slug: products.slug,
+          publishedAt: products.publishedAt,
+        })
         .from(products)
         .where(eq(products.id, id))
         .for("update")
@@ -551,6 +586,16 @@ export const updateProduct = defineOperation({
               "Another product already uses that slug.",
             ),
           )
+      }
+      // A product that has been live keeps its old address working.
+      if (fields.slug && fields.slug !== current.slug) {
+        if (current.publishedAt)
+          await recordAddressChange(
+            tx,
+            `/products/${current.slug}`,
+            `/products/${fields.slug}`,
+          )
+        else await releaseAddress(tx, `/products/${fields.slug}`)
       }
       if (categoryIds) {
         await assertCategories(tx, current.departmentId, categoryIds)

@@ -10,21 +10,24 @@ import { adminListMedia } from "@/features/media"
 import { getActor } from "@/server/auth/session"
 import { toActionError, type ActionError } from "@/server/action"
 
-import { createPage } from "./service"
 import {
   archivePage,
-  autosavePageDraft,
-  cancelPageSchedule,
-  createPreviewLink,
-  publishPage,
+  changePageSlug,
   renamePage,
-  requestPageChanges,
   restorePage,
-  restoreRevision,
-  schedulePage,
-  submitPageForReview,
   unpublishPage,
-  withdrawPageSubmission,
+} from "./pages-admin"
+import { createPage } from "./service"
+import {
+  autosaveDraft,
+  cancelSchedule,
+  createPreviewLink,
+  publishDraft,
+  requestChanges,
+  restoreRevision,
+  scheduleDraft,
+  submitForReview,
+  withdrawSubmission,
 } from "./workflow"
 
 export type CmsResult<T = object> =
@@ -57,33 +60,24 @@ export async function createPageAction(input: Input<typeof createPage>) {
 }
 
 /** Autosave: no page refresh, so the editor keeps its state. */
-export async function autosavePageAction(
-  input: Input<typeof autosavePageDraft>,
-) {
-  return run(async () => autosavePageDraft(await getActor(), input), {
+export async function autosaveAction(input: Input<typeof autosaveDraft>) {
+  return run(async () => autosaveDraft(await getActor(), input), {
     refreshPage: false,
   })
 }
 
-export async function renamePageAction(input: Input<typeof renamePage>) {
-  return run(async () => renamePage(await getActor(), input))
-}
-
 const transitions = {
-  submit: submitPageForReview,
-  withdraw: withdrawPageSubmission,
-  requestChanges: requestPageChanges,
-  publish: publishPage,
-  schedule: schedulePage,
-  cancelSchedule: cancelPageSchedule,
-  unpublish: unpublishPage,
-  archive: archivePage,
-  restore: restorePage,
+  submit: submitForReview,
+  withdraw: withdrawSubmission,
+  requestChanges,
+  publish: publishDraft,
+  schedule: scheduleDraft,
+  cancelSchedule,
 } as const
 
-export type PageTransition = keyof typeof transitions
+export type Transition = keyof typeof transitions
 
-export async function pageTransitionAction<K extends PageTransition>(
+export async function transitionAction<K extends Transition>(
   kind: K,
   input: Input<(typeof transitions)[K]>,
 ) {
@@ -92,6 +86,28 @@ export async function pageTransitionAction<K extends PageTransition>(
     input: unknown,
   ) => Promise<object>
   return run(async () => operation(await getActor(), input))
+}
+
+const pageActions = {
+  unpublish: unpublishPage,
+  archive: archivePage,
+  restore: restorePage,
+} as const
+
+export type PageAction = keyof typeof pageActions
+
+export async function pageAction(kind: PageAction, pageId: string) {
+  return run(async () => pageActions[kind](await getActor(), { pageId }))
+}
+
+export async function renamePageAction(input: Input<typeof renamePage>) {
+  return run(async () => renamePage(await getActor(), input))
+}
+
+export async function changePageSlugAction(
+  input: Input<typeof changePageSlug>,
+) {
+  return run(async () => changePageSlug(await getActor(), input))
 }
 
 export async function restoreRevisionAction(

@@ -11,6 +11,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
+import { MediaImage } from "@/components/media-image"
 import type { ResolvedNavItem } from "@/features/cms"
 import { cn } from "@/lib/utils"
 
@@ -52,37 +53,65 @@ export function MainNav({ items }: { items: ResolvedNavItem[] }) {
 function MegaPanel({ item }: { item: ResolvedNavItem }) {
   const grouped = item.children.some((child) => child.children.length > 0)
   return (
-    <div className={cn("p-5", grouped ? "w-[44rem]" : "w-64")}>
-      <div
-        className={cn(
-          grouped ? "grid grid-cols-4 gap-x-6 gap-y-4" : "flex flex-col",
-        )}
-      >
-        {item.children.map((child) =>
-          grouped ? (
-            <div key={child.id} className="flex flex-col gap-1">
-              <PanelLink href={child.href} strong>
-                {child.label}
-              </PanelLink>
-              {child.children.map((grandchild) => (
-                <PanelLink key={grandchild.id} href={grandchild.href}>
-                  {grandchild.label}
+    <div
+      className={cn(
+        "flex gap-6 p-5",
+        grouped
+          ? item.promo
+            ? "w-[58rem]"
+            : "w-[44rem]"
+          : item.promo
+            ? "w-[30rem]"
+            : "w-64",
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <div
+          className={cn(
+            grouped ? "grid grid-cols-4 gap-x-6 gap-y-4" : "flex flex-col",
+          )}
+        >
+          {item.children.map((child) =>
+            grouped ? (
+              <div key={child.id} className="flex flex-col gap-1">
+                <PanelLink href={child.href} strong>
+                  {child.label}
                 </PanelLink>
-              ))}
-            </div>
-          ) : (
-            <PanelLink key={child.id} href={child.href}>
-              {child.label}
-              {child.badge && <NavBadge>{child.badge}</NavBadge>}
-            </PanelLink>
-          ),
-        )}
+                {child.children.map((grandchild) => (
+                  <PanelLink key={grandchild.id} href={grandchild.href}>
+                    {grandchild.label}
+                  </PanelLink>
+                ))}
+              </div>
+            ) : (
+              <PanelLink key={child.id} href={child.href}>
+                {child.label}
+                {child.badge && <NavBadge>{child.badge}</NavBadge>}
+              </PanelLink>
+            ),
+          )}
+        </div>
+        <div className="mt-4 border-t pt-3">
+          <PanelLink href={item.href} strong>
+            Shop all {item.label} →
+          </PanelLink>
+        </div>
       </div>
-      <div className="mt-4 border-t pt-3">
-        <PanelLink href={item.href} strong>
-          Shop all {item.label} →
-        </PanelLink>
-      </div>
+      {item.promo && (
+        <NavigationMenuLink
+          render={<Link href={item.href as Route} />}
+          className="relative block w-48 shrink-0 overflow-hidden rounded-none p-0"
+        >
+          <MediaImage
+            media={item.promo}
+            alt=""
+            fill
+            sizes="192px"
+            className="object-cover"
+          />
+          <span className="sr-only">{item.label}</span>
+        </NavigationMenuLink>
+      )}
     </div>
   )
 }

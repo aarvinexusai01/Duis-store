@@ -23,6 +23,8 @@ export type MediaRef = {
   width: number
   height: number
   alt: string
+  /** Where to keep in frame when cropped (0–1); centre when absent. */
+  focal?: { x: number; y: number }
 }
 
 export type ProductCard = {
@@ -875,16 +877,26 @@ export async function loadMediaRefs(
     width: number
     height: number
     alt: string
+    focal_x: number
+    focal_y: number
   }>(
     await getDb().execute(sql`
-      select id, storage_key as key, width, height, alt_text as alt
+      select id, storage_key as key, width, height, alt_text as alt, focal_x, focal_y
       from media_assets where id = any(${uuidArray(ids)}) and deleted_at is null
     `),
   )
   return new Map(
     result.map((row) => [
       row.id,
-      { key: row.key, width: row.width, height: row.height, alt: row.alt },
+      {
+        key: row.key,
+        width: row.width,
+        height: row.height,
+        alt: row.alt,
+        ...(row.focal_x !== 0.5 || row.focal_y !== 0.5
+          ? { focal: { x: row.focal_x, y: row.focal_y } }
+          : {}),
+      },
     ]),
   )
 }

@@ -5,46 +5,45 @@ import { sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { getServerEnv } from "@/config/env"
-import { loadCatalogTree, loadMediaRefs } from "@/features/catalog"
 import { systemActor, type Actor } from "@/server/auth/actor"
 import { writeAudit } from "@/server/audit"
-import { requestRevalidation } from "@/server/cache/revalidate"
-import { cacheTags } from "@/server/cache/tags"
 import { getDb } from "@/server/db/client"
 import { withTransaction, type Transaction } from "@/server/db/transaction"
 import { DomainError } from "@/server/errors"
 import { logger } from "@/server/observability/logger"
 import { defineOperation } from "@/server/operation"
 
-import { describeDiff, diffPages } from "./revision-diff"
-import { pageDataSchema, type PageData } from "./schemas"
 import {
-  insertRefs,
-  insertRevision,
-  pageRefs,
-  publishRevision,
-} from "./service"
+  contentIsValid,
+  lockTarget,
+  parseContent,
+  setDraftPointer,
+  targetSchema,
+  type ContentTarget,
+  type Holder,
+  type MenuKey,
+  type PageStatus,
+  type PageType,
+} from "./content-target"
+import { describeDiff, diffPages } from "./revision-diff"
+import {
+  pageDataSchema,
+  type NavigationData,
+  type PageData,
+  type SiteSettingsData,
+} from "./schemas"
+import { insertRefs, insertRevision, publishRevision } from "./service"
 
 /**
- * The page workflow behind the CMS portal (doc/06 Phase 6a, owner decision
- * 2026-10-17): a working draft edited in place by autosave, frozen into a
- * numbered revision when it is submitted, published or scheduled. Content
- * Managers publish directly; Content Editors submit for review.
+ * The CMS workflow (doc/06 Phase 6, owner decisions 2026-10-17), shared by
+ * pages, menus and site settings: a working draft edited in place by
+ * autosave, frozen into a numbered revision when it is submitted, scheduled
+ * or published. Content Managers publish directly; Content Editors submit
+ * for review.
  */
 
 export type WorkflowStatus =
   "draft" | "in_review" | "approved" | "scheduled" | "published" | "archived"
-
-type PageRow = {
-  id: string
-  type: "home" | "landing" | "static" | "policy"
-  slug: string
-  title: string
-  status: "draft" | "published" | "archived"
-  draft_revision_id: string | null
-  published_revision_id: string | null
-  published_at: Date | null
-}
 
 type RevisionRow = {
   id: string
@@ -58,15 +57,13 @@ type RevisionRow = {
 }
 
 const actorId = (actor: Actor) => (actor.kind === "user" ? actor.userId : null)
-
-async function lockPage(tx: Transaction, pageId: string): Promise<PageRow> {
-  const found = await tx.execute<PageRow>(sql`
-    select id, type, slug::text, title, status, draft_revision_id, published_revision_id, published_at
-    from cms_pages where id = ${pageId} for update`)
-  const page = found.rows[0]
-  if (!page) throw new DomainError("NOT_FOUND", "Page not found.")
-  return page
-}
+const FROZEN: WorkflowStatus[] = ["in_review", "approved", "scheduled"]
+const PENDING: WorkflowStatus[] = [
+  "draft",
+  "in_review",
+  "approved",
+  "scheduled",
+]
 
 async function revision(
   db: Transaction | ReturnType<typeof getDb>,
@@ -76,99 +73,44 @@ async function revision(
   if (!revisionId) return null
   const found = await db.execute<RevisionRow>(sql`
     select id, version, data, workflow_status, note, review_note, scheduled_for, updated_at
-    from cms_revisions where id = ${revisionId} and entity_type = 'page'
+    from cms_revisions where id = ${revisionId}
     ${lock ? sql`for update` : sql``}`)
   return found.rows[0] ?? null
 }
 
-/** The page's working draft, if its latest revision is still editable. */
-async function workingDraft(tx: Transaction, page: PageRow) {
-  const draft = await revision(tx, page.draft_revision_id, true)
-  return draft?.workflow_status === "draft" ? draft : null
+async function audit(
+  tx: Transaction,
+  actor: Actor,
+  holder: Holder,
+  action: string,
+  changes?: Record<string, unknown>,
+) {
+  await writeAudit(tx, actor, {
+    action: `cms.${holder.kind}.${action}`,
+    entityType: holder.auditEntity,
+    entityId: holder.entityId,
+    ...(changes ? { changes } : {}),
+  })
 }
 
 // --- Reads -----------------------------------------------------------------------------
 
-export type AdminPageRow = {
-  id: string
-  type: PageRow["type"]
-  slug: string
-  title: string
-  status: PageRow["status"]
-  draftStatus: WorkflowStatus | null
-  unpublishedChanges: boolean
-  scheduledFor: Date | null
-  updatedAt: Date
+/** Empty content for a target that has never been saved. */
+function emptyContent(type: ContentTarget["type"]): unknown {
+  if (type === "page") return { sections: [], seo: {} } satisfies PageData
+  if (type === "navigation") return { items: [] } satisfies NavigationData
+  return {
+    brandName: "Duis",
+    contact: { email: "" },
+    social: {},
+    defaultSeo: { title: "", description: "" },
+  }
 }
 
-export const adminListPages = defineOperation({
-  name: "cms.adminListPages",
-  access: { cms: ["read"] },
-  input: z.object({
-    view: z.enum(["all", "review", "scheduled"]).default("all"),
-  }),
-  async handler(_ctx, { view }) {
-    const rows = await getDb().execute<{
-      id: string
-      type: PageRow["type"]
-      slug: string
-      title: string
-      status: PageRow["status"]
-      draft_status: WorkflowStatus | null
-      changed: boolean
-      scheduled_for: Date | null
-      updated_at: Date
-    }>(sql`
-      select p.id, p.type, p.slug::text, p.title, p.status,
-             d.workflow_status as draft_status,
-             (p.draft_revision_id is distinct from p.published_revision_id
-               and d.workflow_status in ('draft', 'in_review', 'scheduled')) as changed,
-             d.scheduled_for,
-             greatest(p.updated_at, coalesce(d.updated_at, p.updated_at)) as updated_at
-      from cms_pages p
-      left join cms_revisions d on d.id = p.draft_revision_id
-      where ${
-        view === "review"
-          ? sql`d.workflow_status = 'in_review' and p.status <> 'archived'`
-          : view === "scheduled"
-            ? sql`d.workflow_status = 'scheduled' and p.status <> 'archived'`
-            : sql`true`
-      }
-      order by (p.type = 'home') desc, p.status = 'archived', p.title`)
-    const counts = await getDb().execute<{ review: number; scheduled: number }>(
-      sql`
-        select count(*) filter (where d.workflow_status = 'in_review')::int as review,
-               count(*) filter (where d.workflow_status = 'scheduled')::int as scheduled
-        from cms_pages p join cms_revisions d on d.id = p.draft_revision_id
-        where p.status <> 'archived'`,
-    )
-    return {
-      counts: counts.rows[0] ?? { review: 0, scheduled: 0 },
-      rows: rows.rows.map((r): AdminPageRow => ({
-        id: r.id,
-        type: r.type,
-        slug: r.slug,
-        title: r.title,
-        status: r.status,
-        draftStatus: r.draft_status,
-        unpublishedChanges: r.changed,
-        scheduledFor: r.scheduled_for,
-        updatedAt: r.updated_at,
-      })),
-    }
-  },
-})
-
-export type PageEditorState = {
-  page: {
-    id: string
-    type: PageRow["type"]
-    slug: string
-    title: string
-    status: PageRow["status"]
-    publishedAt: Date | null
-  }
-  data: PageData
+export type EditorState<T = unknown> = {
+  target: ContentTarget
+  page: (NonNullable<Holder["page"]> & { id: string }) | null
+  data: T
   /** The revision being edited, and its save token (null before the first edit). */
   draft: {
     revisionId: string
@@ -181,153 +123,105 @@ export type PageEditorState = {
   publishedRevisionId: string | null
 }
 
-export const getPageEditor = defineOperation({
-  name: "cms.getPageEditor",
+export type PageEditorState = Omit<EditorState<PageData>, "page"> & {
+  page: NonNullable<Holder["page"]> & { id: string }
+}
+
+export const getEditor = defineOperation({
+  name: "cms.getEditor",
   access: { cms: ["read"] },
-  input: z.object({ pageId: z.uuid() }),
-  async handler(_ctx, { pageId }): Promise<PageEditorState> {
-    const found = await getDb().execute<PageRow>(sql`
-      select id, type, slug::text, title, status, draft_revision_id, published_revision_id, published_at
-      from cms_pages where id = ${pageId}`)
-    const page = found.rows[0]
-    if (!page) throw new DomainError("NOT_FOUND", "Page not found.")
-    const current = await revision(getDb(), page.draft_revision_id)
-    const parsed = current ? pageDataSchema.safeParse(current.data) : null
-    return {
-      page: {
-        id: page.id,
-        type: page.type,
-        slug: page.slug,
-        title: page.title,
-        status: page.status,
-        publishedAt: page.published_at,
-      },
-      data: parsed?.success ? parsed.data : { sections: [], seo: {} },
-      draft: current
-        ? {
-            revisionId: current.id,
-            version: current.version,
-            status: current.workflow_status,
-            updatedAt: new Date(current.updated_at).toISOString(),
-            reviewNote: current.review_note,
-            scheduledFor: current.scheduled_for,
-          }
-        : null,
-      publishedRevisionId: page.published_revision_id,
-    }
+  input: z.object({ target: targetSchema }),
+  async handler(_ctx, { target }): Promise<EditorState> {
+    return withTransaction(async (tx) => {
+      const holder = await lockTarget(tx, target, { create: true })
+      const current = await revision(tx, holder.draftRevisionId)
+      const valid = current ? contentIsValid(target.type, current.data) : null
+      return {
+        target,
+        page: holder.page ? { ...holder.page, id: holder.entityId } : null,
+        data: valid?.success ? valid.data : emptyContent(target.type),
+        draft: current
+          ? {
+              revisionId: current.id,
+              version: current.version,
+              status: current.workflow_status,
+              updatedAt: new Date(current.updated_at).toISOString(),
+              reviewNote: current.review_note,
+              scheduledFor: current.scheduled_for,
+            }
+          : null,
+        publishedRevisionId: holder.publishedRevisionId,
+      }
+    })
   },
 })
 
-/**
- * Names and thumbnails for the builder: everything the page points at, and
- * the collections and categories it can choose from.
- */
-export async function loadEditorLabels(data: PageData) {
-  const refs = pageRefs(data)
-  const [media, products, collections, tree] = await Promise.all([
-    loadMediaRefs([...refs.mediaIds]),
-    refs.productIds.size > 0
-      ? getDb().execute<{ id: string; title: string }>(sql`
-          select id, title from products where id in (${sql.join(
-            [...refs.productIds].map((id) => sql`${id}`),
-            sql`, `,
-          )})`)
-      : Promise.resolve({ rows: [] as { id: string; title: string }[] }),
-    getDb().execute<{ id: string; title: string; status: string }>(sql`
-      select id, title, status from collections where status <> 'archived' order by title`),
-    loadCatalogTree(),
-  ])
-  return {
-    media: [...media].map(([id, ref]) => ({ id, key: ref.key, alt: ref.alt })),
-    products: products.rows.map((p) => ({ id: p.id, label: p.title })),
-    collections: collections.rows.map((c) => ({
-      id: c.id,
-      label: c.status === "published" ? c.title : `${c.title} (draft)`,
-    })),
-    categories: tree.categories.map((c) => ({
-      id: c.id,
-      label: `${"– ".repeat(c.depth)}${c.name}`,
-    })),
-  }
-}
-
 // --- Editing ---------------------------------------------------------------------------
+
+const baseSchema = z
+  .object({ revisionId: z.uuid(), updatedAt: z.iso.datetime() })
+  .nullable()
 
 /**
  * Autosave. Edits the working draft in place; if the latest revision is
- * frozen (submitted, scheduled or published), starts a new draft from this
- * data. `base` is what the editor last loaded or saved: if someone else has
- * saved since, nothing is written and the editor is asked to reload.
+ * published or archived, starts a new draft from this data. `base` is what
+ * the editor last loaded or saved: if someone else has saved since, nothing
+ * is written and the editor is asked to reload.
  */
-export const autosavePageDraft = defineOperation({
-  name: "cms.autosavePageDraft",
+export const autosaveDraft = defineOperation({
+  name: "cms.autosaveDraft",
   access: { cms: ["draft"] },
   input: z.object({
-    pageId: z.uuid(),
-    data: pageDataSchema,
-    base: z
-      .object({ revisionId: z.uuid(), updatedAt: z.iso.datetime() })
-      .nullable(),
+    target: targetSchema,
+    data: z.unknown(),
+    base: baseSchema,
   }),
-  async handler({ actor }, { pageId, data, base }) {
+  async handler({ actor }, { target, data: raw, base }) {
+    const { data, refs } = parseContent(target.type, raw)
     return withTransaction(async (tx) => {
-      const page = await lockPage(tx, pageId)
-      if (page.status === "archived")
+      const holder = await lockTarget(tx, target, { create: true })
+      if (holder.page?.status === "archived")
         throw new DomainError("INVALID_STATE", "Restore the page to edit it.")
-      if ((base?.revisionId ?? null) !== page.draft_revision_id) {
-        throw new DomainError(
-          "CONFLICT",
-          "Someone else changed this page. Reload to see their version.",
-        )
-      }
-      const latest = await revision(tx, page.draft_revision_id)
-      if (
-        latest &&
-        ["in_review", "approved", "scheduled"].includes(latest.workflow_status)
-      ) {
+      const conflict = new DomainError(
+        "CONFLICT",
+        "Someone else changed this. Reload to see their version.",
+      )
+      if ((base?.revisionId ?? null) !== holder.draftRevisionId) throw conflict
+      const latest = await revision(tx, holder.draftRevisionId, true)
+      if (latest && FROZEN.includes(latest.workflow_status)) {
         throw new DomainError(
           "INVALID_STATE",
           "This version is waiting to be reviewed or published. Withdraw it or cancel the schedule to edit.",
         )
       }
-      const draft = await workingDraft(tx, page)
-      if (draft) {
-        if (new Date(draft.updated_at).toISOString() !== base!.updatedAt) {
-          throw new DomainError(
-            "CONFLICT",
-            "Someone else changed this page. Reload to see their version.",
-          )
-        }
+      if (latest?.workflow_status === "draft") {
+        if (new Date(latest.updated_at).toISOString() !== base!.updatedAt)
+          throw conflict
         const updated = await tx.execute<{ updated_at: Date }>(sql`
           update cms_revisions set data = ${JSON.stringify(data)}::jsonb,
             created_by = coalesce(created_by, ${actorId(actor)}), updated_at = now()
-          where id = ${draft.id} returning updated_at`)
+          where id = ${latest.id} returning updated_at`)
         await tx.execute(
-          sql`delete from cms_revision_refs where revision_id = ${draft.id}`,
+          sql`delete from cms_revision_refs where revision_id = ${latest.id}`,
         )
-        await insertRefs(tx, draft.id, pageRefs(data))
+        await insertRefs(tx, latest.id, refs)
         return {
-          revisionId: draft.id,
-          version: draft.version,
+          revisionId: latest.id,
+          version: latest.version,
           updatedAt: new Date(updated.rows[0]!.updated_at).toISOString(),
         }
       }
       const created = await insertRevision(
         tx,
-        "page",
-        pageId,
+        holder.entityType,
+        holder.entityId,
         data,
-        pageRefs(data),
+        refs,
         actorId(actor),
       )
-      await tx.execute(
-        sql`update cms_pages set draft_revision_id = ${created.revisionId}, updated_at = now() where id = ${pageId}`,
-      )
-      await writeAudit(tx, actor, {
-        action: "cms.page.draft_started",
-        entityType: "cms_page",
-        entityId: pageId,
-        changes: { version: created.version },
+      await setDraftPointer(tx, holder, created.revisionId)
+      await audit(tx, actor, holder, "draft_started", {
+        version: created.version,
       })
       const saved = await revision(tx, created.revisionId)
       return {
@@ -339,53 +233,24 @@ export const autosavePageDraft = defineOperation({
   },
 })
 
-/** Title changes apply straight away (the slug is fixed after creation). */
-export const renamePage = defineOperation({
-  name: "cms.renamePage",
-  access: { cms: ["draft"] },
-  input: z.object({
-    pageId: z.uuid(),
-    title: z.string().trim().min(1).max(120),
-  }),
-  async handler({ actor }, { pageId, title }) {
-    return withTransaction(async (tx) => {
-      const page = await lockPage(tx, pageId)
-      await tx.execute(
-        sql`update cms_pages set title = ${title}, updated_at = now() where id = ${pageId}`,
-      )
-      await requestRevalidation(
-        [cacheTags.cmsPage(page.slug), cacheTags.cmsPagesList],
-        { tx },
-      )
-      await writeAudit(tx, actor, {
-        action: "cms.page.rename",
-        entityType: "cms_page",
-        entityId: pageId,
-        changes: { from: page.title, to: title },
-      })
-      return {}
-    })
-  },
-})
-
 // --- Workflow --------------------------------------------------------------------------
 
 async function draftFor(
   tx: Transaction,
-  pageId: string,
+  target: ContentTarget,
   allowed: WorkflowStatus[],
   message: string,
 ) {
-  const page = await lockPage(tx, pageId)
-  if (page.status === "archived")
+  const holder = await lockTarget(tx, target)
+  if (holder.page?.status === "archived")
     throw new DomainError("INVALID_STATE", "Restore the page first.")
-  const current = await revision(tx, page.draft_revision_id, true)
+  const current = await revision(tx, holder.draftRevisionId, true)
   if (!current || !allowed.includes(current.workflow_status))
     throw new DomainError("INVALID_STATE", message)
-  return { page, current }
+  return { holder, current }
 }
 
-async function setStatus(
+export async function setStatus(
   tx: Transaction,
   revisionId: string,
   status: WorkflowStatus,
@@ -407,31 +272,29 @@ async function setStatus(
 }
 
 /** Content Editors: hand the working draft to a manager. */
-export const submitPageForReview = defineOperation({
+export const submitForReview = defineOperation({
   name: "cms.submitForReview",
   access: { cms: ["draft"] },
   input: z.object({
-    pageId: z.uuid(),
+    target: targetSchema,
     note: z.string().trim().max(300).optional(),
   }),
-  async handler({ actor }, { pageId, note }) {
+  async handler({ actor }, { target, note }) {
     return withTransaction(async (tx) => {
-      const { current } = await draftFor(
+      const { holder, current } = await draftFor(
         tx,
-        pageId,
+        target,
         ["draft"],
         "Only a draft can be submitted.",
       )
-      pageDataSchema.parse(current.data)
+      parseContent(target.type, current.data)
       await setStatus(tx, current.id, "in_review", {
         note: note ?? null,
         reviewNote: null,
       })
-      await writeAudit(tx, actor, {
-        action: "cms.page.submit",
-        entityType: "cms_page",
-        entityId: pageId,
-        changes: { version: current.version, note },
+      await audit(tx, actor, holder, "submit", {
+        version: current.version,
+        note,
       })
       return {}
     })
@@ -439,43 +302,38 @@ export const submitPageForReview = defineOperation({
 })
 
 /** Authors: take a submission back to keep editing. */
-export const withdrawPageSubmission = defineOperation({
+export const withdrawSubmission = defineOperation({
   name: "cms.withdrawSubmission",
   access: { cms: ["draft"] },
-  input: z.object({ pageId: z.uuid() }),
-  async handler({ actor }, { pageId }) {
+  input: z.object({ target: targetSchema }),
+  async handler({ actor }, { target }) {
     return withTransaction(async (tx) => {
-      const { current } = await draftFor(
+      const { holder, current } = await draftFor(
         tx,
-        pageId,
+        target,
         ["in_review"],
         "Nothing is waiting for review.",
       )
       await setStatus(tx, current.id, "draft")
-      await writeAudit(tx, actor, {
-        action: "cms.page.withdraw",
-        entityType: "cms_page",
-        entityId: pageId,
-        changes: { version: current.version },
-      })
+      await audit(tx, actor, holder, "withdraw", { version: current.version })
       return {}
     })
   },
 })
 
 /** Managers: send a submitted draft back to its author with a reason. */
-export const requestPageChanges = defineOperation({
+export const requestChanges = defineOperation({
   name: "cms.requestChanges",
   access: { cms: ["review"] },
   input: z.object({
-    pageId: z.uuid(),
+    target: targetSchema,
     reviewNote: z.string().trim().min(1, "Say what needs changing.").max(500),
   }),
-  async handler({ actor }, { pageId, reviewNote }) {
+  async handler({ actor }, { target, reviewNote }) {
     return withTransaction(async (tx) => {
-      const { current } = await draftFor(
+      const { holder, current } = await draftFor(
         tx,
-        pageId,
+        target,
         ["in_review"],
         "Only a submitted draft can be sent back.",
       )
@@ -483,11 +341,9 @@ export const requestPageChanges = defineOperation({
         reviewNote,
         reviewedBy: actorId(actor),
       })
-      await writeAudit(tx, actor, {
-        action: "cms.page.request_changes",
-        entityType: "cms_page",
-        entityId: pageId,
-        changes: { version: current.version, reviewNote },
+      await audit(tx, actor, holder, "request_changes", {
+        version: current.version,
+        reviewNote,
       })
       return {}
     })
@@ -495,49 +351,47 @@ export const requestPageChanges = defineOperation({
 })
 
 /** Managers: publish the working draft (or a submitted one) now. */
-export const publishPage = defineOperation({
-  name: "cms.publishPage",
+export const publishDraft = defineOperation({
+  name: "cms.publishDraft",
   access: { cms: ["publish"] },
-  input: z.object({ pageId: z.uuid() }),
-  async handler({ actor }, { pageId }) {
+  input: z.object({ target: targetSchema }),
+  async handler({ actor }, { target }) {
     const revisionId = await withTransaction(async (tx) => {
-      const page = await lockPage(tx, pageId)
-      if (page.status === "archived")
+      const holder = await lockTarget(tx, target)
+      if (holder.page?.status === "archived")
         throw new DomainError("INVALID_STATE", "Restore the page first.")
-      const latest = await revision(tx, page.draft_revision_id, true)
-      // Taken offline earlier and not edited since: publish that content as
+      const latest = await revision(tx, holder.draftRevisionId, true)
+      // A page taken offline and not edited since: publish that content as
       // a new version.
       if (
         latest &&
-        page.status !== "published" &&
+        holder.page &&
+        holder.page.status !== "published" &&
         ["published", "archived"].includes(latest.workflow_status)
       ) {
-        const data = pageDataSchema.parse(latest.data)
+        const { data, refs } = parseContent(target.type, latest.data)
         const copy = await insertRevision(
           tx,
-          "page",
-          pageId,
+          holder.entityType,
+          holder.entityId,
           data,
-          pageRefs(data),
+          refs,
           actorId(actor),
           `Republished version ${latest.version}`,
         )
-        await tx.execute(
-          sql`update cms_pages set draft_revision_id = ${copy.revisionId}, updated_at = now() where id = ${pageId}`,
-        )
+        await setDraftPointer(tx, holder, copy.revisionId)
         return copy.revisionId
       }
-      const { current } = await draftFor(
-        tx,
-        pageId,
-        ["draft", "in_review", "approved", "scheduled"],
-        "There are no unpublished changes.",
-      )
-      if (current.workflow_status === "in_review")
-        await setStatus(tx, current.id, "in_review", {
+      if (!latest || !PENDING.includes(latest.workflow_status))
+        throw new DomainError(
+          "INVALID_STATE",
+          "There are no unpublished changes.",
+        )
+      if (latest.workflow_status === "in_review")
+        await setStatus(tx, latest.id, "in_review", {
           reviewedBy: actorId(actor),
         })
-      return current.id
+      return latest.id
     })
     await publishRevision(actor, { revisionId })
     return { revisionId }
@@ -545,150 +399,62 @@ export const publishPage = defineOperation({
 })
 
 /** Managers: publish at a set time (the worker checks every minute). */
-export const schedulePage = defineOperation({
-  name: "cms.schedulePage",
+export const scheduleDraft = defineOperation({
+  name: "cms.schedule",
   access: { cms: ["publish"] },
-  input: z.object({ pageId: z.uuid(), at: z.iso.datetime({ offset: true }) }),
-  async handler({ actor }, { pageId, at }) {
+  input: z.object({
+    target: targetSchema,
+    at: z.iso.datetime({ offset: true }),
+  }),
+  async handler({ actor }, { target, at }) {
     const when = new Date(at)
     const now = Date.now()
+    const reject = (message: string) =>
+      new DomainError("VALIDATION_FAILED", message, {
+        issues: { at: [message] },
+      })
     if (when.getTime() < now + 60_000)
-      throw new DomainError(
-        "VALIDATION_FAILED",
-        "Pick a time at least a minute from now.",
-        { issues: { at: ["Pick a time at least a minute from now."] } },
-      )
+      throw reject("Pick a time at least a minute from now.")
     if (when.getTime() > now + 366 * 24 * 3600_000)
-      throw new DomainError(
-        "VALIDATION_FAILED",
-        "Pick a time within the next year.",
-        { issues: { at: ["Pick a time within the next year."] } },
-      )
+      throw reject("Pick a time within the next year.")
     return withTransaction(async (tx) => {
-      const { current } = await draftFor(
+      const { holder, current } = await draftFor(
         tx,
-        pageId,
-        ["draft", "in_review", "approved", "scheduled"],
+        target,
+        PENDING,
         "There are no unpublished changes to schedule.",
       )
-      pageDataSchema.parse(current.data)
+      parseContent(target.type, current.data)
       await setStatus(tx, current.id, "scheduled", {
         scheduledFor: when,
         ...(current.workflow_status === "in_review"
           ? { reviewedBy: actorId(actor) }
           : {}),
       })
-      await writeAudit(tx, actor, {
-        action: "cms.page.schedule",
-        entityType: "cms_page",
-        entityId: pageId,
-        changes: { version: current.version, at: when.toISOString() },
+      await audit(tx, actor, holder, "schedule", {
+        version: current.version,
+        at: when.toISOString(),
       })
       return { scheduledFor: when }
     })
   },
 })
 
-export const cancelPageSchedule = defineOperation({
+export const cancelSchedule = defineOperation({
   name: "cms.cancelSchedule",
   access: { cms: ["publish"] },
-  input: z.object({ pageId: z.uuid() }),
-  async handler({ actor }, { pageId }) {
+  input: z.object({ target: targetSchema }),
+  async handler({ actor }, { target }) {
     return withTransaction(async (tx) => {
-      const { current } = await draftFor(
+      const { holder, current } = await draftFor(
         tx,
-        pageId,
+        target,
         ["scheduled"],
-        "Nothing is scheduled for this page.",
+        "Nothing is scheduled.",
       )
       await setStatus(tx, current.id, "draft", { scheduledFor: null })
-      await writeAudit(tx, actor, {
-        action: "cms.page.cancel_schedule",
-        entityType: "cms_page",
-        entityId: pageId,
-        changes: { version: current.version },
-      })
-      return {}
-    })
-  },
-})
-
-async function takeOffline(
-  tx: Transaction,
-  actor: Actor,
-  page: PageRow,
-  status: "draft" | "archived",
-) {
-  if (page.type === "home")
-    throw new DomainError("INVALID_STATE", "The home page is always live.")
-  if (page.published_revision_id) {
-    await setStatus(tx, page.published_revision_id, "archived")
-  }
-  // A pending schedule would put it back online.
-  await tx.execute(sql`
-    update cms_revisions set workflow_status = 'draft', scheduled_for = null, updated_at = now()
-    where entity_type = 'page' and entity_id = ${page.id} and workflow_status = 'scheduled'`)
-  await tx.execute(sql`
-    update cms_pages set status = ${status}::publication_status, published_revision_id = null,
-      updated_at = now()
-    where id = ${page.id}`)
-  await requestRevalidation(
-    [cacheTags.cmsPage(page.slug), cacheTags.cmsPagesList],
-    { tx },
-  )
-  await writeAudit(tx, actor, {
-    action: status === "archived" ? "cms.page.archive" : "cms.page.unpublish",
-    entityType: "cms_page",
-    entityId: page.id,
-    changes: { slug: page.slug },
-  })
-}
-
-/** Takes the page off the site; its content stays for re-publishing. */
-export const unpublishPage = defineOperation({
-  name: "cms.unpublishPage",
-  access: { cms: ["publish"] },
-  input: z.object({ pageId: z.uuid() }),
-  async handler({ actor }, { pageId }) {
-    return withTransaction(async (tx) => {
-      const page = await lockPage(tx, pageId)
-      if (page.status !== "published")
-        throw new DomainError("INVALID_STATE", "The page isn't live.")
-      await takeOffline(tx, actor, page, "draft")
-      return {}
-    })
-  },
-})
-
-export const archivePage = defineOperation({
-  name: "cms.archivePage",
-  access: { cms: ["archive"] },
-  input: z.object({ pageId: z.uuid() }),
-  async handler({ actor }, { pageId }) {
-    return withTransaction(async (tx) => {
-      const page = await lockPage(tx, pageId)
-      if (page.status === "archived") return {}
-      await takeOffline(tx, actor, page, "archived")
-      return {}
-    })
-  },
-})
-
-export const restorePage = defineOperation({
-  name: "cms.restorePage",
-  access: { cms: ["archive"] },
-  input: z.object({ pageId: z.uuid() }),
-  async handler({ actor }, { pageId }) {
-    return withTransaction(async (tx) => {
-      const page = await lockPage(tx, pageId)
-      if (page.status !== "archived") return {}
-      await tx.execute(
-        sql`update cms_pages set status = 'draft', updated_at = now() where id = ${pageId}`,
-      )
-      await writeAudit(tx, actor, {
-        action: "cms.page.restore",
-        entityType: "cms_page",
-        entityId: pageId,
+      await audit(tx, actor, holder, "cancel_schedule", {
+        version: current.version,
       })
       return {}
     })
@@ -699,44 +465,46 @@ export const restorePage = defineOperation({
 export const restoreRevision = defineOperation({
   name: "cms.restoreRevision",
   access: { cms: ["draft"] },
-  input: z.object({ pageId: z.uuid(), revisionId: z.uuid() }),
-  async handler({ actor }, { pageId, revisionId }) {
+  input: z.object({ target: targetSchema, revisionId: z.uuid() }),
+  async handler({ actor }, { target, revisionId }) {
     return withTransaction(async (tx) => {
-      const page = await lockPage(tx, pageId)
+      const holder = await lockTarget(tx, target)
       const source = await tx.execute<{ data: unknown; version: number }>(sql`
         select data, version from cms_revisions
-        where id = ${revisionId} and entity_type = 'page' and entity_id = ${pageId}`)
+        where id = ${revisionId} and entity_type = ${holder.entityType}::cms_entity_type
+          and entity_id = ${holder.entityId}`)
       const row = source.rows[0]
       if (!row) throw new DomainError("NOT_FOUND", "Revision not found.")
-      const data = pageDataSchema.parse(row.data)
-      const draft = await workingDraft(tx, page)
-      if (draft) {
+      const { data, refs } = parseContent(target.type, row.data)
+      const latest = await revision(tx, holder.draftRevisionId, true)
+      if (latest && FROZEN.includes(latest.workflow_status)) {
+        throw new DomainError(
+          "INVALID_STATE",
+          "Withdraw the submission or cancel the schedule first.",
+        )
+      }
+      if (latest?.workflow_status === "draft") {
         await tx.execute(sql`
           update cms_revisions set data = ${JSON.stringify(data)}::jsonb, updated_at = now()
-          where id = ${draft.id}`)
+          where id = ${latest.id}`)
         await tx.execute(
-          sql`delete from cms_revision_refs where revision_id = ${draft.id}`,
+          sql`delete from cms_revision_refs where revision_id = ${latest.id}`,
         )
-        await insertRefs(tx, draft.id, pageRefs(data))
+        await insertRefs(tx, latest.id, refs)
       } else {
         const created = await insertRevision(
           tx,
-          "page",
-          pageId,
+          holder.entityType,
+          holder.entityId,
           data,
-          pageRefs(data),
+          refs,
           actorId(actor),
           `Restored from version ${row.version}`,
         )
-        await tx.execute(
-          sql`update cms_pages set draft_revision_id = ${created.revisionId}, updated_at = now() where id = ${pageId}`,
-        )
+        await setDraftPointer(tx, holder, created.revisionId)
       }
-      await writeAudit(tx, actor, {
-        action: "cms.page.restore_revision",
-        entityType: "cms_page",
-        entityId: pageId,
-        changes: { fromVersion: row.version },
+      await audit(tx, actor, holder, "restore_revision", {
+        fromVersion: row.version,
       })
       return {}
     })
@@ -761,11 +529,14 @@ export type RevisionSummary = {
   changes: string
 }
 
-export const listPageRevisions = defineOperation({
-  name: "cms.listPageRevisions",
+export const listRevisions = defineOperation({
+  name: "cms.listRevisions",
   access: { cms: ["read"] },
-  input: z.object({ pageId: z.uuid() }),
-  async handler(_ctx, { pageId }): Promise<RevisionSummary[]> {
+  input: z.object({ target: targetSchema }),
+  async handler(_ctx, { target }): Promise<RevisionSummary[]> {
+    const holder = await withTransaction((tx) =>
+      lockTarget(tx, target, { create: true }),
+    )
     const rows = await getDb().execute<{
       id: string
       version: number
@@ -779,77 +550,116 @@ export const listPageRevisions = defineOperation({
       scheduled_for: Date | null
       published_at: Date | null
       updated_at: Date
-      live: boolean
     }>(sql`
       select r.id, r.version, r.data, r.workflow_status, a.name as author, v.name as reviewer,
              pb.name as publisher, r.note, r.review_note, r.scheduled_for, r.published_at,
-             r.updated_at, (p.published_revision_id = r.id) as live
+             r.updated_at
       from cms_revisions r
-      join cms_pages p on p.id = r.entity_id
       left join users a on a.id = r.created_by
       left join users v on v.id = r.reviewed_by
       left join users pb on pb.id = r.published_by
-      where r.entity_type = 'page' and r.entity_id = ${pageId}
+      where r.entity_type = ${holder.entityType}::cms_entity_type and r.entity_id = ${holder.entityId}
       order by r.version desc
       limit 100`)
     const ordered = [...rows.rows].reverse()
-    const summaries = ordered.map((row, i): RevisionSummary => {
-      const data = pageDataSchema.safeParse(row.data)
-      const before =
-        i > 0 ? pageDataSchema.safeParse(ordered[i - 1]!.data) : null
-      const changes =
-        data.success && (i === 0 || before?.success)
-          ? describeDiff(
-              diffPages(before?.success ? before.data : null, data.data),
-              i === 0,
-            )
-          : "Content from an older format"
-      return {
-        id: row.id,
-        version: row.version,
-        status: row.workflow_status,
-        author: row.author,
-        reviewer: row.reviewer,
-        publisher: row.publisher,
-        note: row.note,
-        reviewNote: row.review_note,
-        scheduledFor: row.scheduled_for,
-        publishedAt: row.published_at,
-        updatedAt: row.updated_at,
-        live: row.live,
-        changes,
-      }
-    })
-    return summaries.reverse()
+    return ordered
+      .map((row, i): RevisionSummary => {
+        let changes: string
+        if (target.type === "page") {
+          const data = pageDataSchema.safeParse(row.data)
+          const before =
+            i > 0 ? pageDataSchema.safeParse(ordered[i - 1]!.data) : null
+          changes =
+            data.success && (i === 0 || before?.success)
+              ? describeDiff(
+                  diffPages(before?.success ? before.data : null, data.data),
+                  i === 0,
+                )
+              : "Content from an older format"
+        } else {
+          changes =
+            i === 0
+              ? "First version"
+              : JSON.stringify(row.data) ===
+                  JSON.stringify(ordered[i - 1]!.data)
+                ? "No changes"
+                : "Edited"
+        }
+        return {
+          id: row.id,
+          version: row.version,
+          status: row.workflow_status,
+          author: row.author,
+          reviewer: row.reviewer,
+          publisher: row.publisher,
+          note: row.note,
+          reviewNote: row.review_note,
+          scheduledFor: row.scheduled_for,
+          publishedAt: row.published_at,
+          updatedAt: row.updated_at,
+          live: row.id === holder.publishedRevisionId,
+          changes,
+        }
+      })
+      .reverse()
   },
 })
+
+export type ScheduledItem = {
+  revisionId: string
+  label: string
+  href: string
+  version: number
+  scheduledFor: Date
+  scheduledBy: string | null
+}
+
+const MENU_LABELS: Record<MenuKey, string> = {
+  header: "Header menu",
+  footer: "Footer menu",
+  mobile: "Mobile menu",
+  social: "Social links",
+}
 
 export const listScheduled = defineOperation({
   name: "cms.listScheduled",
   access: { cms: ["read"] },
   input: z.object({}),
-  async handler() {
+  async handler(): Promise<ScheduledItem[]> {
     const rows = await getDb().execute<{
       revision_id: string
-      page_id: string
-      title: string
-      slug: string
+      entity_type: "page" | "navigation" | "site_settings" | "blog_post"
+      entity_id: string
+      title: string | null
+      menu_key: MenuKey | null
       version: number
       scheduled_for: Date
       scheduled_by: string | null
     }>(sql`
-      select r.id as revision_id, p.id as page_id, p.title, p.slug::text, r.version, r.scheduled_for,
+      select r.id as revision_id, r.entity_type, r.entity_id, p.title, m.key::text as menu_key,
+             r.version, r.scheduled_for,
              (select u.name from audit_logs l join users u on u.id = l.actor_user_id
-              where l.entity_id = p.id::text and l.action = 'cms.page.schedule'
+              where l.entity_id = r.entity_id::text and l.action like 'cms.%.schedule'
               order by l.created_at desc limit 1) as scheduled_by
-      from cms_revisions r join cms_pages p on p.id = r.entity_id
-      where r.entity_type = 'page' and r.workflow_status = 'scheduled'
+      from cms_revisions r
+      left join cms_pages p on r.entity_type = 'page' and p.id = r.entity_id
+      left join navigation_menus m on r.entity_type = 'navigation' and m.id = r.entity_id
+      where r.workflow_status = 'scheduled'
       order by r.scheduled_for`)
     return rows.rows.map((r) => ({
       revisionId: r.revision_id,
-      pageId: r.page_id,
-      title: r.title,
-      slug: r.slug,
+      label:
+        r.entity_type === "page"
+          ? (r.title ?? "Page")
+          : r.entity_type === "navigation"
+            ? MENU_LABELS[r.menu_key ?? "header"]
+            : "Site settings",
+      href:
+        r.entity_type === "page"
+          ? `/admin/cms/pages/${r.entity_id}`
+          : r.entity_type === "navigation"
+            ? `/admin/cms/navigation/${r.menu_key}`
+            : "/admin/cms/settings",
       version: r.version,
       scheduledFor: r.scheduled_for,
       scheduledBy: r.scheduled_by,
@@ -896,29 +706,29 @@ export const createPreviewLink = defineOperation({
   access: { cms: ["read"] },
   input: z.object({ revisionId: z.uuid() }),
   async handler(_ctx, { revisionId }) {
-    const found = await getDb().execute<{ id: string }>(
-      sql`select id from cms_revisions where id = ${revisionId} and entity_type = 'page'`,
-    )
+    const found = await getDb().execute<{ id: string }>(sql`
+      select id from cms_revisions
+      where id = ${revisionId} and entity_type in ('page', 'navigation', 'site_settings')`)
     if (!found.rows[0])
       throw new DomainError("NOT_FOUND", "Revision not found.")
     const expires = Math.floor(Date.now() / 1000) + PREVIEW_TTL_SECONDS
     const token = `${revisionId}.${expires}.${previewSignature(revisionId, expires)}`
-    return {
-      path: `/preview/${token}`,
-      expiresAt: new Date(expires * 1000),
-    }
+    return { path: `/preview/${token}`, expiresAt: new Date(expires * 1000) }
   },
 })
 
-export type PreviewPage = {
-  revisionId: string
-  version: number
-  type: PageRow["type"]
-  slug: string
-  title: string
-  data: PageData
-  expiresAt: Date
-}
+type PreviewBase = { revisionId: string; version: number; expiresAt: Date }
+
+export type PreviewPage =
+  | (PreviewBase & {
+      kind: "page"
+      type: PageType
+      slug: string
+      title: string
+      data: PageData
+    })
+  | (PreviewBase & { kind: "navigation"; key: MenuKey; data: NavigationData })
+  | (PreviewBase & { kind: "site_settings"; data: SiteSettingsData })
 
 /** The revision behind a preview token, or null if the link is bad or old. */
 export async function loadPreview(token: string): Promise<PreviewPage | null> {
@@ -937,24 +747,48 @@ export async function loadPreview(token: string): Promise<PreviewPage | null> {
   const found = await getDb().execute<{
     version: number
     data: unknown
-    type: PageRow["type"]
-    slug: string
-    title: string
+    entity_type: "page" | "navigation" | "site_settings"
+    page_type: PageType | null
+    slug: string | null
+    title: string | null
+    menu_key: MenuKey | null
   }>(sql`
-    select r.version, r.data, p.type, p.slug::text, p.title
-    from cms_revisions r join cms_pages p on p.id = r.entity_id
-    where r.id = ${revisionId} and r.entity_type = 'page'`)
+    select r.version, r.data, r.entity_type, p.type as page_type, p.slug::text, p.title,
+           m.key::text as menu_key
+    from cms_revisions r
+    left join cms_pages p on r.entity_type = 'page' and p.id = r.entity_id
+    left join navigation_menus m on r.entity_type = 'navigation' and m.id = r.entity_id
+    where r.id = ${revisionId}`)
   const row = found.rows[0]
   if (!row) return null
-  const data = pageDataSchema.safeParse(row.data)
-  if (!data.success) return null
-  return {
+  const valid = contentIsValid(row.entity_type, row.data)
+  if (!valid.success) return null
+  const base = {
     revisionId: revisionId!,
     version: row.version,
-    type: row.type,
-    slug: row.slug,
-    title: row.title,
-    data: data.data,
     expiresAt: new Date(expires * 1000),
   }
+  if (row.entity_type === "page")
+    return {
+      ...base,
+      kind: "page",
+      type: row.page_type!,
+      slug: row.slug!,
+      title: row.title!,
+      data: valid.data as PageData,
+    }
+  if (row.entity_type === "navigation")
+    return {
+      ...base,
+      kind: "navigation",
+      key: row.menu_key!,
+      data: valid.data as NavigationData,
+    }
+  return {
+    ...base,
+    kind: "site_settings",
+    data: valid.data as SiteSettingsData,
+  }
 }
+
+export type { PageStatus }

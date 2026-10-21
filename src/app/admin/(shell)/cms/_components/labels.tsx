@@ -16,6 +16,8 @@ type Labels = {
   products: Map<string, string>
   collections: Option[]
   categories: Option[]
+  /** Pages by slug (id = slug), for menu links. */
+  pages: Option[]
   addMedia: (item: { id: string; key: string; alt: string }) => void
   addProduct: (id: string, label: string) => void
 }
@@ -36,6 +38,7 @@ export function LabelsProvider({
     products: Option[]
     collections: Option[]
     categories: Option[]
+    pages: Option[]
   }
   children: ReactNode
 }) {
@@ -63,6 +66,7 @@ export function LabelsProvider({
       products,
       collections: initial.collections,
       categories: initial.categories,
+      pages: initial.pages,
       addMedia,
       addProduct,
     }),
@@ -71,6 +75,7 @@ export function LabelsProvider({
       products,
       initial.collections,
       initial.categories,
+      initial.pages,
       addMedia,
       addProduct,
     ],

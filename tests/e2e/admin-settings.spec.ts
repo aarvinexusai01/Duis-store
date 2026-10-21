@@ -110,7 +110,9 @@ test("content editor is refused on settings, staff, reports and orders", async (
   await page.goto("/")
   const editor = await createStaff(page, "content_editor")
   await signInAndSetUpTwoFactor(page, editor)
-  await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0)
+  await expect(
+    page.getByRole("link", { name: "Settings", exact: true }),
+  ).toHaveCount(0)
   for (const path of [
     "/admin/settings",
     "/admin/staff",

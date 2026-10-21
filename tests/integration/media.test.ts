@@ -106,7 +106,14 @@ describe("image upload pipeline", () => {
     })
     await expect(deleteMedia(system, { id: used.id })).rejects.toMatchObject({
       code: "CONFLICT",
-      details: { usage: [{ kind: "product", count: 1 }] },
+      details: {
+        usage: [
+          expect.objectContaining({
+            kind: "Product",
+            href: `/admin/products/${fx.productId}`,
+          }),
+        ],
+      },
     })
 
     const unused = await uploadImage(system, { bytes: await makeUniqueImage() })

@@ -21,6 +21,8 @@ export const pageDataSchema = z.object({
       description: z.string().max(170).optional(),
       ogMediaId: id.optional(),
       noindex: z.boolean().optional(),
+      // Another page that should rank instead (duplicates, campaigns).
+      canonical: safeHref.optional(),
     })
     .default({}),
 })
@@ -65,6 +67,8 @@ export const siteSettingsDataSchema = z.object({
   brandName: z.string().trim().min(1).max(60),
   tagline: z.string().trim().max(120).optional(),
   logoMediaId: id.optional(),
+  // Square image for browser tabs; a monogram is used without one.
+  faviconMediaId: id.optional(),
   announcement: z
     .object({
       enabled: z.boolean(),

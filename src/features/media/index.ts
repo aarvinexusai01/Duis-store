@@ -2,8 +2,10 @@
 export {
   adminListMedia,
   deleteMedia,
+  getMediaUsage,
   MEDIA_PAGE_SIZE,
   type MediaListItem,
+  type MediaUse,
   mediaUsage,
   updateMediaDetails,
   uploadImage,

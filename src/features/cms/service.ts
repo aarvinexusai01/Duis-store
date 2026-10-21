@@ -8,6 +8,7 @@ import {
   navigationMenus,
   siteSettings,
 } from "@/db/schema"
+import { releaseAddress } from "@/features/redirects"
 import { writeAudit } from "@/server/audit"
 import { requestRevalidation } from "@/server/cache/revalidate"
 import { cacheTags } from "@/server/cache/tags"
@@ -17,6 +18,7 @@ import { DomainError, isUniqueViolation } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
 
 import { collectBlockRefs, emptyRefs, type ContentRefs } from "./blocks"
+import { pageHref } from "./resolve"
 import {
   createPageSchema,
   navigationDataSchema,
@@ -41,7 +43,7 @@ export function pageRefs(data: PageData): ContentRefs {
   return refs
 }
 
-function navigationRefs(data: NavigationData): ContentRefs {
+export function navigationRefs(data: NavigationData): ContentRefs {
   const refs = emptyRefs()
   const visit = (item: NavItem) => {
     if (item.link.type === "category")
@@ -56,9 +58,10 @@ function navigationRefs(data: NavigationData): ContentRefs {
   return refs
 }
 
-function settingsRefs(data: SiteSettingsData): ContentRefs {
+export function settingsRefs(data: SiteSettingsData): ContentRefs {
   const refs = emptyRefs()
   if (data.logoMediaId) refs.mediaIds.add(data.logoMediaId)
+  if (data.faviconMediaId) refs.mediaIds.add(data.faviconMediaId)
   if (data.defaultSeo.ogMediaId) refs.mediaIds.add(data.defaultSeo.ogMediaId)
   return refs
 }
@@ -154,6 +157,7 @@ export const createPage = defineOperation({
             throw new DomainError("CONFLICT", "A page with that slug exists.")
           throw err
         })
+      await releaseAddress(tx, pageHref(input.slug))
       await writeAudit(tx, actor, {
         action: "cms.page.create",
         entityType: "cms_page",

@@ -238,24 +238,26 @@ How these are limited:
 - **`contact.send`** is public: a honeypot field, Turnstile once configured, 5 per IP per 10 minutes and 5 per address per hour.
 - **The inbox** uses the customer permissions: reading needs `customer: read`, handling needs `customer: update`.
 
-## Operations (Phase 6a, page builder and workflow)
+## Operations (Phase 6a–6b, CMS workflow)
+
+Since 6b the workflow operations act on a target: a page, the header or footer menu, or the site settings.
 
 | Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
 |---|---|---|---|---|---|---|---|
 | `cms.adminListPages` | ✓ | ✓ | ✓ | ✓ | · | · | · |
 | `cms.archivePage` | ✓ | · | ✓ | · | · | · | · |
-| `cms.autosavePageDraft` | ✓ | · | ✓ | ✓ | · | · | · |
+| `cms.autosaveDraft` | ✓ | · | ✓ | ✓ | · | · | · |
 | `cms.cancelSchedule` | ✓ | · | ✓ | · | · | · | · |
 | `cms.createPreviewLink` | ✓ | ✓ | ✓ | ✓ | · | · | · |
-| `cms.getPageEditor` | ✓ | ✓ | ✓ | ✓ | · | · | · |
-| `cms.listPageRevisions` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `cms.getEditor` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `cms.listRevisions` | ✓ | ✓ | ✓ | ✓ | · | · | · |
 | `cms.listScheduled` | ✓ | ✓ | ✓ | ✓ | · | · | · |
-| `cms.publishPage` | ✓ | · | ✓ | · | · | · | · |
+| `cms.publishDraft` | ✓ | · | ✓ | · | · | · | · |
 | `cms.renamePage` | ✓ | · | ✓ | ✓ | · | · | · |
 | `cms.requestChanges` | ✓ | · | ✓ | · | · | · | · |
 | `cms.restorePage` | ✓ | · | ✓ | · | · | · | · |
 | `cms.restoreRevision` | ✓ | · | ✓ | ✓ | · | · | · |
-| `cms.schedulePage` | ✓ | · | ✓ | · | · | · | · |
+| `cms.schedule` | ✓ | · | ✓ | · | · | · | · |
 | `cms.submitForReview` | ✓ | · | ✓ | ✓ | · | · | · |
 | `cms.unpublishPage` | ✓ | · | ✓ | · | · | · | · |
 | `cms.withdrawSubmission` | ✓ | · | ✓ | ✓ | · | · | · |
@@ -263,8 +265,24 @@ How these are limited:
 
 How these are limited:
 - **Content Editors** create pages, edit drafts, submit for review and withdraw a submission. They can't publish, schedule, send back, unpublish or archive (ADR-0028).
-- **Store Admins** can read every page and its history, but not change content.
+- **Store Admins** can read every page, menu, setting and history, but not change content.
 - **Preview links** are created by anyone who can read content, and work without signing in until they expire (24 hours). The signed token is the credential.
 - **The `cms.publish-scheduled` job** publishes as the system, not as a person. Who scheduled it is in the audit log.
+
+## Operations (Phase 6b, addresses, redirects and media)
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `cms.changePageSlug` | ✓ | · | ✓ | · | · | · | · |
+| `media.usage` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `redirects.adminList` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `redirects.create` | ✓ | · | ✓ | · | · | · | · |
+| `redirects.delete` | ✓ | · | ✓ | · | · | · | · |
+
+How these are limited:
+- **Address changes and redirects** need `cms: publish` (Content Managers and Super Admins), because they change what live links do (ADR-0029).
+- **Automatic redirects** are written by the operation that changes a product, collection or category address, under that operation's own permission.
+- **"Where used"** is visible to anyone who can see the media library.
+- **Deleting an image and archiving a collection** are refused while live or pending content uses them, whatever the role.
 
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

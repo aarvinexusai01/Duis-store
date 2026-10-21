@@ -43,7 +43,20 @@ export function BannerImage({
         media={mobile ? "(min-width: 768px)" : undefined}
         srcSet={desktop}
       />
-      <img {...rest} alt={image.alt} className={className} />
+      <img
+        {...rest}
+        alt={image.alt}
+        className={className}
+        // Staff choose what stays in frame when the banner is cropped.
+        style={
+          image.focal
+            ? {
+                ...rest.style,
+                objectPosition: `${image.focal.x * 100}% ${image.focal.y * 100}%`,
+              }
+            : rest.style
+        }
+      />
     </picture>
   )
 }

@@ -25,6 +25,8 @@ export const metadata: Metadata = {
   applicationName: SITE.name,
   formatDetection: { telephone: false, email: false, address: false },
   openGraph: { siteName: SITE.name, locale: "en_IN", type: "website" },
+  // Served from site settings (or a monogram), so staff can change it.
+  icons: { icon: "/brand/icon" },
 }
 
 export const viewport: Viewport = {

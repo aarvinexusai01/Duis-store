@@ -150,3 +150,35 @@ export const siteSettings = pgTable(
   },
   (t) => [check("site_settings_singleton_check", sql`${t.id} = 1`)],
 )
+
+/**
+ * Old addresses that point somewhere else (owner decision 2026-10-17): added
+ * automatically when a page, product, collection or category address
+ * changes, or by staff. Served by the request proxy with a real 301/302.
+ */
+export const redirects = pgTable(
+  "redirects",
+  {
+    id: primaryId(),
+    // Normalised: lower case, no trailing slash, no query string.
+    fromPath: text().notNull().unique(),
+    // A site path, optionally with a query string, or an https URL.
+    toPath: text().notNull(),
+    statusCode: smallint().notNull().default(301),
+    source: text().notNull().default("manual"),
+    hits: integer().notNull().default(0),
+    lastHitAt: timestamptz(),
+    createdBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    ...timestamps(),
+  },
+  (t) => [
+    check("redirects_status_check", sql`${t.statusCode} in (301, 302)`),
+    check("redirects_source_check", sql`${t.source} in ('auto', 'manual')`),
+    check("redirects_from_check", sql`${t.fromPath} ~ '^/[^?#[:space:]]*$'`),
+    check(
+      "redirects_to_check",
+      sql`${t.toPath} ~ '^(/[^[:space:]]*|https://[^[:space:]]+)$'`,
+    ),
+    check("redirects_no_loop_check", sql`${t.fromPath} <> ${t.toPath}`),
+  ],
+)

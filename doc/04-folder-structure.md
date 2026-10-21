@@ -180,7 +180,8 @@ src/features/
 ├── marketing/       # back-in-stock, abandoned cart, newsletter
 ├── analytics/       # consent-aware GA4/Meta events, CAPI payloads
 ├── contact/         # contact form and the admin Messages inbox
-├── cms/             # pages, blocks registry, revisions, workflow, nav, site settings, redirects, blog
+├── cms/             # pages, blocks registry, revisions, workflow, nav, site settings, blog
+├── redirects/       # old-address redirects: automatic on address changes, staff-managed
 ├── settings/        # store settings (commerce config)
 ├── reports/         # dashboard metrics, exports (GST, sales, COD)
 └── audit/           # audit log writer + viewer queries

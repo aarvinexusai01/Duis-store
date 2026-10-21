@@ -16,6 +16,10 @@ export type AdminNavItem = {
     | "customers"
     | "messages"
     | "pages"
+    | "menus"
+    | "siteSettings"
+    | "media"
+    | "redirects"
     | "scheduled"
     | "discounts"
     | "exchanges"
@@ -131,6 +135,30 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/cms",
         label: "Pages",
         icon: "pages",
+        permission: { cms: ["read"] },
+      },
+      {
+        href: "/admin/cms/navigation",
+        label: "Menus",
+        icon: "menus",
+        permission: { cms: ["read"] },
+      },
+      {
+        href: "/admin/cms/settings",
+        label: "Site settings",
+        icon: "siteSettings",
+        permission: { cms: ["read"] },
+      },
+      {
+        href: "/admin/media",
+        label: "Media",
+        icon: "media",
+        permission: { media: ["read"] },
+      },
+      {
+        href: "/admin/cms/redirects",
+        label: "Redirects",
+        icon: "redirects",
         permission: { cms: ["read"] },
       },
       {

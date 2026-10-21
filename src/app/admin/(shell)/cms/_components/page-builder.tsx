@@ -26,12 +26,11 @@ import {
   PlusIcon,
   Trash2Icon,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import type { Block, BlockType, PageEditorState } from "@/features/cms"
-import { autosavePageAction } from "@/features/cms/admin-actions"
 import { pageDataSchema, type PageData } from "@/features/cms/schemas"
 import { cn } from "@/lib/utils"
 
@@ -42,16 +41,7 @@ import {
   type FieldErrors,
 } from "./block-forms"
 import { MediaField } from "./pickers"
-
-export type SaveState =
-  | { kind: "saved"; at: Date | null }
-  | { kind: "pending" }
-  | { kind: "saving" }
-  | { kind: "invalid"; count: number }
-  | { kind: "conflict"; message: string }
-  | { kind: "error"; message: string }
-
-type Base = { revisionId: string; updatedAt: string } | null
+import { issueCount, useAutosave, type EditorContext } from "./use-autosave"
 
 /** Validation errors grouped by section id (and "seo"), keyed by field path. */
 function validate(data: PageData): Record<string, FieldErrors> {
@@ -92,97 +82,25 @@ function summary(block: Block): string {
  */
 export function PageBuilder({
   state,
-  readOnly,
-  onSaved,
-  onSaveState,
+  context,
 }: {
   state: PageEditorState
-  readOnly: boolean
-  onSaved: (base: { revisionId: string; updatedAt: string }) => void
-  onSaveState: (save: SaveState) => void
+  context: EditorContext
 }) {
-  const [data, setData] = useState<PageData>(state.data)
+  const { readOnly } = context
   const [open, setOpen] = useState<string | null>(null)
-  const base = useRef<Base>(
-    state.draft
-      ? { revisionId: state.draft.revisionId, updatedAt: state.draft.updatedAt }
-      : null,
+  const countErrors = useCallback(
+    (next: PageData) => issueCount(validate(next)),
+    [],
   )
-  const latest = useRef(data)
-  const saving = useRef(false)
-  const dirty = useRef(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
+  const { data, update } = useAutosave<PageData>({
+    target: { type: "page", id: state.page.id },
+    state,
+    errorCount: countErrors,
+    context,
+  })
   const errors = useMemo(() => validate(data), [data])
-  const errorCount = Object.values(errors).reduce(
-    (n, group) => n + Object.keys(group).length,
-    0,
-  )
-
-  // Saves until nothing new is pending; edits made during a save go next.
-  const save = useCallback(async () => {
-    if (saving.current) return
-    saving.current = true
-    try {
-      while (dirty.current) {
-        const snapshot = latest.current
-        if (!pageDataSchema.safeParse(snapshot).success) return
-        dirty.current = false
-        onSaveState({ kind: "saving" })
-        const result = await autosavePageAction({
-          pageId: state.page.id,
-          data: snapshot,
-          base: base.current,
-        })
-        if (!result.ok) {
-          dirty.current = true
-          onSaveState(
-            result.code === "CONFLICT"
-              ? { kind: "conflict", message: result.message }
-              : { kind: "error", message: result.message },
-          )
-          return
-        }
-        base.current = {
-          revisionId: result.revisionId,
-          updatedAt: result.updatedAt,
-        }
-        onSaved(base.current)
-      }
-      onSaveState({ kind: "saved", at: new Date() })
-    } finally {
-      saving.current = false
-    }
-  }, [onSaveState, onSaved, state.page.id])
-
-  // Debounced autosave after every change.
-  const update = (next: PageData) => {
-    if (readOnly) return
-    setData(next)
-    latest.current = next
-    dirty.current = true
-    if (timer.current) clearTimeout(timer.current)
-    const invalid = validate(next)
-    const count = Object.values(invalid).reduce(
-      (n, group) => n + Object.keys(group).length,
-      0,
-    )
-    if (count > 0) {
-      onSaveState({ kind: "invalid", count })
-      return
-    }
-    onSaveState({ kind: "pending" })
-    timer.current = setTimeout(() => void save(), 1_500)
-  }
-
-  // Save on leaving the page if something is still pending.
-  useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => {
-      if (dirty.current) event.preventDefault()
-    }
-    window.addEventListener("beforeunload", warn)
-    return () => window.removeEventListener("beforeunload", warn)
-  }, [])
+  const errorCount = issueCount(errors)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -499,6 +417,29 @@ function SeoPanel({
           />
           <span className="text-xs text-muted-foreground">
             {seo.description?.length ?? 0}/170
+          </span>
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="font-medium">Canonical address (optional)</span>
+          <input
+            value={seo.canonical ?? ""}
+            maxLength={500}
+            aria-invalid={errors.canonical ? true : undefined}
+            placeholder="/collections/summer-sale"
+            onChange={(e) =>
+              onChange({ ...seo, canonical: e.target.value || undefined })
+            }
+            className={input}
+          />
+          <span
+            className={
+              errors.canonical
+                ? "text-xs text-destructive"
+                : "text-xs text-muted-foreground"
+            }
+          >
+            {errors.canonical ??
+              "Only if another page should rank instead of this one."}
           </span>
         </label>
         <MediaField

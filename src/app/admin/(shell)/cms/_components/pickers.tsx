@@ -169,7 +169,12 @@ export function MediaLibraryDialog({
       width: json.width,
       height: json.height,
       alt: "",
+      caption: null,
+      focalX: 0.5,
+      focalY: 0.5,
       filename: file.name,
+      bytes: file.size,
+      used: false,
       createdAt: new Date(),
     })
   }

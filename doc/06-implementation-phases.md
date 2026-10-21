@@ -632,7 +632,35 @@ Tasks:
   - **History** with a change summary per version. **Preview** side by side (desktop and mobile) and as a shareable 24-hour link.
   - **Scheduling:** a job every minute, and a "Scheduled" overview.
   - **Exit check passes:** an E2E test publishes twice and sees each change on both replicas within 10 seconds.
+- **6b plan and owner decisions (2026-10-17):**
+  - **Redirects:** changing the address of a page, product, collection or category adds a permanent (301) redirect from the old address automatically. Chains collapse, so old links never hop twice. A Redirects screen lists them with hit counts and lets staff add their own (e.g. `/sale` → `/collections/summer-sale`).
+  - **Menus and site settings** use the same workflow as pages: a draft, submit for review, publish or schedule, history and preview.
+  - **In-use content is never deleted:**
+    - deleting an image, or archiving a collection, that live content uses is blocked;
+    - a "where used" list shows the products, pages and menus using it.
+  - **Media library** (`/admin/media`):
+    - grid or list, search, and an "unused" filter;
+    - upload several files with progress;
+    - alt text, caption and focal point (click on the image) editing;
+    - a "where used" list, and delete.
+  - **Navigation** (`/admin/cms/navigation`): the header mega menu (top items, columns of links to categories, collections, pages or URLs, badges and a promo image), plus the footer, mobile and social menus.
+  - **Site settings** (`/admin/cms/settings`): brand name, logo, favicon, announcement bar, contact details, social links, grievance officer and default SEO.
+  - **Pages and SEO:**
+    - policy pages can be created and show "Last updated";
+    - page addresses can be changed (with a redirect);
+    - per-page canonical URL, alongside title, description, share image and noindex.
+  - **Preview** of a menu or settings draft shows the home page wrapped in the draft header and footer.
+- **6b, built 2026-10-21** ([ADR-029](adr/0029-phase-6b-media-navigation-redirects-decisions.md)):
+  - **One workflow** for pages, menus and site settings: draft, review, schedule, publish, history and preview.
+  - **Menus:** header mega menu (items, columns, links, badges, promo image) and footer.
+  - **Site settings:** brand, logo, favicon, announcement bar, contact, social links, grievance officer and SEO defaults.
+  - **Media library:** grid or list, search, an "unused" filter, upload with progress, alt text, caption, focal point, "where used" and delete.
+  - **Redirects:** automatic on page, product, collection and category address changes (no chains), a Redirects screen, and real 301/302 responses from the proxy.
+  - **Pages:** policy pages with "Last updated", address changes, canonical URLs.
+  - **Exit criterion met:** an image or collection in use can't be deleted or archived, and the message names where it's used (integration tests).
 - **Assumptions** (tell me if any is wrong):
+  - Redirect changes reach every replica within 30 seconds. Each replica's request proxy keeps the list in memory and reloads it every 30 seconds, so a redirect costs no database query and returns a real 301.
+  - Only Content Managers and Super Admins edit redirects.
   - There are no review emails yet. Pending reviews show as a count on the CMS pages list.
   - Preview links can be opened by anyone holding them until they expire, so they can be shared with someone outside the admin.
   - Store Admins keep read-only access to the CMS, as now.
