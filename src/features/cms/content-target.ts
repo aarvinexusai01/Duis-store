@@ -11,7 +11,8 @@ import {
   pageDataSchema,
   siteSettingsDataSchema,
 } from "./schemas"
-import { navigationRefs, pageRefs, settingsRefs } from "./service"
+import { blogPostDataSchema } from "./journal-schemas"
+import { navigationRefs, pageRefs, postRefs, settingsRefs } from "./service"
 
 /**
  * What the CMS workflow can act on (doc/06 Phase 6, owner decision
@@ -26,6 +27,7 @@ export const targetSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("page"), id: z.uuid() }),
   z.object({ type: z.literal("navigation"), key: z.enum(MENU_KEYS) }),
   z.object({ type: z.literal("site_settings") }),
+  z.object({ type: z.literal("blog_post"), id: z.uuid() }),
 ])
 export type ContentTarget = z.infer<typeof targetSchema>
 
@@ -34,15 +36,21 @@ export type PageStatus = "draft" | "published" | "archived"
 
 /** The row that points at a target's draft and live revisions. */
 export type Holder = {
-  entityType: "page" | "navigation" | "site_settings"
+  entityType: "page" | "navigation" | "site_settings" | "blog_post"
   entityId: string
   draftRevisionId: string | null
   publishedRevisionId: string | null
   /** For audit entries: cms.<kind>.<action> on <auditEntity>. */
-  kind: "page" | "navigation" | "settings"
-  auditEntity: "cms_page" | "navigation_menu" | "site_settings"
+  kind: "page" | "navigation" | "settings" | "post"
+  auditEntity: "cms_page" | "navigation_menu" | "site_settings" | "blog_post"
   page?: {
     type: PageType
+    slug: string
+    title: string
+    status: PageStatus
+    publishedAt: Date | null
+  }
+  post?: {
     slug: string
     title: string
     status: PageStatus
@@ -122,6 +130,35 @@ export async function lockTarget(
         auditEntity: "navigation_menu",
       }
     }
+    case "blog_post": {
+      const found = await tx.execute<{
+        id: string
+        slug: string
+        title: string
+        status: PageStatus
+        draft_revision_id: string | null
+        published_revision_id: string | null
+        published_at: Date | null
+      }>(sql`
+        select id, slug::text, title, status, draft_revision_id, published_revision_id, published_at
+        from blog_posts where id = ${target.id} for update`)
+      const row = found.rows[0]
+      if (!row) throw new DomainError("NOT_FOUND", "Post not found.")
+      return {
+        entityType: "blog_post",
+        entityId: row.id,
+        draftRevisionId: row.draft_revision_id,
+        publishedRevisionId: row.published_revision_id,
+        kind: "post",
+        auditEntity: "blog_post",
+        post: {
+          slug: row.slug,
+          title: row.title,
+          status: row.status,
+          publishedAt: row.published_at,
+        },
+      }
+    }
     case "site_settings": {
       if (create) {
         await tx.execute(
@@ -171,6 +208,11 @@ export async function setDraftPointer(
         sql`update site_settings set draft_revision_id = ${revisionId}, updated_at = now() where id = 1`,
       )
       return
+    case "blog_post":
+      await tx.execute(
+        sql`update blog_posts set draft_revision_id = ${revisionId}, updated_at = now() where id = ${holder.entityId}`,
+      )
+      return
   }
 }
 
@@ -184,7 +226,9 @@ export function parseContent(
       ? pageDataSchema
       : type === "navigation"
         ? navigationDataSchema
-        : siteSettingsDataSchema
+        : type === "blog_post"
+          ? blogPostDataSchema
+          : siteSettingsDataSchema
   const parsed = schema.safeParse(data)
   if (!parsed.success) {
     throw new DomainError(
@@ -200,7 +244,9 @@ export function parseContent(
       ? pageRefs(parsed.data as z.infer<typeof pageDataSchema>)
       : type === "navigation"
         ? navigationRefs(parsed.data as z.infer<typeof navigationDataSchema>)
-        : settingsRefs(parsed.data as z.infer<typeof siteSettingsDataSchema>)
+        : type === "blog_post"
+          ? postRefs(parsed.data as z.infer<typeof blogPostDataSchema>)
+          : settingsRefs(parsed.data as z.infer<typeof siteSettingsDataSchema>)
   return { data: parsed.data, refs }
 }
 
@@ -211,6 +257,8 @@ export function contentIsValid(type: ContentTarget["type"], data: unknown) {
       ? pageDataSchema
       : type === "navigation"
         ? navigationDataSchema
-        : siteSettingsDataSchema
+        : type === "blog_post"
+          ? blogPostDataSchema
+          : siteSettingsDataSchema
   return schema.safeParse(data)
 }

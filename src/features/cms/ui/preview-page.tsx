@@ -4,10 +4,14 @@ import { SiteFooter } from "@/components/layout/site-footer"
 import { SiteHeader, type ChromeDraft } from "@/components/layout/site-header"
 import { loadCatalogTree } from "@/features/catalog"
 
+import { loadMediaRefs } from "@/features/catalog"
+
+import { resolvePostBody } from "../journal"
 import { getResolvedPage } from "../queries"
 import { resolvePageBlocks } from "../resolve"
 import type { PreviewPage } from "../workflow"
 import { Blocks } from "./blocks"
+import { PostBody } from "./journal/post-body"
 
 /**
  * Renders a revision exactly as the live site would: the same resolver and
@@ -29,9 +33,11 @@ export async function PreviewPageView({ preview }: { preview: PreviewPage }) {
   const what =
     preview.kind === "page"
       ? "this page"
-      : preview.kind === "navigation"
-        ? `the ${preview.key} menu`
-        : "the site settings"
+      : preview.kind === "blog_post"
+        ? "this story"
+        : preview.kind === "navigation"
+          ? `the ${preview.key} menu`
+          : "the site settings"
 
   let body: React.ReactNode
   if (preview.kind === "page") {
@@ -52,6 +58,43 @@ export async function PreviewPageView({ preview }: { preview: PreviewPage }) {
           <Blocks blocks={blocks} />
         </article>
       )
+  } else if (preview.kind === "blog_post") {
+    const [blocks, cover] = await Promise.all([
+      resolvePostBody(preview.data),
+      preview.data.coverMediaId
+        ? loadMediaRefs([preview.data.coverMediaId])
+        : null,
+    ])
+    const image = preview.data.coverMediaId
+      ? cover?.get(preview.data.coverMediaId)
+      : undefined
+    body = (
+      <article className="pb-16">
+        <header className="page-container max-w-3xl pt-6 text-center">
+          <h1 className="mt-6 display-heading text-5xl sm:text-6xl">
+            {preview.data.title || "Untitled story"}
+          </h1>
+          {preview.data.excerpt && (
+            <p className="mt-4 text-lg text-muted-foreground">
+              {preview.data.excerpt}
+            </p>
+          )}
+        </header>
+        {image && (
+          <div className="page-container mt-8 max-w-5xl">
+            {/* eslint-disable-next-line @next/next/no-img-element -- preview only */}
+            <img
+              src={`/media/${image.key}/1280.webp`}
+              alt=""
+              className="aspect-[16/9] w-full object-cover"
+            />
+          </div>
+        )}
+        <div className="page-container mt-10">
+          <PostBody blocks={blocks} />
+        </div>
+      </article>
+    )
   } else {
     body = <Blocks blocks={(await getResolvedPage("home"))?.blocks ?? []} />
   }

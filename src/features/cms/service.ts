@@ -18,6 +18,11 @@ import { DomainError, isUniqueViolation } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
 
 import { collectBlockRefs, emptyRefs, type ContentRefs } from "./blocks"
+import {
+  blogPostDataSchema,
+  readingMinutes,
+  type BlogPostData,
+} from "./journal-schemas"
 import { pageHref } from "./resolve"
 import {
   createPageSchema,
@@ -34,12 +39,25 @@ import {
   type SiteSettingsData,
 } from "./schemas"
 
-type EntityType = "page" | "navigation" | "site_settings"
+type EntityType = "page" | "navigation" | "site_settings" | "blog_post"
 
 export function pageRefs(data: PageData): ContentRefs {
   const refs = emptyRefs()
   data.sections.forEach((section) => collectBlockRefs(section, refs))
   if (data.seo.ogMediaId) refs.mediaIds.add(data.seo.ogMediaId)
+  return refs
+}
+
+/** A post's images and products (authors, categories and tags have FKs). */
+export function postRefs(data: BlogPostData): ContentRefs {
+  const refs = emptyRefs()
+  if (data.coverMediaId) refs.mediaIds.add(data.coverMediaId)
+  if (data.seo.ogMediaId) refs.mediaIds.add(data.seo.ogMediaId)
+  for (const block of data.body) {
+    if (block.type === "image") refs.mediaIds.add(block.mediaId)
+    if (block.type === "products")
+      block.productIds.forEach((value) => refs.productIds.add(value))
+  }
   return refs
 }
 
@@ -354,10 +372,46 @@ export const publishRevision = defineOperation({
           .where(eq(siteSettings.id, 1))
         tags = [cacheTags.cmsSettings]
       } else {
-        throw new DomainError(
-          "INVALID_STATE",
-          "Blog publishing arrives with the blog module.",
+        const data = blogPostDataSchema.parse(revision.data)
+        const found = await tx.execute<{
+          id: string
+          slug: string
+          published_revision_id: string | null
+          published_at: Date | null
+        }>(sql`
+          select id, slug::text, published_revision_id, published_at
+          from blog_posts where id = ${revision.entityId} for update`)
+        const post = found.rows[0]
+        if (!post) throw new DomainError("NOT_FOUND", "Post not found.")
+        previous = post.published_revision_id
+        // The post keeps its first publication date; edits don't redate it.
+        await tx
+          .execute(
+            sql`
+          update blog_posts set published_revision_id = ${revisionId}, status = 'published',
+            published_at = coalesce(published_at, ${now}), title = ${data.title},
+            excerpt = ${data.excerpt ?? null}, cover_media_id = ${data.coverMediaId ?? null},
+            author_id = ${data.authorId}, category_id = ${data.categoryId ?? null},
+            reading_minutes = ${readingMinutes(data)}, updated_at = now()
+          where id = ${post.id}`,
+          )
+          .catch((err) => {
+            if ((err as { cause?: { code?: string } }).cause?.code === "23503")
+              throw new DomainError(
+                "VALIDATION_FAILED",
+                "This post's author, category or a tag no longer exists.",
+              )
+            throw err
+          })
+        await tx.execute(
+          sql`delete from blog_post_tags where post_id = ${post.id}`,
         )
+        for (const tagId of new Set(data.tagIds)) {
+          await tx.execute(sql`
+            insert into blog_post_tags (post_id, tag_id)
+            select ${post.id}, id from blog_tags where id = ${tagId}`)
+        }
+        tags = [cacheTags.journalPost(post.slug), cacheTags.journalList]
       }
 
       if (previous && previous !== revisionId) {

@@ -7,6 +7,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   smallint,
   text,
   unique,
@@ -180,5 +181,91 @@ export const redirects = pgTable(
       sql`${t.toPath} ~ '^(/[^[:space:]]*|https://[^[:space:]]+)$'`,
     ),
     check("redirects_no_loop_check", sql`${t.fromPath} <> ${t.toPath}`),
+  ],
+)
+
+// --- The Journal (doc/06 Phase 6c, owner decisions 2026-10-21) -------------------------
+
+/** Post authors: profiles, optionally a staff account, so guests can write. */
+export const blogAuthors = pgTable("blog_authors", {
+  id: primaryId(),
+  slug: citext().notNull().unique(),
+  name: text().notNull(),
+  bio: text(),
+  photoMediaId: uuid().references(() => mediaAssets.id, {
+    onDelete: "restrict",
+  }),
+  userId: uuid().references(() => users.id, { onDelete: "set null" }),
+  ...timestamps(),
+})
+
+export const blogCategories = pgTable("blog_categories", {
+  id: primaryId(),
+  slug: citext().notNull().unique(),
+  name: text().notNull(),
+  description: text(),
+  position: integer().notNull().default(0),
+  ...timestamps(),
+})
+
+export const blogTags = pgTable("blog_tags", {
+  id: primaryId(),
+  slug: citext().notNull().unique(),
+  name: text().notNull(),
+  createdAt: timestamptz().notNull().defaultNow(),
+})
+
+/**
+ * A post. Its content lives in cms_revisions; the columns below copy the
+ * live revision's listing fields on publish, so lists and feeds are cheap.
+ */
+export const blogPosts = pgTable(
+  "blog_posts",
+  {
+    id: primaryId(),
+    slug: citext().notNull().unique(),
+    status: publicationStatus().notNull().default("draft"),
+    draftRevisionId: revisionPointer(),
+    publishedRevisionId: revisionPointer(),
+    publishedAt: timestamptz(),
+    // Copied from the live revision on publish.
+    title: text().notNull(),
+    excerpt: text(),
+    coverMediaId: uuid().references(() => mediaAssets.id, {
+      onDelete: "restrict",
+    }),
+    authorId: uuid().references(() => blogAuthors.id, {
+      onDelete: "restrict",
+    }),
+    categoryId: uuid().references(() => blogCategories.id, {
+      onDelete: "restrict",
+    }),
+    readingMinutes: integer().notNull().default(1),
+    createdBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    ...timestamps(),
+  },
+  (t) => [
+    index("blog_posts_published_idx")
+      .on(t.publishedAt.desc())
+      .where(sql`${t.status} = 'published'`),
+    index("blog_posts_category_idx").on(t.categoryId),
+    index("blog_posts_author_idx").on(t.authorId),
+  ],
+)
+
+/** The live revision's tags (rewritten on publish). */
+export const blogPostTags = pgTable(
+  "blog_post_tags",
+  {
+    postId: uuid()
+      .notNull()
+      .references(() => blogPosts.id, { onDelete: "cascade" }),
+    tagId: uuid()
+      .notNull()
+      .references(() => blogTags.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.postId, t.tagId] }),
+    index("blog_post_tags_tag_idx").on(t.tagId),
   ],
 )

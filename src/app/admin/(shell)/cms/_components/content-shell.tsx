@@ -34,7 +34,9 @@ import type {
 } from "@/features/cms"
 import {
   changePageSlugAction,
+  changePostSlugAction,
   pageAction,
+  postAction,
   previewLinkAction,
   renamePageAction,
   restoreRevisionAction,
@@ -133,7 +135,9 @@ export function ContentShell({
   const frozen =
     status === "in_review" || status === "approved" || status === "scheduled"
   const readOnly =
-    !permissions.draft || state.page?.status === "archived" || frozen
+    !permissions.draft ||
+    (state.page ?? state.post)?.status === "archived" ||
+    frozen
   const busy = save.kind === "saving" || save.kind === "pending"
   const hasChanges =
     startedDraft ||
@@ -220,7 +224,8 @@ export function ContentShell({
                 target={target}
                 revisions={revisions}
                 canRestore={
-                  permissions.draft && state.page?.status !== "archived"
+                  permissions.draft &&
+                  (state.page ?? state.post)?.status !== "archived"
                 }
               />
             )}
@@ -257,9 +262,12 @@ function WorkflowBar({
     null | "schedule" | "send-back" | "submit"
   >(null)
   const page = state.page
+  // Pages and posts can be renamed in address, taken offline and archived.
+  const item = state.page ?? state.post
+  const what = state.post ? "story" : "page"
   const isHome = page?.type === "home"
-  const archived = page?.status === "archived"
-  const live = page ? page.status === "published" : !!state.publishedRevisionId
+  const archived = item?.status === "archived"
+  const live = item ? item.status === "published" : !!state.publishedRevisionId
   const blocked =
     pending || busy || save.kind === "invalid" || save.kind === "conflict"
 
@@ -276,8 +284,10 @@ function WorkflowBar({
     })
   const runPage = (kind: PageAction, done: string) =>
     startTransition(async () => {
-      if (!page) return
-      const result = await pageAction(kind, page.id)
+      if (!item) return
+      const result = state.post
+        ? await postAction(kind, item.id)
+        : await pageAction(kind, item.id)
       if (result.ok) toast.success(done)
       else toast.error(result.message)
     })
@@ -345,7 +355,7 @@ function WorkflowBar({
             Rename
           </Button>
         )}
-        {page && !isHome && permissions.publish && !archived && (
+        {item && !isHome && permissions.publish && !archived && (
           <Button
             type="button"
             size="sm"
@@ -355,19 +365,18 @@ function WorkflowBar({
             onClick={() => {
               const slug = window
                 .prompt(
-                  page.publishedAt
+                  item.publishedAt
                     ? "New web address (the old one will redirect here)"
                     : "New web address",
-                  page.slug,
+                  item.slug,
                 )
                 ?.trim()
                 .toLowerCase()
-              if (!slug || slug === page.slug) return
+              if (!slug || slug === item.slug) return
               startTransition(async () => {
-                const result = await changePageSlugAction({
-                  pageId: page.id,
-                  slug,
-                })
+                const result = state.post
+                  ? await changePostSlugAction({ postId: item.id, slug })
+                  : await changePageSlugAction({ pageId: item.id, slug })
                 if (result.ok) toast.success("Address changed")
                 else
                   toast.error(result.fieldErrors?.slug?.[0] ?? result.message)
@@ -449,7 +458,7 @@ function WorkflowBar({
             </Button>
           </>
         )}
-        {page && permissions.publish && live && !isHome && (
+        {item && permissions.publish && live && !isHome && (
           <Button
             type="button"
             size="sm"
@@ -457,14 +466,14 @@ function WorkflowBar({
             className="rounded-sm"
             disabled={pending}
             onClick={() => {
-              if (window.confirm("Take this page off the site?"))
+              if (window.confirm(`Take this ${what} off the site?`))
                 runPage("unpublish", "Unpublished")
             }}
           >
             Unpublish
           </Button>
         )}
-        {page && permissions.archive && !isHome && (
+        {item && permissions.archive && !isHome && (
           <Button
             type="button"
             size="sm"
@@ -474,7 +483,7 @@ function WorkflowBar({
             onClick={() =>
               archived
                 ? runPage("restore", "Restored as a draft")
-                : window.confirm("Archive this page? It goes offline.") &&
+                : window.confirm(`Archive this ${what}? It goes offline.`) &&
                   runPage("archive", "Archived")
             }
           >

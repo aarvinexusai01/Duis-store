@@ -174,6 +174,8 @@ const IN_USE = sql`(
   or exists (select 1 from products p where p.og_media_id = m.id)
   or exists (select 1 from categories c where c.image_media_id = m.id)
   or exists (select 1 from collections c where c.image_media_id = m.id or c.banner_media_id = m.id)
+  or exists (select 1 from blog_authors a where a.photo_media_id = m.id)
+  or exists (select 1 from blog_posts b where b.cover_media_id = m.id)
   or exists (select 1 from cms_revision_refs r join cms_revisions rev on rev.id = r.revision_id
              where r.media_id = m.id and rev.workflow_status <> 'archived')
 )`
@@ -251,12 +253,17 @@ export async function mediaUsage(mediaId: string): Promise<MediaUse[]> {
     select 'Collection', c.title, '/admin/collections/' || c.id from collections c
       where c.image_media_id = ${mediaId} or c.banner_media_id = ${mediaId}
     union all
+    select 'Journal author', a.name, '/admin/cms/journal/settings' from blog_authors a
+      where a.photo_media_id = ${mediaId}
+    union all
     select distinct
       case rev.entity_type when 'page' then 'Page' when 'navigation' then 'Menu'
+        when 'blog_post' then 'Journal post'
         when 'site_settings' then 'Site settings' else 'Content' end,
-      coalesce(pg.title, nm.name, 'Site settings'),
+      coalesce(pg.title, nm.name, rev.data->>'title', 'Site settings'),
       case rev.entity_type when 'page' then '/admin/cms/pages/' || pg.id
         when 'navigation' then '/admin/cms/navigation/' || nm.key
+        when 'blog_post' then '/admin/cms/journal/' || rev.entity_id
         else '/admin/cms/settings' end
       from cms_revision_refs r
       join cms_revisions rev on rev.id = r.revision_id

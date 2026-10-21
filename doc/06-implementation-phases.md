@@ -658,6 +658,34 @@ Tasks:
   - **Redirects:** automatic on page, product, collection and category address changes (no chains), a Redirects screen, and real 301/302 responses from the proxy.
   - **Pages:** policy pages with "Last updated", address changes, canonical URLs.
   - **Exit criterion met:** an image or collection in use can't be deleted or archived, and the message names where it's used (integration tests).
+- **6c plan and owner decisions (2026-10-21):**
+  - **"The Journal"** at `/journal`:
+    - posts at `/journal/<post>`;
+    - categories at `/journal/category/<slug>`, tags at `/journal/tag/<slug>`, authors at `/journal/author/<slug>`;
+    - RSS at `/journal/rss.xml`.
+  - **Posts** follow the same workflow as pages: draft, review, schedule, publish, history and preview.
+    - A post has a title, an address, an excerpt, a cover image, an author, a category, tags, search settings, and a body of blocks.
+    - Text blocks use the existing rich-text editor.
+    - Image blocks have a caption.
+    - **Shoppable product blocks** show live product cards.
+    - **YouTube:** nothing loads until the reader presses play, then the video plays from `youtube-nocookie.com`.
+    - **Instagram:** shows only after marketing-cookie consent (Instagram sets tracking cookies); before that, a link to open it on Instagram.
+  - **Authors** are separate profiles (name, bio, photo), optionally linked to a staff account, so guest writers work too.
+  - **No comments.**
+  - **Taxonomy:**
+    - Managers edit categories and authors on a "Journal settings" screen. Editors can add tags while writing.
+    - Changing the address of a live post, category or author adds a redirect.
+    - A category or author that is still used can't be deleted.
+  - **Search engines:** `BlogPosting` structured data, posts in the sitemap, and reading time shown.
+  - **Exit check (E2E):**
+    - a post published from the admin appears on `/journal` and in the RSS feed on both replicas within 10 seconds;
+    - a YouTube block makes no request to YouTube until it's played.
+- **6c, built 2026-10-21** ([ADR-030](adr/0030-phase-6c-journal-decisions.md)):
+  - **The Journal** at `/journal`, with category, tag and author pages, an RSS feed, sitemap entries and `BlogPosting` structured data.
+  - **Stories** use the shared workflow (review, schedule, publish, history, preview). Blocks: text, image, shoppable products, YouTube (nothing loads until play) and Instagram (only after marketing consent).
+  - **Admin:** story list, editor, and an authors, categories and tags screen. Address changes redirect; anything in use can't be deleted.
+  - **Exit checks pass (E2E):** a published story is on `/journal` and in RSS on both replicas within 10 seconds, and YouTube makes no request before play.
+  - **Phase 6 is complete.**
 - **Assumptions** (tell me if any is wrong):
   - Redirect changes reach every replica within 30 seconds. Each replica's request proxy keeps the list in memory and reloads it every 30 seconds, so a redirect costs no database query and returns a real 301.
   - Only Content Managers and Super Admins edit redirects.

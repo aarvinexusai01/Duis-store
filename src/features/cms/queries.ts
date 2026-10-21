@@ -4,6 +4,15 @@ import { cacheLife, cacheTag } from "next/cache"
 import { loadCatalogTree } from "@/features/catalog"
 import { cacheTags } from "@/server/cache/tags"
 
+import {
+  loadJournalCategories,
+  loadJournalFeed,
+  loadJournalList,
+  loadJournalPost,
+  loadJournalTerm,
+  loadRelatedPosts,
+  type JournalFilter,
+} from "./journal"
 import { resolveNavigation, resolvePageBlocks } from "./resolve"
 import {
   loadPublishedNavigation,
@@ -72,4 +81,53 @@ export async function getPublishedPageList() {
   cacheTag(cacheTags.cmsPagesList)
   cacheLife("hours")
   return loadPublishedPageList()
+}
+
+// --- The Journal ----------------------------------------------------------------------
+
+/** Lists change when any post, author, category or tag does. */
+export async function getJournalList(filter: JournalFilter, page = 1) {
+  "use cache"
+  cacheTag(cacheTags.journalList)
+  cacheLife("hours")
+  return loadJournalList(filter, page)
+}
+
+export async function getJournalTerm(
+  kind: "category" | "tag" | "author",
+  slug: string,
+) {
+  "use cache"
+  cacheTag(cacheTags.journalList)
+  cacheLife("hours")
+  return loadJournalTerm(kind, slug)
+}
+
+export async function getJournalCategories() {
+  "use cache"
+  cacheTag(cacheTags.journalList)
+  cacheLife("hours")
+  return loadJournalCategories()
+}
+
+/** A post shows live product cards, so product changes refresh it too. */
+export async function getJournalPost(slug: string) {
+  "use cache"
+  cacheTag(
+    cacheTags.journalPost(slug),
+    cacheTags.journalList,
+    cacheTags.productsList,
+  )
+  cacheLife("hours")
+  const post = await loadJournalPost(slug)
+  if (!post) return null
+  return { post, related: await loadRelatedPosts(post) }
+}
+
+/** The latest posts (30 for RSS; the sitemap asks for all of them). */
+export async function getJournalFeed(limit = 30) {
+  "use cache"
+  cacheTag(cacheTags.journalList)
+  cacheLife("hours")
+  return loadJournalFeed(limit)
 }

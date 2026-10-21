@@ -17,6 +17,17 @@ import {
   restorePage,
   unpublishPage,
 } from "./pages-admin"
+import {
+  archivePost,
+  changePostSlug,
+  createPost,
+  createTag,
+  deleteJournalTerm,
+  restorePost,
+  saveAuthor,
+  saveCategory,
+  unpublishPost,
+} from "./journal-admin"
 import { createPage } from "./service"
 import {
   autosaveDraft,
@@ -175,4 +186,51 @@ export async function pickerOptionsAction() {
     },
     { refreshPage: false },
   )
+}
+
+// --- The Journal -----------------------------------------------------------------------
+
+export async function createPostAction(input: Input<typeof createPost>) {
+  let id: string
+  try {
+    ;({ id } = await createPost(await getActor(), input))
+  } catch (error) {
+    return { ok: false as const, ...toActionError(error) }
+  }
+  redirect(`/admin/cms/journal/${id}` as Route)
+}
+
+const postActions = {
+  unpublish: unpublishPost,
+  archive: archivePost,
+  restore: restorePost,
+} as const
+
+export async function postAction(kind: PageAction, postId: string) {
+  return run(async () => postActions[kind](await getActor(), { postId }))
+}
+
+export async function changePostSlugAction(
+  input: Input<typeof changePostSlug>,
+) {
+  return run(async () => changePostSlug(await getActor(), input))
+}
+
+export async function saveAuthorAction(input: Input<typeof saveAuthor>) {
+  return run(async () => saveAuthor(await getActor(), input))
+}
+
+export async function saveCategoryAction(input: Input<typeof saveCategory>) {
+  return run(async () => saveCategory(await getActor(), input))
+}
+
+/** While writing: no page refresh, the editor keeps its state. */
+export async function createTagAction(input: Input<typeof createTag>) {
+  return run(async () => createTag(await getActor(), input), {
+    refreshPage: false,
+  })
+}
+
+export async function deleteTermAction(input: Input<typeof deleteJournalTerm>) {
+  return run(async () => deleteJournalTerm(await getActor(), input))
 }

@@ -25,6 +25,7 @@ import {
   type PageStatus,
   type PageType,
 } from "./content-target"
+import { blogPostDataSchema, type BlogPostData } from "./journal-schemas"
 import { describeDiff, diffPages } from "./revision-diff"
 import {
   pageDataSchema,
@@ -99,6 +100,8 @@ async function audit(
 function emptyContent(type: ContentTarget["type"]): unknown {
   if (type === "page") return { sections: [], seo: {} } satisfies PageData
   if (type === "navigation") return { items: [] } satisfies NavigationData
+  if (type === "blog_post")
+    return { title: "", authorId: "", tagIds: [], body: [], seo: {} }
   return {
     brandName: "Duis",
     contact: { email: "" },
@@ -110,6 +113,7 @@ function emptyContent(type: ContentTarget["type"]): unknown {
 export type EditorState<T = unknown> = {
   target: ContentTarget
   page: (NonNullable<Holder["page"]> & { id: string }) | null
+  post: (NonNullable<Holder["post"]> & { id: string }) | null
   data: T
   /** The revision being edited, and its save token (null before the first edit). */
   draft: {
@@ -139,6 +143,7 @@ export const getEditor = defineOperation({
       return {
         target,
         page: holder.page ? { ...holder.page, id: holder.entityId } : null,
+        post: holder.post ? { ...holder.post, id: holder.entityId } : null,
         data: valid?.success ? valid.data : emptyContent(target.type),
         draft: current
           ? {
@@ -180,7 +185,7 @@ export const autosaveDraft = defineOperation({
     const { data, refs } = parseContent(target.type, raw)
     return withTransaction(async (tx) => {
       const holder = await lockTarget(tx, target, { create: true })
-      if (holder.page?.status === "archived")
+      if ((holder.page ?? holder.post)?.status === "archived")
         throw new DomainError("INVALID_STATE", "Restore the page to edit it.")
       const conflict = new DomainError(
         "CONFLICT",
@@ -242,7 +247,7 @@ async function draftFor(
   message: string,
 ) {
   const holder = await lockTarget(tx, target)
-  if (holder.page?.status === "archived")
+  if ((holder.page ?? holder.post)?.status === "archived")
     throw new DomainError("INVALID_STATE", "Restore the page first.")
   const current = await revision(tx, holder.draftRevisionId, true)
   if (!current || !allowed.includes(current.workflow_status))
@@ -358,15 +363,15 @@ export const publishDraft = defineOperation({
   async handler({ actor }, { target }) {
     const revisionId = await withTransaction(async (tx) => {
       const holder = await lockTarget(tx, target)
-      if (holder.page?.status === "archived")
+      if ((holder.page ?? holder.post)?.status === "archived")
         throw new DomainError("INVALID_STATE", "Restore the page first.")
       const latest = await revision(tx, holder.draftRevisionId, true)
       // A page taken offline and not edited since: publish that content as
       // a new version.
       if (
         latest &&
-        holder.page &&
-        holder.page.status !== "published" &&
+        (holder.page ?? holder.post) &&
+        (holder.page ?? holder.post)!.status !== "published" &&
         ["published", "archived"].includes(latest.workflow_status)
       ) {
         const { data, refs } = parseContent(target.type, latest.data)
@@ -576,6 +581,24 @@ export const listRevisions = defineOperation({
                   i === 0,
                 )
               : "Content from an older format"
+        } else if (target.type === "blog_post") {
+          const asPage = (data: unknown) => {
+            const post = blogPostDataSchema.safeParse(data)
+            return post.success
+              ? ({
+                  sections: post.data.body,
+                  seo: post.data.seo,
+                } as unknown as PageData)
+              : null
+          }
+          const current = asPage(row.data)
+          const before = i > 0 ? asPage(ordered[i - 1]!.data) : null
+          changes = current
+            ? describeDiff(diffPages(before, current), i === 0).replace(
+                "Sections:",
+                "Blocks:",
+              )
+            : "Content from an older format"
         } else {
           changes =
             i === 0
@@ -636,7 +659,8 @@ export const listScheduled = defineOperation({
       scheduled_for: Date
       scheduled_by: string | null
     }>(sql`
-      select r.id as revision_id, r.entity_type, r.entity_id, p.title, m.key::text as menu_key,
+      select r.id as revision_id, r.entity_type, r.entity_id, coalesce(p.title, r.data->>'title') as title,
+             m.key::text as menu_key,
              r.version, r.scheduled_for,
              (select u.name from audit_logs l join users u on u.id = l.actor_user_id
               where l.entity_id = r.entity_id::text and l.action like 'cms.%.schedule'
@@ -644,6 +668,7 @@ export const listScheduled = defineOperation({
       from cms_revisions r
       left join cms_pages p on r.entity_type = 'page' and p.id = r.entity_id
       left join navigation_menus m on r.entity_type = 'navigation' and m.id = r.entity_id
+      left join blog_posts b on r.entity_type = 'blog_post' and b.id = r.entity_id
       where r.workflow_status = 'scheduled'
       order by r.scheduled_for`)
     return rows.rows.map((r) => ({
@@ -653,13 +678,17 @@ export const listScheduled = defineOperation({
           ? (r.title ?? "Page")
           : r.entity_type === "navigation"
             ? MENU_LABELS[r.menu_key ?? "header"]
-            : "Site settings",
+            : r.entity_type === "blog_post"
+              ? `Journal: ${r.title ?? "post"}`
+              : "Site settings",
       href:
         r.entity_type === "page"
           ? `/admin/cms/pages/${r.entity_id}`
           : r.entity_type === "navigation"
             ? `/admin/cms/navigation/${r.menu_key}`
-            : "/admin/cms/settings",
+            : r.entity_type === "blog_post"
+              ? `/admin/cms/journal/${r.entity_id}`
+              : "/admin/cms/settings",
       version: r.version,
       scheduledFor: r.scheduled_for,
       scheduledBy: r.scheduled_by,
@@ -708,7 +737,7 @@ export const createPreviewLink = defineOperation({
   async handler(_ctx, { revisionId }) {
     const found = await getDb().execute<{ id: string }>(sql`
       select id from cms_revisions
-      where id = ${revisionId} and entity_type in ('page', 'navigation', 'site_settings')`)
+      where id = ${revisionId} and entity_type in ('page', 'navigation', 'site_settings', 'blog_post')`)
     if (!found.rows[0])
       throw new DomainError("NOT_FOUND", "Revision not found.")
     const expires = Math.floor(Date.now() / 1000) + PREVIEW_TTL_SECONDS
@@ -729,6 +758,7 @@ export type PreviewPage =
     })
   | (PreviewBase & { kind: "navigation"; key: MenuKey; data: NavigationData })
   | (PreviewBase & { kind: "site_settings"; data: SiteSettingsData })
+  | (PreviewBase & { kind: "blog_post"; slug: string; data: BlogPostData })
 
 /** The revision behind a preview token, or null if the link is bad or old. */
 export async function loadPreview(token: string): Promise<PreviewPage | null> {
@@ -747,17 +777,18 @@ export async function loadPreview(token: string): Promise<PreviewPage | null> {
   const found = await getDb().execute<{
     version: number
     data: unknown
-    entity_type: "page" | "navigation" | "site_settings"
+    entity_type: "page" | "navigation" | "site_settings" | "blog_post"
     page_type: PageType | null
     slug: string | null
     title: string | null
     menu_key: MenuKey | null
   }>(sql`
-    select r.version, r.data, r.entity_type, p.type as page_type, p.slug::text, p.title,
-           m.key::text as menu_key
+    select r.version, r.data, r.entity_type, p.type as page_type,
+           coalesce(p.slug, b.slug)::text as slug, p.title, m.key::text as menu_key
     from cms_revisions r
     left join cms_pages p on r.entity_type = 'page' and p.id = r.entity_id
     left join navigation_menus m on r.entity_type = 'navigation' and m.id = r.entity_id
+    left join blog_posts b on r.entity_type = 'blog_post' and b.id = r.entity_id
     where r.id = ${revisionId}`)
   const row = found.rows[0]
   if (!row) return null
@@ -783,6 +814,13 @@ export async function loadPreview(token: string): Promise<PreviewPage | null> {
       kind: "navigation",
       key: row.menu_key!,
       data: valid.data as NavigationData,
+    }
+  if (row.entity_type === "blog_post")
+    return {
+      ...base,
+      kind: "blog_post",
+      slug: row.slug!,
+      data: valid.data as BlogPostData,
     }
   return {
     ...base,

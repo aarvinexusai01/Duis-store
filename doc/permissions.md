@@ -285,4 +285,26 @@ How these are limited:
 - **"Where used"** is visible to anyone who can see the media library.
 - **Deleting an image and archiving a collection** are refused while live or pending content uses them, whatever the role.
 
+## Operations (Phase 6c, the Journal)
+
+Stories use the shared CMS workflow operations above (target `blog_post`).
+
+| Operation | Super | Store | Content mgr | Editor | Fulfil | Support | Customer |
+|---|---|---|---|---|---|---|---|
+| `journal.adminListPosts` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `journal.archivePost` | ✓ | · | ✓ | · | · | · | · |
+| `journal.changePostSlug` | ✓ | · | ✓ | · | · | · | · |
+| `journal.createPost` | ✓ | · | ✓ | ✓ | · | · | · |
+| `journal.createTag` | ✓ | · | ✓ | ✓ | · | · | · |
+| `journal.deleteTerm` | ✓ | · | ✓ | · | · | · | · |
+| `journal.restorePost` | ✓ | · | ✓ | · | · | · | · |
+| `journal.saveAuthor` | ✓ | · | ✓ | · | · | · | · |
+| `journal.saveCategory` | ✓ | · | ✓ | · | · | · | · |
+| `journal.taxonomy` | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `journal.unpublishPost` | ✓ | · | ✓ | · | · | · | · |
+
+How these are limited:
+- **Content Editors** write stories and add tags while writing. Managers publish, change addresses, and manage authors and categories (ADR-0030).
+- **Authors, categories and tags** can't be deleted while any story, draft or live, uses them.
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

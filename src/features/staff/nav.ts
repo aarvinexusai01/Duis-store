@@ -17,6 +17,7 @@ export type AdminNavItem = {
     | "messages"
     | "pages"
     | "menus"
+    | "journal"
     | "siteSettings"
     | "media"
     | "redirects"
@@ -135,6 +136,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/cms",
         label: "Pages",
         icon: "pages",
+        permission: { cms: ["read"] },
+      },
+      {
+        href: "/admin/cms/journal",
+        label: "Journal",
+        icon: "journal",
         permission: { cms: ["read"] },
       },
       {

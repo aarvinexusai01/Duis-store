@@ -13,6 +13,8 @@ export const cacheTags = {
   cmsPagesList: "cms:pages",
   cmsNavigation: "cms:nav",
   cmsSettings: "cms:settings",
+  journalPost: (slug: string) => `journal:post:${slug}`,
+  journalList: "journal:list",
   media: (id: string) => `media:${id}`,
   storeSettings: "store:settings",
 } as const
