@@ -5,7 +5,7 @@ import { DomainError } from "@/server/errors"
 import { errorResponse } from "@/server/http"
 
 /**
- * Staff image upload (multipart field `file`, optional `altText`). Caddy also
+ * Staff image upload (multipart field `file`, optional `altText`). Nginx also
  * caps the body size (doc/07); the check here protects development.
  */
 export async function POST(request: Request) {

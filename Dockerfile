@@ -20,8 +20,15 @@ RUN --mount=type=cache,target=/root/.npm \
 # --- build ------------------------------------------------------------------
 FROM base AS build
 ARG APP_SHA=dev
+# Browser error reporting is baked in at build time (the DSN is public);
+# empty leaves Sentry out of the browser entirely.
+ARG NEXT_PUBLIC_SENTRY_DSN=""
+ARG APP_ENV=production
 # Version-skew protection while old and new replicas overlap.
-ENV NEXT_DEPLOYMENT_ID=${APP_SHA}
+ENV NEXT_DEPLOYMENT_ID=${APP_SHA} \
+    NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
+    NEXT_PUBLIC_APP_ENV=${APP_ENV} \
+    NEXT_PUBLIC_APP_SHA=${APP_SHA}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Every build must use the same Server Actions key so actions keep working
@@ -43,13 +50,15 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 # Application files stay root-owned (read-only for the app user); only the
-# Next.js cache directory is writable.
+# Next.js cache and the data folders (volumes in compose.yaml) are writable.
+# A new named volume copies these owners, so the app user can write to it.
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/src/db/migrations ./migrations
-RUN mkdir -p .next/cache && chown node:node .next/cache
+RUN mkdir -p .next/cache /data/media /data/private \
+ && chown node:node .next/cache /data/media /data/private
 
 USER node
 EXPOSE 3000

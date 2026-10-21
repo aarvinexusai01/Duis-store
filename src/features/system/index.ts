@@ -9,3 +9,5 @@ export {
   type AuditRow,
   type FailedJob,
 } from "./admin"
+export { loadOpsChecks, runOpsChecks } from "./ops-checks"
+export type { OpsCheck } from "./ops-rules"

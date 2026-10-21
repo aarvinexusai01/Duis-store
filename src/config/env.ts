@@ -118,6 +118,22 @@ export const serverEnvSchema = z
       .min(1)
       .default(15 * 1024 * 1024),
 
+    // Server health alerts (doc/07 §7): who gets them. Unset: shown on the
+    // System page only.
+    OPS_ALERT_EMAIL: z
+      .string()
+      .transform((value) =>
+        value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.email()).min(1))
+      .optional(),
+    // Error reports to Sentry (doc/10: Sentry SaaS); off while unset.
+    SENTRY_DSN: httpUrl.optional(),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
+
     // Cache invalidation fan-out to every web replica (ADR-008, ADR-017).
     INTERNAL_REVALIDATE_SECRET: z.string().min(32),
     INTERNAL_REVALIDATE_URLS: urlList,

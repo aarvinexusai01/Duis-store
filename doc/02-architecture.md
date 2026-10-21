@@ -14,10 +14,10 @@
 ┌───────────────────────────┼──────────────────────────────────────────┐
 │ VPS (Ubuntu LTS, Docker)  ▼                                          │
 │                  ┌─────────────────┐                                 │
-│  network: edge   │ caddy           │ TLS, security headers, body     │
+│  network: edge   │ nginx           │ TLS, security headers, body     │
 │                  │                 │ limits, real-IP, /media static  │
 │                  └──┬───────────┬──┘                                 │
-│                     │ LB + health checks                             │
+│                     │ LB + failover                                  │
 │              ┌──────▼───┐   ┌───▼──────┐                             │
 │              │ web_a    │   │ web_b    │  Next.js 16 (standalone)    │
 │              │ storefront / admin / cms / api / webhooks            │
@@ -29,7 +29,7 @@
 │              │ (+pgBackRest)  │ (same image│ reservations, shipping, │
 │              └──────┬─────┘   │  as web)   │ notifications, CMS      │
 │                     │         └────────────┘ scheduling, cleanup     │
-│   volumes: pgdata, media, pgbackrest spool, caddy data               │
+│   volumes: pgdata, media, pgbackrest spool                           │
 └─────────────────────┼────────────────────────────────────────────────┘
                       │ encrypted backups
                       ▼
@@ -100,7 +100,7 @@ Versions are the `latest` npm tags on 2026-10-13. Phase 0 pins exact versions in
 | Shipping | Shiprocket REST API (own client) | — | Behind the `ShippingProvider` interface. |
 | Unit and integration tests | Vitest | 5.0 | Integration tests use a real PostgreSQL in Docker. |
 | End-to-end tests | Playwright + axe-core | 1.64 | Customer, admin and CMS journeys, plus accessibility checks. |
-| Reverse proxy | Caddy | 2.x | Simple config, automatic HTTPS, active health checks, load balancing. |
+| Reverse proxy | Nginx (open source) | 1.30 | Owner decision 2026-10-21 (ADR-0031). Widely known, TLS with the Origin CA certificate, load balancing with failover. |
 | Containers | Docker Engine + Compose v2 | 28.x / 2.40 | Self-hosted, reproducible. |
 
 ## 4. Evaluations and choices
@@ -129,7 +129,7 @@ Plain PostgreSQL with Drizzle covers everything we need: relational integrity, t
 - **What we build instead:** the custom CMS reuses mature libraries (Tiptap, dnd-kit, shadcn/ui, Zod) and our own job queue and media pipeline. CMS content is stored as **typed, Zod-validated JSON blocks** inside revisions. Every block reference to a product, collection, category or media item is also stored in **reference tables with real foreign keys**. That gives database integrity and safe deletion. See [05-database-design.md](05-database-design.md#11-cms).
 
 ### 4.4 Media storage: local volume now, S3-compatible later
-- **Choice:** files go to a persistent Docker volume, are served by Caddy at `/media/*` with long-lived immutable cache headers, and are cached at Cloudflare's edge.
+- **Choice:** files go to a persistent Docker volume, are served by Nginx at `/media/*` with long-lived immutable cache headers, and are cached at Cloudflare's edge.
 - **Why not MinIO:** its community edition stopped publishing images in October 2025 and is now maintenance-only or archived, so we don't use it.
 - **Future option:** a `StorageAdapter` interface (`local` now, `s3` later) means we can move to Cloudflare R2, Backblaze B2, Garage or SeaweedFS if we ever run more than one server.
 - **Upload pipeline:**
@@ -174,8 +174,9 @@ Job catalogue (initial):
 - Filters and facets come from indexed variant and attribute tables.
 - This comfortably handles 5,000 products. A `SearchProvider` interface keeps Meilisearch available as a later option.
 
-### 4.7 Reverse proxy: Caddy
-- **Why Caddy over Nginx and Traefik:** the simplest config for TLS, security headers, active health checks across two upstreams, `lb_try_duration` (so requests wait instead of failing while a replica restarts), request-body limits per path, and trusted-proxy real IPs.
+### 4.7 Reverse proxy: Nginx
+- **Choice:** open-source Nginx (owner decision 2026-10-21, ADR-0031; the plan first chose Caddy). It handles TLS, security headers, request-body limits per path, trusted-proxy real IPs (`set_real_ip_from` Cloudflare ranges), `/media` static files and load balancing across two upstreams, with retries of safe requests on the other replica.
+- **No active health checks** (an NGINX Plus feature). Deploys take a replica out of rotation explicitly: the upstream file marks it `down`, and a graceful reload lets running requests finish before it is replaced.
 - **TLS behind Cloudflare:** we use a Cloudflare Origin CA certificate.
 
 ## 5. Rendering, caching and revalidation
@@ -241,7 +242,7 @@ Each provider is chosen through environment variables. Development and CI defaul
 | ADR-004 | Custom CMS on the shared schema; JSON block revisions plus foreign-key reference tables | Accepted (business decision) |
 | ADR-005 | pg-boss job queue in a dedicated worker; no Redis | Accepted |
 | ADR-006 | Local media volume with sharp pre-generated widths; `StorageAdapter` for future S3 | Accepted |
-| ADR-007 | Caddy behind Cloudflare (Origin CA, Full strict, origin firewall limited to Cloudflare) | Accepted |
+| ADR-007 | Caddy behind Cloudflare (Origin CA, Full strict, origin firewall limited to Cloudflare) | Superseded by ADR-031: Nginx in place of Caddy; the Cloudflare setup is unchanged |
 | ADR-008 | Two web replicas with cache-tag fan-out revalidation | Accepted, revisit after load test |
 | ADR-009 | Integer paise for all money; GST included in prices; tax lines saved per order line | Accepted |
 | ADR-010 | Partial COD: advance via Razorpay, balance as the COD amount sent to Shiprocket | Accepted, **⚠ verify Shiprocket fields** |
@@ -264,4 +265,5 @@ Each provider is chosen through environment variables. Development and CI defaul
 | [ADR-027](adr/0027-phase-5c-consent-analytics-contact-decisions.md) | Phase 5c: equal-choice cookie banner with append-only consent records, GA4 (Consent Mode basic) and Meta Pixel loaded only after consent, server-side Purchase via the Conversions API with a shared event ID and hashed identifiers (unverified), measurement IDs read at request time, contact form with an admin inbox and reply-to email | Accepted (Phase 5c) |
 | [ADR-028](adr/0028-phase-6a-page-builder-workflow-decisions.md) | Phase 6a: working draft edited in place by autosave with a save token, frozen into versions on submit/schedule/publish; managers publish directly, editors submit; signed 24-hour preview links rendered by the storefront's own components; minute-level scheduled publishing; worker queue filter for the E2E cache-only worker | Accepted (Phase 6a) |
 | [ADR-029](adr/0029-phase-6b-media-navigation-redirects-decisions.md) | Phase 6b: one workflow for pages, menus and site settings (content targets); menu and settings previews around the live home page; redirects served by the request proxy from a 30-second in-memory table, automatic on address changes with chains collapsed; in-use images and collections can't be removed and say where they're used; focal points on CMS images; favicon from settings | Accepted (Phase 6b) |
+| [ADR-031](adr/0031-phase-7a-production-stack-decisions.md) | Phase 7a: open-source Nginx replaces Caddy (deploys mark a replica `down` and reload gracefully); CSP allow-list without nonces; one Postgres image for the database and its backups (pgBackRest + restic to R2); Postgres gets outbound-only access for WAL; server checks in `ops_checks` emailed by the worker and exposed at `/api/health/ops`; drain-then-replace rolling deploys; deploys never restart Postgres; app and infra secrets in separate files | Accepted (Phase 7a) |
 | [ADR-030](adr/0030-phase-6c-journal-decisions.md) | Phase 6c: the Journal at /journal on the shared CMS workflow; block bodies (text, image, shoppable products, click-to-play YouTube, consent-gated Instagram); live listing fields copied on publish; author profiles; RSS and sitemap; no comments | Accepted (Phase 6c) |

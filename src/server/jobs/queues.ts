@@ -28,6 +28,7 @@ export const QUEUES = {
   cartReminders: "marketing.cart-reminders",
   metaPurchase: "analytics.meta-purchase",
   publishScheduledContent: "cms.publish-scheduled",
+  opsCheck: "system.ops-check",
 } as const
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES]
@@ -65,6 +66,7 @@ export type JobPayloads = {
   "marketing.cart-reminders": null
   "analytics.meta-purchase": { orderId: string }
   "cms.publish-scheduled": null
+  "system.ops-check": null
 }
 
 type QueuePolicy = Parameters<PgBoss["createQueue"]>[1]
@@ -197,6 +199,12 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
     retryDelay: 15,
     expireInSeconds: 120,
     deadLetter,
+  },
+  // Server health (doc/07 §7); the next run covers a failed one.
+  "system.ops-check": {
+    policy: "stately",
+    retryLimit: 0,
+    expireInSeconds: 120,
   },
   "reviews.request": {
     policy: "stately",

@@ -6,7 +6,7 @@ import {
 
 import { countHit, findRedirect } from "@/server/redirects/proxy-table"
 
-// Caddy sets X-Request-Id in production; accept only well-formed values so a
+// Nginx sets X-Request-Id in production; accept only well-formed values so a
 // client cannot inject arbitrary text into logs.
 const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/
 

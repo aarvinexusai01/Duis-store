@@ -32,3 +32,6 @@ next-env.d.ts
 
 # local media storage (MEDIA_ROOT in development)
 /storage/
+
+# Server state for the production stack (certificates, deploy log)
+/state/

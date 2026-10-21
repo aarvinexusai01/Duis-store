@@ -1,0 +1,19 @@
+# Local stack only: the drill reaches the local S3 gateway on the main
+# project's network and trusts its self-signed certificate.
+services:
+  postgres:
+    environment:
+      PGBACKREST_REPO1_STORAGE_CA_FILE: /etc/duis-local/s3.crt
+    volumes:
+      - ./state/s3/s3.crt:/etc/duis-local/s3.crt:ro
+  restore:
+    environment:
+      PGBACKREST_REPO1_STORAGE_CA_FILE: /etc/duis-local/s3.crt
+      RESTIC_CACERT: /etc/duis-local/s3.crt
+    volumes:
+      - ./state/s3/s3.crt:/etc/duis-local/s3.crt:ro
+
+networks:
+  egress:
+    name: duis_egress
+    external: true

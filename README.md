@@ -152,7 +152,8 @@ src/
   config/     validated environment
   lib/        framework-free utilities
 tests/        integration and e2e tests (unit tests sit next to the code)
-docker/       PostgreSQL init scripts (Caddy/backup configs arrive in Phase 7)
+docker/       Nginx config, and the Postgres + backup image
+ops/          deploy, rollback, backup, restore and server scripts (doc/runbooks)
 scripts/      build and run helpers
 doc/          plan, decisions (doc/adr), runbooks
 ```
@@ -179,7 +180,7 @@ docker build --build-arg APP_SHA=$(git rev-parse --short=12 HEAD) -t duis-web:$(
 # first admin:    node dist/create-super-admin.mjs --email … --name …
 ```
 
-The image never contains `.env` files; configuration comes from the environment at runtime. Production Compose, Caddy, backups and deploy scripts arrive in Phase 7 ([doc/07-deployment-operations.md](doc/07-deployment-operations.md)).
+The image never contains `.env` files; configuration comes from the environment at runtime. Production runs on `compose.yaml` through the `ops/` scripts: see [doc/07-deployment-operations.md](doc/07-deployment-operations.md) and [doc/runbooks](doc/runbooks/README.md).
 
 ## Conventions
 

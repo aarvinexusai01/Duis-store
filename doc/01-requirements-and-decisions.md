@@ -30,7 +30,7 @@ A production-ready, self-hosted e-commerce platform for **Duis**, a single-merch
 | 12 | Catalogue data | **None yet, so demo data** | A deterministic seed creates realistic demo products, variants, stock, collections and CMS content with generated placeholder images. CSV import is deferred. |
 | 13 | Scale | **Medium**: 500–5,000 products, 100–1,000 orders a day | One server with two web replicas (no downtime during deploys, uses more CPU cores) and PostgreSQL full-text search. No Redis. Load tested before launch. |
 | 14 | Server | **Cloud VPS in an Indian region** | Recommended size is about 8 vCPU, 16 GB RAM and 160 GB+ SSD, running Ubuntu LTS. |
-| 15 | Edge | **Cloudflare proxy (free plan)** | Origin certificate with Full (strict) TLS. The server firewall only accepts connections from Cloudflare. Real client IPs come from `CF-Connecting-IP`, which Caddy trusts only from Cloudflare's IP ranges. Turnstile protects the OTP and auth forms. |
+| 15 | Edge | **Cloudflare proxy (free plan)** | Origin certificate with Full (strict) TLS. The server firewall only accepts connections from Cloudflare. Real client IPs come from `CF-Connecting-IP`, which Nginx trusts only from Cloudflare's IP ranges. Turnstile protects the OTP and auth forms. |
 | 16 | Backups | **S3-compatible bucket** | Encrypted off-site backups. PostgreSQL gets point-in-time recovery (pgBackRest) plus a nightly logical dump. Media is backed up with restic. |
 | 17 | Deploys | **Build on the server** | `scripts/deploy.sh` builds images tagged with the git commit (SHA), runs migrations, then updates the replicas one at a time. Rollback switches to the previous image without rebuilding. GitHub Actions still runs the checks on pull requests. |
 | 18 | Brand | **"Duis"**; domain still to be decided | The brand name, logo and domain come from configuration and CMS site settings, never hard-coded. |
@@ -118,7 +118,7 @@ The release is complete when all four scenarios pass end to end on the productio
 A Content Editor in the same scenario can save drafts but can't publish.
 
 **Deployment.**
-1. The stack is deployed on a Linux VPS with Docker Compose behind Cloudflare and Caddy over HTTPS.
+1. The stack is deployed on a Linux VPS with Docker Compose behind Cloudflare and Nginx over HTTPS.
 2. Containers restart without losing data.
 3. A deploy causes no downtime and can be rolled back to the previous version.
 4. A backup is restored to a fresh server by following the runbook.

@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# Backups and restores for Duis (doc/07 §6). Runs inside the `backup`
+# container (as postgres) or the `restore` tool container (as root), and
+# reaches Postgres through the shared socket.
+#
+#   duis-backup run                      set up both repositories, then follow the schedule
+#   duis-backup pgbackrest full|diff     physical backup with pgBackRest
+#   duis-backup nightly                  pg_dump and the media volumes through restic
+#   duis-backup prune                    restic retention (30 daily, 12 monthly)
+#   duis-backup check                    read back part of the restic repository
+#   duis-backup status                   list backups and snapshots
+#   duis-backup restore-db [time]        restore the database (stopped) to the latest
+#                                        state, or to a time such as "2026-10-21 14:05:00+05:30"
+#   duis-backup restore-media [snapshot] restore the media volumes (default: latest)
+set -euo pipefail
+
+STANZA=duis
+DB=${POSTGRES_DB:-duis}
+export PGHOST=${PGHOST:-/var/run/postgresql}
+export PGUSER=postgres
+MEDIA_PATHS=(/data/media /data/private)
+
+log() { printf '%s duis-backup: %s\n' "$(date -u +%FT%TZ)" "$*" >&2; }
+
+as_postgres() {
+  if [ "$(id -u)" = 0 ]; then gosu postgres "$@"; else "$@"; fi
+}
+
+# Writes a row in ops_checks, which the worker turns into alerts. Never fails
+# the backup itself (the table appears with the first migration).
+record() {
+  local key=$1 ok=$2 detail=$3
+  as_postgres psql -X -q -d "$DB" -v ON_ERROR_STOP=1 \
+    -v key="$key" -v ok="$ok" -v detail="$detail" >/dev/null <<'SQL' || log "could not record $1 status"
+insert into ops_checks (key, ok, detail, checked_at, last_ok_at)
+values (:'key', :'ok'::boolean, :'detail', now(), case when :'ok'::boolean then now() end)
+on conflict (key) do update set ok = excluded.ok, detail = excluded.detail,
+  checked_at = excluded.checked_at,
+  last_ok_at = coalesce(excluded.last_ok_at, ops_checks.last_ok_at);
+SQL
+}
+
+wait_for_postgres() {
+  until pg_isready -q -d "$DB"; do
+    log "waiting for postgres"
+    sleep 2
+  done
+}
+
+elapsed() { echo "$(($(date +%s) - $1))s"; }
+
+pgbackrest_backup() {
+  local type=$1 start
+  start=$(date +%s)
+  log "pgBackRest $type backup starting"
+  if pgbackrest --stanza="$STANZA" --type="$type" backup; then
+    record backup.pgbackrest true "$type backup took $(elapsed "$start")."
+    log "pgBackRest $type backup finished"
+  else
+    record backup.pgbackrest false "The $type backup failed. See: ops/compose logs backup."
+    return 1
+  fi
+}
+
+nightly() {
+  local start
+  start=$(date +%s)
+  log "nightly restic backup starting"
+  # --stdin-from-command keeps no snapshot if pg_dump fails part-way.
+  if restic backup --host duis --tag db --stdin-filename "$DB.dump" \
+    --stdin-from-command -- pg_dump --format=custom --dbname="$DB" &&
+    restic backup --host duis --tag media "${MEDIA_PATHS[@]}"; then
+    record backup.restic true "Database dump and images saved in $(elapsed "$start")."
+    log "nightly restic backup finished"
+  else
+    record backup.restic false "The nightly copy failed. See: ops/compose logs backup."
+    return 1
+  fi
+}
+
+prune() {
+  restic forget --host duis --group-by host,tags \
+    --keep-daily 30 --keep-monthly 12 --prune
+}
+
+check() {
+  if ! restic check --read-data-subset=5%; then
+    record backup.restic false "The weekly restic check found errors. See: ops/compose logs backup."
+    return 1
+  fi
+}
+
+ensure_restic_repo() {
+  if ! restic cat config >/dev/null 2>&1; then
+    log "creating the restic repository"
+    restic init
+  fi
+}
+
+run() {
+  wait_for_postgres
+  ensure_restic_repo
+  pgbackrest --stanza="$STANZA" stanza-create
+  # Forces a WAL switch and confirms it reached the bucket.
+  pgbackrest --stanza="$STANZA" check
+  if ! pgbackrest --stanza="$STANZA" info | grep -q "full backup"; then
+    log "no backup yet: taking the first full backup"
+    pgbackrest_backup full
+  fi
+  if ! restic snapshots --host duis --tag db --json 2>/dev/null | grep -q '"id"'; then
+    log "no nightly copy yet: making the first one"
+    nightly || true
+  fi
+  exec supercronic -passthrough-logs /etc/duis/crontab
+}
+
+restore_db() {
+  local target=${1:-} pgdata=/var/lib/postgresql/18/docker
+  if pg_isready -q -d "$DB" 2>/dev/null; then
+    log "postgres is still running; stop it first"
+    exit 1
+  fi
+  as_postgres mkdir -p "$pgdata"
+  as_postgres chmod 700 "$pgdata"
+  local args=(--stanza="$STANZA" --delta)
+  if [ -n "$target" ]; then
+    args+=(--type=time "--target=$target" --target-action=promote)
+  fi
+  log "restoring the database (${target:-latest})"
+  as_postgres pgbackrest "${args[@]}" restore
+}
+
+restore_media() {
+  local snapshot=${1:-latest}
+  log "restoring media from restic snapshot $snapshot"
+  restic restore "$snapshot" --host duis --tag media --target / --overwrite always
+}
+
+case "${1:-}" in
+  run) run ;;
+  pgbackrest) pgbackrest_backup "${2:?full or diff}" ;;
+  nightly) nightly ;;
+  prune) prune ;;
+  check) check ;;
+  status)
+    pgbackrest --stanza="$STANZA" info
+    restic snapshots --compact
+    ;;
+  restore-db) restore_db "${2:-}" ;;
+  restore-media) restore_media "${2:-latest}" ;;
+  *)
+    sed -n '2,17p' "$0"
+    exit 2
+    ;;
+esac

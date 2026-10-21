@@ -1,0 +1,63 @@
+# Additions for running the production stack on a laptop (ops/local/init.sh):
+# a local S3 gateway in place of Cloudflare R2, and Mailpit for email.
+# ops/compose adds this file when .env.infra sets DUIS_STACK=local.
+services:
+  s3:
+    image: versity/versitygw:v1.8.0
+    command:
+      - --access
+      - ${R2_ACCESS_KEY_ID}
+      - --secret
+      - ${R2_SECRET_ACCESS_KEY}
+      - --region
+      - ${R2_REGION:-auto}
+      - --port
+      - :9000
+      - --cert
+      - /certs/s3.crt
+      - --key
+      - /certs/s3.key
+      - --quiet
+      - posix
+      - /buckets
+    volumes:
+      - ./state/s3:/certs:ro
+      - s3_data:/buckets
+    networks:
+      egress:
+        aliases:
+          - ${R2_ENDPOINT}
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.31.5
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8026}:8025"
+    networks:
+      - egress
+    restart: unless-stopped
+
+  # The local gateway's certificate is self-signed; trust it explicitly.
+  postgres:
+    environment:
+      PGBACKREST_REPO1_STORAGE_CA_FILE: /etc/duis-local/s3.crt
+    volumes:
+      - ./state/s3/s3.crt:/etc/duis-local/s3.crt:ro
+  backup:
+    environment:
+      PGBACKREST_REPO1_STORAGE_CA_FILE: /etc/duis-local/s3.crt
+      RESTIC_CACERT: /etc/duis-local/s3.crt
+    volumes:
+      - ./state/s3/s3.crt:/etc/duis-local/s3.crt:ro
+  restore:
+    environment:
+      PGBACKREST_REPO1_STORAGE_CA_FILE: /etc/duis-local/s3.crt
+      RESTIC_CACERT: /etc/duis-local/s3.crt
+    volumes:
+      - ./state/s3/s3.crt:/etc/duis-local/s3.crt:ro
+
+volumes:
+  s3_data:

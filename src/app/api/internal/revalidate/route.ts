@@ -17,7 +17,7 @@ const bodySchema = z.object({
 })
 
 /**
- * Receives the worker's signed revalidation fan-out. Blocked at Caddy in
+ * Receives the worker's signed revalidation fan-out. Blocked at Nginx in
  * production, and useless without the shared secret anyway.
  */
 export async function POST(request: Request) {

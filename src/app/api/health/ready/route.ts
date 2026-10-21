@@ -2,7 +2,7 @@ import { connection } from "next/server"
 
 import { checkReadiness } from "@/server/health"
 
-/** Readiness: used by Caddy's active health checks and the deploy smoke test. */
+/** Readiness: checked by deploys before a replica takes traffic, the smoke test and the uptime monitor. */
 export async function GET() {
   await connection()
   const report = await checkReadiness()

@@ -154,6 +154,7 @@ Roles and permissions are defined **in code** (Better Auth access control, ADR-0
 
 | Table | Key columns / notes |
 |---|---|
+| `ops_checks` | `key` (e.g. `backup.pgbackrest`, `host.disk`, `worker`), `ok`, `detail` (short, no personal data), `checked_at`, `last_ok_at`, `alerted_at`. Written by the backup container and the host-check script as the superuser, and by the worker's `system.ops-check` job; read by `/admin/system` and `/api/health/ops` (ADR-0031). |
 | `audit_logs` *(append-only)* | `actor_user_id`, `actor_roles`, `action` (for example `product.update`), `entity_type`, `entity_id`, `changes jsonb` (before/after diff, secrets redacted), `ip`, `user_agent`, `request_id`, `created_at`. Index on (`entity_type`, `entity_id`, `created_at`). |
 | `webhook_events` | `provider`, `event_id`, `event_type`, `payload jsonb`, `received_at`, `processed_at`, `status`, `attempts`, `last_error`. **Unique (`provider`, `event_id`).** |
 | `idempotency_keys` | `key` (PK), `scope`, `request_hash`, `response jsonb`, `expires_at` |

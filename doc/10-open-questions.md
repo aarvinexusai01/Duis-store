@@ -62,10 +62,10 @@ These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-c
 |---|---|---|
 | SMS (OTP) + WhatsApp provider | MSG91, Gupshup, Interakt/AiSensy (WhatsApp only), Twilio | **One provider for both SMS (DLT) and WhatsApp** (MSG91 or Gupshup). Compare current pricing pages before choosing. |
 | Transactional email | Amazon SES, Zoho ZeptoMail, Brevo, Resend | Any SMTP provider works (Nodemailer). SES or ZeptoMail for cost and deliverability. **Never** a self-run mail server. |
-| Error tracking | Sentry SaaS (free tier) or self-hosted GlitchTip | Sentry SaaS to start (zero operations, PII scrubbed). GlitchTip if data must stay in-house. Same SDK either way. |
-| External uptime monitor | UptimeRobot, Better Stack, Uptime Kuma on another host | Any free tier. It must run **off** the production server. |
-| VPS provider | AWS Lightsail/EC2 Mumbai, DigitalOcean Bangalore, E2E Networks, Linode/Akamai Mumbai | Choose on price for 8 vCPU / 16 GB, snapshot support and a firewall API |
-| Backup bucket | Backblaze B2, Cloudflare R2, AWS S3 | B2 or R2 (low cost, S3 API, object lock or versioning) |
+| Error tracking | Sentry SaaS (free tier) or self-hosted GlitchTip | **Decided (2026-10-21): Sentry SaaS** (free tier, PII scrubbed before sending). |
+| External uptime monitor | UptimeRobot, Better Stack, Uptime Kuma on another host | **Decided (2026-10-21): UptimeRobot** (free tier, off the production server). |
+| VPS provider | AWS Lightsail/EC2 Mumbai, DigitalOcean Bangalore, E2E Networks, Linode/Akamai Mumbai, Bluehost | **Decided (2026-10-21): Bluehost self-managed VPS, Mumbai.** Before buying, confirm an Ubuntu 24.04 image and at least 8 vCPU / 16 GB (doc/06 Phase 7). |
+| Backup bucket | Backblaze B2, Cloudflare R2, AWS S3 | **Decided (2026-10-21): Cloudflare R2** (no download fees for restores, bucket lock rules). |
 | External GST invoicing tool | Zoho Books, Tally, Shiprocket invoices | **Not decided (2026-10-16):** Phase 4 ships a generic per-line GST CSV that can be mapped to any tool later. |
 
 ## 4. External activation checklist (start early, since some take weeks)
@@ -79,11 +79,11 @@ These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-c
 | A5 | Shiprocket account: KYC, pickup address (warehouse), API user, webhook token. **2026-10-16:** the client is built (unverified). With the account: set the `SHIPROCKET_*` values and book and cancel one test parcel. Then check the partial-COD collectable amount, status words, webhook URL rules and label host. | Days | Phase 4 | You |
 | A6 | Google Cloud OAuth client (consent screen, authorised redirect URIs) | 1 day (verification may take longer) | Phase 2 (development client), Phase 8 (production) | You / us |
 | A7 | Transactional email account plus DNS (SPF, DKIM, DMARC) | 1–2 days | Phase 3 (development uses Mailpit) | You / us |
-| A8 | VPS provisioning (8 vCPU / 16 GB, Ubuntu LTS) | Hours | Phase 7 (staging earlier) | You |
-| A9 | S3-compatible backup bucket plus access keys. Store the restic and pgBackRest passwords in a password manager. | Hours | Phase 7 | You |
+| A8 | VPS provisioning: **Bluehost self-managed VPS, Mumbai**, Ubuntu 24.04, 8 vCPU / 16 GB (runbook: first-server-setup) | Hours | Phase 7b | You |
+| A9 | **Cloudflare R2** backup bucket plus an API token scoped to it. Store the restic and pgBackRest passphrases in a password manager. | Hours | Phase 7b | You |
 | A10 | Cloudflare Origin CA certificate, Turnstile keys, WAF and cache rules | Hours | Phase 7 | Us |
 | A11 | GA4 property, Meta Pixel and Conversions API access token. Set `GA4_MEASUREMENT_ID`, `META_PIXEL_ID`, `META_CAPI_ACCESS_TOKEN`; check one test purchase with `META_CAPI_TEST_EVENT_CODE` (ADR-0027) | Hours | Phase 5 | You |
-| A12 | Sentry (or GlitchTip) project and DSN | Hours | Phase 1 | Us |
+| A12 | **Sentry SaaS** project (Next.js) and its DSN, for `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`; an **UptimeRobot** account with monitors on `/api/health/ready` and `/api/health/ops` | Hours | Phase 7b | You |
 | A13 | **Legal content:** legal entity name, registered address, GSTIN, grievance officer, privacy, terms, shipping, exchange and cancellation policies (lawyer-reviewed) | 1–2 weeks | Phase 6 content / before Razorpay live KYC | You |
 | A14 | **GST:** your CA to confirm HSN codes per category, the slab interpretation (₹2,500 per piece, before or after tax, effect of discounts), and that tax on shipping and COD fees is handled correctly | 1 week | Phase 3 | You + CA |
 | A15 | Brand assets: logo (SVG source), any colours or fonts you want kept. Otherwise we propose a bold-streetwear identity for approval. | — | Phase 2 | You |

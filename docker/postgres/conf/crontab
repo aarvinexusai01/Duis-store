@@ -1,0 +1,10 @@
+# Backup schedule, in IST (TZ is set on the backup container).
+# Weekly full and daily differential database backups; WAL is archived
+# continuously by Postgres itself.
+30 2 * * 0    duis-backup pgbackrest full
+30 2 * * 1-6  duis-backup pgbackrest diff
+# Nightly logical dump and the media volume, through restic.
+30 3 * * *    duis-backup nightly
+# Weekly retention, pruning and a partial read-back of the restic repository.
+0 5 * * 0     duis-backup prune
+30 5 * * 0    duis-backup check

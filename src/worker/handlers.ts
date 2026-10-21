@@ -15,6 +15,7 @@ import { sendBackInStock } from "@/features/alerts"
 import { sendCartReminders } from "@/features/marketing"
 import { processRefund } from "@/features/payments"
 import { sendReviewRequests } from "@/features/reviews"
+import { runOpsChecks } from "@/features/system"
 import {
   processTrackingWebhook,
   runShipmentJob,
@@ -26,6 +27,8 @@ import { QUEUES, type JobPayloads, type QueueName } from "@/server/jobs/queues"
 import { deliverEmail, markEmailFailed } from "@/server/notifications/delivery"
 import { deliverWhatsApp } from "@/server/notifications/whatsapp"
 import { logger } from "@/server/observability/logger"
+
+import { reportJobError } from "./sentry"
 
 /**
  * Queue → handler wiring. Handlers stay thin and call services; pg-boss's
@@ -113,6 +116,10 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
     const sent = await sendLowStockDigest()
     if (sent > 0) logger.info({ sent }, "low-stock digest queued")
   },
+  "system.ops-check": async () => {
+    const sent = await runOpsChecks()
+    if (sent > 0) logger.warn({ sent }, "ops alert emails queued")
+  },
   "shipping.sync-tracking": async () => {
     const applied = await syncActiveShipments()
     if (applied > 0) logger.info({ applied }, "parcel tracking synced")
@@ -132,6 +139,7 @@ const SCHEDULES: { queue: QueueName; cron: string }[] = [
   { queue: QUEUES.reviewRequests, cron: "0 11 * * *" },
   { queue: QUEUES.cartReminders, cron: "*/15 * * * *" },
   { queue: QUEUES.publishScheduledContent, cron: "* * * * *" },
+  { queue: QUEUES.opsCheck, cron: "*/15 * * * *" },
 ]
 
 /**
@@ -151,7 +159,13 @@ export async function registerHandlers(boss: PgBoss): Promise<void> {
     if (only && !only.has(queue)) continue
     const handler = handlers[queue] as Handler<QueueName>
     await boss.work<JobPayloads[QueueName]>(queue, async ([job]) => {
-      if (job) await handler(job)
+      if (!job) return
+      try {
+        await handler(job)
+      } catch (err) {
+        reportJobError(err, { queue, id: job.id })
+        throw err
+      }
     })
   }
   for (const { queue, cron } of SCHEDULES) {

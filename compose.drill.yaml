@@ -1,0 +1,44 @@
+# The monthly restore drill (ops/restore-drill.sh): restores the newest
+# backup into a separate, throwaway project ("duis-drill") with its own
+# volumes, checks it, and removes it. It reads the backup bucket only.
+name: duis-drill
+
+services:
+  postgres:
+    extends:
+      file: compose.yaml
+      service: postgres
+    # Small, and it must never archive into the production bucket.
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - archive_mode=off
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  restore:
+    extends:
+      file: compose.yaml
+      service: restore
+
+networks:
+  backend:
+    internal: true
+  egress: {}
+
+volumes:
+  pgdata:
+  pgsocket:
+  pgbackrest_spool:
+  restic_cache:
+  media:
+  private:

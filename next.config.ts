@@ -1,9 +1,18 @@
 import type { NextConfig } from "next"
 
-// Baseline headers for every response. Caddy adds HSTS and the TLS-related
-// headers in production; the CSP (with per-request nonces) is set in proxy.ts
-// from Phase 1 onwards.
+import { contentSecurityPolicy } from "./src/lib/csp"
+
+const dev = process.env.NODE_ENV === "development"
+const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN
+
+// Baseline headers for every response. Nginx adds HSTS in production. The
+// CSP allow-lists sources without nonces, so cached page shells keep working
+// (src/lib/csp.ts, ADR-0031).
 const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: contentSecurityPolicy({ dev, sentryDsn, frameAncestors: "'none'" }),
+  },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -49,7 +58,17 @@ const nextConfig: NextConfig = {
       // entries override earlier ones for the same header.
       {
         source: "/preview/:token",
-        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Content-Security-Policy",
+            value: contentSecurityPolicy({
+              dev,
+              sentryDsn,
+              frameAncestors: "'self'",
+            }),
+          },
+        ],
       },
     ]
   },

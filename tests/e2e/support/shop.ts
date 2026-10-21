@@ -40,6 +40,24 @@ export async function signInWithOtp(page: Page, next: string) {
 }
 
 /**
+ * Selects a size that can be bought. The page opens on the first colour,
+ * which may be sold out in a long-used dev database even though another
+ * colour has stock, so colours are tried in turn.
+ */
+export async function chooseInStockSize(page: Page): Promise<void> {
+  const available = page.locator(
+    'input[name="axis-size"]:not([disabled]):not([data-sold-out])',
+  )
+  const colours = page.locator('input[name="axis-color"]')
+  const count = await colours.count()
+  for (let i = 0; i < count && (await available.count()) === 0; i++) {
+    await colours.nth(i).check({ force: true })
+    await expect(colours.nth(i)).toBeChecked()
+  }
+  await available.first().check({ force: true })
+}
+
+/**
  * Signs a new customer in, buys one item with the simulated gateway and
  * returns the order number. Skips (returns null) without a seeded catalogue.
  */
@@ -52,10 +70,7 @@ export async function placePrepaidOrder(
   await signInWithOtp(page, "/account")
   await page.goto(`/products/${slug}`)
   await page.waitForLoadState("networkidle")
-  const size = page
-    .locator('input[name="axis-size"]:not([disabled]):not([data-sold-out])')
-    .first()
-  await size.check({ force: true })
+  await chooseInStockSize(page)
   await page.getByRole("button", { name: "Add to bag" }).click()
   await expect(page.getByRole("dialog")).toBeVisible()
   await page.goto("/checkout")

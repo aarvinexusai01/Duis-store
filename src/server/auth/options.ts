@@ -50,7 +50,7 @@ export function buildAuthOptions(deps: AuthDependencies) {
       cookiePrefix: "duis",
       useSecureCookies: deps.secureCookies,
       database: { generateId: "uuid" },
-      // Caddy sets X-Real-IP from Cloudflare's CF-Connecting-IP (doc/07 §5).
+      // Nginx sets X-Real-IP from Cloudflare's CF-Connecting-IP (doc/07 §5).
       ipAddress: { ipAddressHeaders: ["x-real-ip"] },
     },
 

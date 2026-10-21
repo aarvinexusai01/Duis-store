@@ -1,0 +1,289 @@
+# Production stack (doc/07 §2). Always run it through ops/compose, which
+# sets the project, the env file (.env.infra) and the image tags:
+#   ops/compose ps | logs -f web_a | exec postgres psql -U postgres duis
+# Deploys and rollbacks go through ops/deploy.sh and ops/rollback.sh, never
+# a bare `up -d`, which would restart Postgres when its image changes.
+name: duis
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-hardening: &hardening
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  restart: unless-stopped
+  logging: *logging
+
+# Settings shared by the web replicas, the worker and the migrate job.
+# .env.production holds the application's own secrets (auth, payments, SMTP);
+# database passwords and backup keys stay in .env.infra.
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://duis_app:${DUIS_APP_PASSWORD:?set in .env.infra}@postgres:5432/duis
+  MEDIA_ROOT: /data/media
+  STORAGE_PRIVATE_ROOT: /data/private
+  INTERNAL_REVALIDATE_URLS: http://web_a:3000,http://web_b:3000
+
+x-app: &app
+  <<: *hardening
+  image: duis-web:${APP_SHA:?use ops/compose}
+  env_file:
+    - path: .env.production
+      required: true
+  tmpfs:
+    - /tmp
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+# pgBackRest's bucket settings (R2 in production, a local S3 gateway on a laptop).
+x-pgbackrest-env: &pgbackrest-env
+  PGBACKREST_REPO1_S3_ENDPOINT: ${R2_ENDPOINT:?set in .env.infra}
+  PGBACKREST_REPO1_STORAGE_PORT: ${R2_PORT:-443}
+  PGBACKREST_REPO1_S3_REGION: ${R2_REGION:-auto}
+  PGBACKREST_REPO1_S3_BUCKET: ${R2_BUCKET:?set in .env.infra}
+  PGBACKREST_REPO1_S3_KEY: ${R2_ACCESS_KEY_ID:?set in .env.infra}
+  PGBACKREST_REPO1_S3_KEY_SECRET: ${R2_SECRET_ACCESS_KEY:?set in .env.infra}
+  PGBACKREST_REPO1_CIPHER_PASS: ${PGBACKREST_CIPHER_PASS:?set in .env.infra}
+
+x-backup-env: &backup-env
+  <<: *pgbackrest-env
+  RESTIC_REPOSITORY: s3:https://${R2_ENDPOINT}:${R2_PORT:-443}/${R2_BUCKET}/restic
+  RESTIC_PASSWORD: ${RESTIC_PASSWORD:?set in .env.infra}
+  RESTIC_CACHE_DIR: /var/cache/restic
+  AWS_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+  AWS_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+  AWS_DEFAULT_REGION: ${R2_REGION:-auto}
+  POSTGRES_DB: duis
+
+services:
+  nginx:
+    <<: *hardening
+    image: nginxinc/nginx-unprivileged:1.30.5-alpine
+    # The folder is mounted, not single files, so a git checkout's changes
+    # are seen; state/nginx holds the certificate and the generated parts.
+    command: ["nginx", "-c", "/etc/nginx/duis/nginx.conf", "-g", "daemon off;"]
+    ports:
+      - "${HTTPS_BIND:-0.0.0.0:443}:8443"
+    volumes:
+      - ./docker/nginx:/etc/nginx/duis:ro
+      - ./state/nginx:/etc/nginx/site:ro
+      - media:/srv/media:ro
+    tmpfs:
+      - /tmp
+    networks:
+      - edge
+    healthcheck:
+      test:
+        ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  web_a:
+    <<: *app
+    environment:
+      <<: *app-env
+      SERVICE_NAME: web_a
+    volumes:
+      - next_cache_a:/app/.next/cache
+      - media:/data/media
+      - private:/data/private
+    networks:
+      - edge
+      - backend
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: ${WEB_MEMORY:-1536M}
+
+  web_b:
+    <<: *app
+    environment:
+      <<: *app-env
+      SERVICE_NAME: web_b
+    volumes:
+      - next_cache_b:/app/.next/cache
+      - media:/data/media
+      - private:/data/private
+    networks:
+      - edge
+      - backend
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: ${WEB_MEMORY:-1536M}
+
+  worker:
+    <<: *app
+    command: ["node", "dist/worker.mjs"]
+    environment:
+      <<: *app-env
+      SERVICE_NAME: worker
+      WORKER_HEARTBEAT_FILE: /tmp/worker-heartbeat
+    volumes:
+      - media:/data/media
+      - private:/data/private
+    networks:
+      - backend
+      - egress
+    # In-flight jobs finish (or are retried later) on SIGTERM.
+    stop_grace_period: 60s
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "process.exit(Date.now() - require('node:fs').statSync(process.env.WORKER_HEARTBEAT_FILE).mtimeMs < 90000 ? 0 : 1)"
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${WORKER_MEMORY:-1G}
+
+  # Applies migrations as the schema owner, then exits (ops/deploy.sh).
+  migrate:
+    <<: *hardening
+    image: duis-web:${APP_SHA:?use ops/compose}
+    profiles: [tools]
+    restart: "no"
+    command: ["node", "dist/migrate.mjs"]
+    environment:
+      MIGRATION_DATABASE_URL: postgres://duis_owner:${DUIS_OWNER_PASSWORD:?set in .env.infra}@postgres:5432/duis
+      LOG_LEVEL: info
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: duis-postgres:${PG_TAG:?use ops/compose}
+    build:
+      context: docker/postgres
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-4GB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-10GB}
+    environment:
+      <<: *pgbackrest-env
+      POSTGRES_DB: duis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env.infra}
+      DUIS_OWNER_PASSWORD: ${DUIS_OWNER_PASSWORD}
+      DUIS_APP_PASSWORD: ${DUIS_APP_PASSWORD}
+      DUIS_READONLY_PASSWORD: ${DUIS_READONLY_PASSWORD:?set in .env.infra}
+      TZ: UTC
+    volumes:
+      # PostgreSQL 18 keeps data under /var/lib/postgresql/18/docker.
+      - pgdata:/var/lib/postgresql
+      - pgsocket:/var/run/postgresql
+      - pgbackrest_spool:/var/spool/pgbackrest
+    # pgBackRest's asynchronous archiver detaches from Postgres. With Postgres
+    # as PID 1 it would inherit that process, and treat its failed exit as a
+    # crash: every server process restarted, every 10 s, while R2 is
+    # unreachable. tini as PID 1 reaps it instead (ADR-0031).
+    init: true
+    # No published port. `egress` is only for pushing WAL to the bucket.
+    networks:
+      - backend
+      - egress
+    shm_size: 1g
+    stop_grace_period: 120s
+    restart: unless-stopped
+    logging: *logging
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d duis"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          memory: ${PG_MEMORY:-6G}
+
+  # Scheduled backups (docker/postgres/conf/crontab) and their status.
+  backup:
+    <<: *hardening
+    image: duis-postgres:${PG_TAG:?use ops/compose}
+    user: postgres
+    entrypoint: ["duis-backup", "run"]
+    environment:
+      <<: *backup-env
+      TZ: Asia/Kolkata
+    volumes:
+      - pgdata:/var/lib/postgresql:ro
+      - pgsocket:/var/run/postgresql
+      - media:/data/media:ro
+      - private:/data/private:ro
+      - restic_cache:/var/cache/restic
+    tmpfs:
+      - /tmp
+    networks:
+      - backend
+      - egress
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Restores (ops/restore.sh). Runs as root so restored files keep their owners.
+  restore:
+    image: duis-postgres:${PG_TAG:?use ops/compose}
+    profiles: [tools]
+    entrypoint: ["duis-backup"]
+    environment:
+      <<: *backup-env
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - pgsocket:/var/run/postgresql
+      - media:/data/media
+      - private:/data/private
+      - restic_cache:/var/cache/restic
+    networks:
+      - backend
+      - egress
+    logging: *logging
+
+networks:
+  # Nginx and the web replicas; has outbound access (Razorpay, Shiprocket…).
+  edge: {}
+  # Postgres and everything that talks to it. No route to the internet.
+  backend:
+    internal: true
+  # Outbound only, for the worker's API calls and backup uploads.
+  egress: {}
+
+volumes:
+  pgdata:
+  pgsocket:
+  pgbackrest_spool:
+  restic_cache:
+  media:
+  private:
+  next_cache_a:
+  next_cache_b:

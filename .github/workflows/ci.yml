@@ -101,3 +101,24 @@ jobs:
           docker logs web
           test "$status" = "healthy"
           curl -fsS http://127.0.0.1:3000/api/health
+
+  ops:
+    name: Production stack files
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Shell scripts pass shellcheck
+        run: shellcheck -x -P ops ops/*.sh ops/compose ops/local/init.sh docker/postgres/bin/duis-backup
+      - name: Compose files are valid
+        run: |
+          ops/local/init.sh
+          ops/compose config -q
+          APP_SHA=ci PG_TAG=ci docker compose -p duis-drill --project-directory . \
+            --env-file .env.infra -f compose.drill.yaml -f compose.drill.local.yaml config -q
+      - name: Nginx configuration is valid
+        run: |
+          bash -c 'source ops/lib.sh && write_nginx_state'
+          docker run --rm -v "$PWD/docker/nginx:/etc/nginx/duis:ro" -v "$PWD/state/nginx:/etc/nginx/site:ro" \
+            nginxinc/nginx-unprivileged:1.30.5-alpine nginx -c /etc/nginx/duis/nginx.conf -t
+      - name: Postgres and backup image builds
+        run: docker build -t duis-postgres:ci docker/postgres

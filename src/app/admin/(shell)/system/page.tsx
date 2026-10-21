@@ -60,6 +60,47 @@ async function System() {
           </p>
         </Panel>
 
+        <Panel
+          title="Server checks"
+          action={
+            <StatusBadge
+              tone={status.checks.every((c) => c.ok) ? "good" : "bad"}
+            >
+              {status.checks.every((c) => c.ok)
+                ? "All passing"
+                : `${status.checks.filter((c) => !c.ok).length} failing`}
+            </StatusBadge>
+          }
+        >
+          <ul className="divide-y text-sm">
+            {status.checks.map((check) => (
+              <li
+                key={check.key}
+                className="flex flex-wrap items-start justify-between gap-3 py-2"
+              >
+                <span className="min-w-0">
+                  <span className="font-medium">{check.label}</span>
+                  {check.detail && (
+                    <span
+                      className={`block ${check.ok ? "text-muted-foreground" : "text-destructive"}`}
+                    >
+                      {check.detail}
+                    </span>
+                  )}
+                  {check.lastOkAt && (
+                    <span className="block text-xs text-muted-foreground">
+                      Last OK {when(check.lastOkAt)}
+                    </span>
+                  )}
+                </span>
+                <StatusBadge tone={check.ok ? "good" : "bad"}>
+                  {check.ok ? "OK" : "Failing"}
+                </StatusBadge>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
         <Panel title="Queues">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

@@ -722,18 +722,129 @@ Tasks:
 
 ## Phase 7: Production deployment & operations
 
+**Plan (written 2026-10-21, before building):**
+- **Owner decisions (2026-10-21):**
+  - **Edge server:** open-source Nginx in place of Caddy (owner decision 2026-10-21, after the plan was written). Deploys mark a replica `down` and reload Nginx gracefully.
+  - **Delivery:** two slices with a review stop after each:
+    - 7a: everything that lives in the repository, proven on a developer machine;
+    - 7b: the real server, run together with the owner once the accounts exist.
+  - **Server:** a Bluehost self-managed VPS in Mumbai.
+  - **Off-server backups:** Cloudflare R2.
+  - **Monitoring:** Sentry SaaS for errors and UptimeRobot for uptime, both on free tiers.
+- **Bluehost points to confirm before 7b** (the scripts don't depend on any of them):
+  - an Ubuntu 24.04 LTS image;
+  - a plan with at least 8 vCPU / 16 GB (4 vCPU / 8 GB is the floor, with one web replica);
+  - the Mumbai location.
+
+  The scripts assume no provider firewall API or snapshots: ufw on the server is the firewall, and our own backups are the recovery path. Outbound port 25 is usually blocked on VPS plans; that's fine because email goes through the SMTP provider on 587 or 465.
+- **7a plan (repository, verified locally):**
+  - **`compose.yaml`** as in 07 §2:
+    - nginx, web_a, web_b, worker, postgres (Postgres 18 + pgBackRest), backup (restic + pg_dump + supercronic), and migrate (tools profile);
+    - internal `backend` network, so Postgres has no route out and no published port;
+    - health checks, memory limits, log rotation, read-only root filesystems, `no-new-privileges`.
+
+    A `compose.local.yaml` override makes it run on a laptop: a self-signed certificate in place of the Origin CA, a local S3 gateway (versitygw) in place of R2, and Mailpit for alert emails.
+  - **Nginx configuration:**
+    - TLS with the Origin CA certificate;
+    - the real visitor IP taken only from Cloudflare's ranges;
+    - HSTS;
+    - body limits (2 MB, 15 MB for staff uploads, 8 MB for customer photos);
+    - `/media/*` served directly with long caching;
+    - load balancing across both replicas, with retries of safe requests;
+    - `/api/internal/*` blocked.
+  - **Content Security Policy** (doc/08 lists it but it isn't built yet): an allow-list without nonces, so cached page shells keep working (owner decision 2026-10-21).
+  - **Sentry** in web and worker:
+    - switched off unless `SENTRY_DSN` is set;
+    - release = the deployed git SHA;
+    - personal data scrubbed before sending (emails, phone numbers, cookies, auth headers, tokens in URLs, request bodies);
+    - a low trace sample rate.
+  - **Ops alerts:**
+    - a worker job every 15 minutes emails `OPS_ALERT_EMAIL` about dead-lettered jobs, stuck queues and stale backups (no success in 26 hours);
+    - a host cron script checks disk over 80 %, memory, container restarts and the certificate's expiry.
+  - **Scripts** in `ops/`, all checked with shellcheck:
+    - `bootstrap.sh` (Ubuntu updates, unattended upgrades, deploy user, SSH keys only, Docker, ufw with 443 from Cloudflare only, swap, time sync);
+    - `deploy.sh`, `rollback.sh` and `smoke-test.sh` (07 §4);
+    - `backup-now.sh`, `restore.sh` (point-in-time or latest; media) and `restore-drill.sh`;
+    - `update-cloudflare-ips.sh`;
+    - `host-check.sh`.
+  - **Backups** (07 §6):
+    - pgBackRest to R2, encrypted: full weekly, differential daily, and continuous WAL;
+    - a nightly `pg_dump` and a media snapshot through restic to R2;
+    - retention, pruning, and a weekly `restic check`;
+    - every run records its status for the alert job.
+  - **Runbooks** in `doc/runbooks/`:
+    - first server setup, deploy, rollback, restore, a monthly restore drill;
+    - incident first steps, secret rotation, adding a replica, moving media to R2.
+  - **Local proof (the 7a exit check):**
+    - the stack starts from empty volumes, runs migrations and becomes healthy;
+    - a deploy of a new build while k6 sends traffic through Nginx has zero failed requests;
+    - rollback to the previous build takes under 2 minutes;
+    - backup → write more orders → point-in-time restore into a separate Compose project → row counts, latest order and media checksums match, with RPO and RTO measured;
+    - Postgres is unreachable from the host, `/api/internal/*` returns 404 through Nginx, and the security headers and CSP are present;
+    - CI also builds the production image and validates the compose file.
+- **7b plan (on the server, with the owner):**
+  - **Accounts and keys from the owner:**
+    - the VPS;
+    - the domain on Cloudflare and an Origin CA certificate;
+    - an R2 bucket with an access key, and bucket lock rules;
+    - a Sentry project DSN;
+    - an UptimeRobot monitor;
+    - SMTP for alert emails.
+  - **Bring the server up:** bootstrap the server, make the first deploy, then switch on Cloudflare (Full strict, cache rules, WAF, a skip rule for webhooks).
+  - **Checks:**
+    - the origin can't be reached directly;
+    - a deploy under load fails no requests;
+    - rollback takes under 2 minutes;
+    - a restore drill onto a scratch server succeeds;
+    - the alerts reach the owner.
+- **7a, built and proven locally on 2026-10-21** ([ADR-031](adr/0031-phase-7a-production-stack-decisions.md); [runbooks](runbooks/README.md)):
+  - **Built:**
+    - `compose.yaml`, with Nginx, two web replicas, worker, Postgres + pgBackRest, backup, migrate and restore;
+    - the Nginx configuration;
+    - the CSP;
+    - Sentry for server, browser and worker;
+    - server checks with alert emails, a System page panel and `/api/health/ops`;
+    - the `ops/` scripts and runbooks;
+    - a CI job for shellcheck, compose and Nginx validation, and the Postgres image build.
+  - **Proven on a laptop**, using a clean clone, a local S3 gateway in place of R2 and seeded demo data:
+    - **First deploy:** from empty volumes it builds, migrates, starts, takes the first full backup and passes the smoke test.
+    - **Replica swaps under steady traffic (k6, 10 requests a second):** zero failed requests across every swap through Nginx (two swaps, 1,523 requests) and through the earlier Caddy setup (a deploy and a rollback, 5,065 requests).
+    - **Rollback:** 35–67 s through Nginx, 53 s earlier (target: under 2 minutes).
+    - **Point-in-time restore:** a row written before the target time is back, one written after is gone. 26 s, followed by a fresh full backup on the new timeline.
+    - **Restore drill:** restored in 13 s; data loss window 3 minutes; 6 tables and 20 of 20 images match.
+    - **Isolation:**
+      - no container but Nginx publishes a port;
+      - the backend network has no internet;
+      - the database superuser can't log in over TCP;
+      - `/api/internal/*` returns 404.
+    - **Real IP:** a forged `CF-Connecting-IP` is ignored unless the connection comes from a trusted range.
+    - **Alerts:** a simulated full disk turned `/api/health/ops` red and produced alert and recovery emails.
+  - **Fixed along the way:**
+    - Postgres crash-restarted every 10 s while the bucket was unreachable (now runs under an init process).
+    - The Docker build had been failing since 6a (`playwright.config.ts` imported from `tests/`).
+    - A Node/Nginx keep-alive race caused 502s while a replica was out.
+    - The restore drill tore itself down from inside a subshell, and compared only one image.
+  - **Not proven locally, moved to 7b:**
+    - **Building while serving:** the laptop's 4 GB Docker VM can't build the image and serve traffic at once (requests timed out during the build). Deploys now build in a separate container with low CPU priority and a memory cap. A deploy under load must be re-checked on the 16 GB server.
+    - **Server-only parts:**
+      - `bootstrap.sh` and `install-timers.sh` (ufw, systemd);
+      - Cloudflare;
+      - R2 itself;
+      - the Sentry DSN;
+      - UptimeRobot.
+
 Tasks:
 1. **Production `compose.yaml`:**
-   - Services: `caddy`, `web_a`, `web_b`, `worker`, `postgres` (custom image with pgBackRest), `backup`, and `migrate` (tools profile)
+   - Services: `nginx` (Caddy in the original plan), `web_a`, `web_b`, `worker`, `postgres` (custom image with pgBackRest), `backup`, and `migrate` (tools profile)
    - Networks `edge` and `backend` (internal)
    - Volumes, health checks, restart policies, resource limits, log rotation, read-only root filesystems, `no-new-privileges`
-2. **Caddyfile:**
+2. **Edge server configuration** (Nginx; originally a Caddyfile):
    - Origin CA TLS
    - Real IP from Cloudflare ranges only
    - Security headers (HSTS, CSP from the app, frame-ancestors, referrer policy, permissions policy)
-   - Body limits (1 MB default, 15 MB for `/api/media/upload`)
+   - Body limits (2 MB default, 15 MB for `/api/media/upload`, 8 MB for customer photos)
    - `/media/*` static with immutable caching
-   - Load balancing with active health checks and `lb_try_duration`
+   - Load balancing with failover; deploys take a replica out of rotation before replacing it
    - Block `/api/internal/*`
 3. **Server bootstrap script:**
    - Ubuntu updates and unattended upgrades

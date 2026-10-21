@@ -49,6 +49,7 @@ describe("database as the runtime role", () => {
   it("reports readiness", async () => {
     await expect(checkReadiness()).resolves.toEqual({
       status: "ok",
+      version: "dev",
       checks: { database: "ok" },
     })
   })

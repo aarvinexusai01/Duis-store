@@ -40,4 +40,7 @@ test("responses carry a request id and baseline security headers", async ({
   expect(headers["x-content-type-options"]).toBe("nosniff")
   expect(headers["x-frame-options"]).toBe("DENY")
   expect(headers["x-powered-by"]).toBeUndefined()
+  const csp = headers["content-security-policy"] ?? ""
+  expect(csp).toContain("frame-ancestors 'none'")
+  expect(csp).toContain("object-src 'none'")
 })

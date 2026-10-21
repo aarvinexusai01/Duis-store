@@ -8,6 +8,7 @@ import { ensureQueues } from "@/server/jobs/queues"
 import { logger } from "@/server/observability/logger"
 
 import { registerHandlers } from "./handlers"
+import { flushWorkerSentry, initWorkerSentry } from "./sentry"
 
 /**
  * Background worker: one process per container, same image as the web app.
@@ -26,7 +27,7 @@ async function touchHeartbeat(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  getServerEnv() // fail fast on invalid configuration
+  initWorkerSentry(getServerEnv()) // also fails fast on invalid configuration
 
   const boss = createBoss("worker")
   await boss.start()
@@ -53,6 +54,7 @@ async function main(): Promise<void> {
       await boss.stop({ graceful: true, timeout: SHUTDOWN_TIMEOUT_MS })
       await stopSender()
       await closeDb()
+      await flushWorkerSentry()
       logger.info("worker stopped")
       process.exit(0)
     } catch (err) {

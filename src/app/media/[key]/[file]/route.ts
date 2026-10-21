@@ -3,7 +3,7 @@ import { connection } from "next/server"
 import { readMediaFile } from "@/server/storage/local"
 
 /**
- * Serves processed images. In production Caddy serves /media/* straight from
+ * Serves processed images. In production Nginx serves /media/* straight from
  * the volume (doc/07 §2); this handler covers development and acts as a
  * fallback. Files are content-addressed, so they can be cached forever.
  */

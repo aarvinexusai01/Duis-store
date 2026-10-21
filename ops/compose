@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# `docker compose` for this deployment: the project, the env file and the
+# image tags. Use it for everything (ops/compose ps, logs, exec …).
+#   APP_SHA  the web image to use; defaults to the deployed one (state/deployed_sha)
+#   PG_TAG   the Postgres/backup image, named after docker/postgres's git tree
+set -euo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
+
+[ -f "$root/.env.infra" ] || {
+  echo "missing $root/.env.infra (copy ops/env/infra.env.example)" >&2
+  exit 1
+}
+
+files=(-f "$root/compose.yaml")
+if grep -qE '^DUIS_STACK=local$' "$root/.env.infra"; then
+  files+=(-f "$root/compose.local.yaml")
+fi
+
+if [ -z "${APP_SHA:-}" ]; then
+  APP_SHA=$(cat "$root/state/deployed_sha" 2>/dev/null || echo none)
+fi
+PG_TAG=${PG_TAG:-$(git -C "$root" rev-parse --short=12 HEAD:docker/postgres)}
+export APP_SHA PG_TAG
+
+exec docker compose --project-name duis --project-directory "$root" \
+  --env-file "$root/.env.infra" "${files[@]}" "$@"

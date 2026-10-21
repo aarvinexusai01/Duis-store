@@ -14,26 +14,26 @@ Duis-store/
 │   ├── adr/                        # one file per significant decision (NNNN-title.md)
 │   └── runbooks/                   # deploy, rollback, restore, incident, secret rotation, go-live
 ├── docker/
-│   ├── caddy/
-│   │   ├── Caddyfile               # TLS (Origin CA), headers, limits, LB, /media, internal-route block
-│   │   └── cloudflare-ips.txt      # trusted proxy ranges (refreshed by script)
-│   ├── postgres/
-│   │   ├── Dockerfile              # postgres:18 + pgBackRest
-│   │   ├── postgresql.conf         # tuned for 16 GB host; WAL archiving on
-│   │   ├── pgbackrest.conf         # S3 repo, retention, encryption (secrets via env)
-│   │   └── initdb/
-│   │       ├── 01-roles.sh         # duis_owner (DDL), duis_app (DML), duis_readonly
-│   │       └── 02-extensions.sql   # pg_trgm, unaccent, ltree, citext
-│   └── backup/
-│       ├── Dockerfile              # restic + pg_dump client + supercronic
-│       └── crontab                 # nightly logical dump + media snapshot, weekly prune/check
+│   ├── nginx/
+│   │   ├── nginx.conf              # TLS (Origin CA), real IP from Cloudflare only, body limits, LB, /media, internal-route block
+│   │   └── proxy.conf              # headers and retries for requests passed to the replicas
+│   └── postgres/                   # one image for `postgres` and `backup` (ADR-0031)
+│       ├── Dockerfile              # postgres:18 + pgBackRest + restic + supercronic
+│       ├── conf/                   # postgresql.conf, pg_hba.conf, pgbackrest.conf, crontab (backup schedule)
+│       ├── bin/duis-backup         # backups, restores and their status rows
+│       └── initdb/
+│           ├── 01-roles.sh         # duis_owner (DDL), duis_app (DML), duis_readonly
+│           └── 02-database.sql     # ownership, grants, extensions
+├── ops/                            # server operations (Phase 7; runbooks in doc/runbooks)
+│   ├── compose                     # `docker compose` with the project, env file and image tags
+│   ├── bootstrap.sh                # Ubuntu hardening, Docker, ufw (+ Docker forward rules), swap
+│   ├── install-timers.sh           # systemd timers: host checks, Cloudflare ranges, restore drill
+│   ├── deploy.sh / rollback.sh     # build@SHA → migrate → drain-and-replace each replica → smoke test
+│   ├── smoke-test.sh  backup-now.sh  restore.sh  restore-drill.sh
+│   ├── update-cloudflare-ips.sh  host-check.sh  lib.sh
+│   ├── env/                        # infra.env.example, app.env.example (placeholders only)
+│   └── local/init.sh               # run the production stack on a laptop
 ├── scripts/
-│   ├── server-bootstrap.sh         # Ubuntu hardening, Docker install, firewall (Cloudflare-only 443)
-│   ├── deploy.sh                   # build@SHA → migrate → rolling restart → smoke test
-│   ├── rollback.sh                 # switch to a previous SHA image (no rebuild)
-│   ├── backup-now.sh / restore.sh / restore-drill.sh
-│   ├── update-cloudflare-ips.sh
-│   ├── smoke-test.sh
 │   ├── build-server-bundles.mjs    # esbuild: src/worker + src/db/migrate → dist/*.mjs   (Phase 0 ✓)
 │   ├── start-standalone.mjs        # `npm start`: runs .next/standalone like the image  (Phase 0 ✓)
 │   └── stubs/server-only.mjs       # `server-only` stand-in for Vitest and the bundles  (Phase 0 ✓)
@@ -41,7 +41,9 @@ Duis-store/
 ├── src/                            # application code (see §2)
 ├── tests/                          # integration + e2e (unit tests are colocated, see §6)
 ├── .dockerignore  .editorconfig  .env.example  .gitignore  .nvmrc
-├── compose.yaml                    # production stack
+├── compose.yaml                    # production stack (always through ops/compose)
+├── compose.local.yaml              # laptop additions: S3 gateway in place of R2, Mailpit
+├── compose.drill.yaml              # the restore drill's throwaway project (+ compose.drill.local.yaml)
 ├── compose.dev.yaml                # local: postgres (localhost:5432) + mailpit (SMTP catcher)
 ├── Dockerfile                      # multi-stage: deps → build (next + worker bundle) → runtime
 ├── components.json                 # shadcn/ui config
@@ -137,7 +139,7 @@ src/app/
     ├── auth/[...all]/route.ts         # Better Auth handler
     ├── webhooks/razorpay/route.ts
     ├── webhooks/logistics/route.ts    # Shiprocket (neutral path name)
-    ├── internal/revalidate/route.ts   # internal network + HMAC only; blocked at Caddy
+    ├── internal/revalidate/route.ts   # internal network + HMAC only; blocked at Nginx
     ├── health/route.ts · health/ready/route.ts
     ├── preview/route.ts · preview/exit/route.ts   # draftMode with signed token
     ├── media/upload/route.ts          # streaming multipart upload (staff)

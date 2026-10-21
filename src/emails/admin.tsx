@@ -71,6 +71,61 @@ export function lowStockDigestText(props: LowStockProps): string {
   ].join("\n")
 }
 
+type OpsAlertProps = {
+  environment: string
+  url: string
+  problems: { label: string; detail: string }[]
+  resolved: string[]
+}
+
+export function OpsAlertEmail(props: OpsAlertProps) {
+  return (
+    <EmailLayout
+      preview={
+        props.problems.length > 0
+          ? `${props.problems.length} check${props.problems.length === 1 ? "" : "s"} failing on ${props.environment}.`
+          : `All checks passing on ${props.environment}.`
+      }
+    >
+      {props.problems.length > 0 ? (
+        <EmailText>
+          These checks are failing on <strong>{props.environment}</strong>:
+        </EmailText>
+      ) : (
+        <EmailText>
+          Every check is passing again on <strong>{props.environment}</strong>.
+        </EmailText>
+      )}
+      {props.problems.map((problem) => (
+        <EmailText key={problem.label}>
+          <strong>{problem.label}</strong>: {problem.detail}
+        </EmailText>
+      ))}
+      {props.resolved.length > 0 && (
+        <EmailText>Recovered: {props.resolved.join(", ")}.</EmailText>
+      )}
+      <EmailText>
+        The runbooks in doc/runbooks say what to do for each check.
+      </EmailText>
+      <EmailButton href={props.url}>Open the System page</EmailButton>
+    </EmailLayout>
+  )
+}
+
+export function opsAlertText(props: OpsAlertProps): string {
+  return [
+    props.problems.length > 0
+      ? `These checks are failing on ${props.environment}:`
+      : `Every check is passing again on ${props.environment}.`,
+    ...props.problems.map((p) => `- ${p.label}: ${p.detail}`),
+    ...(props.resolved.length > 0
+      ? [`Recovered: ${props.resolved.join(", ")}.`]
+      : []),
+    "The runbooks in doc/runbooks say what to do for each check.",
+    `System page: ${props.url}`,
+  ].join("\n")
+}
+
 type TestProps = { sentBy: string }
 
 export function TestEmail({ sentBy }: TestProps) {

@@ -16,6 +16,8 @@ import {
 import { QUEUES, type QueueName } from "@/server/jobs/queues"
 import { defineOperation } from "@/server/operation"
 
+import { loadOpsChecks } from "./ops-checks"
+
 /**
  * The audit log viewer and the system page (doc/06 Phase 4 §11): job
  * queues, failed jobs (retry or discard), webhook events and the worker's
@@ -141,7 +143,7 @@ export const getSystemStatus = defineOperation({
   input: z.object({}),
   async handler() {
     const db = getDb()
-    const [queues, failed, heartbeat, webhooks] = await Promise.all([
+    const [queues, failed, heartbeat, webhooks, checks] = await Promise.all([
       getQueueCounts(),
       db.execute<{
         id: string
@@ -167,10 +169,12 @@ export const getSystemStatus = defineOperation({
       }>(sql`
         select id, provider, event_type, status, attempts, last_error, received_at
         from webhook_events order by received_at desc limit 50`),
+      loadOpsChecks(),
     ])
     const at = heartbeat.rows[0]?.at ? new Date(heartbeat.rows[0].at) : null
     return {
       queues,
+      checks,
       heartbeatAt: at,
       // The heartbeat job runs every minute.
       workerRunning: at !== null && Date.now() - at.getTime() < 3 * 60_000,

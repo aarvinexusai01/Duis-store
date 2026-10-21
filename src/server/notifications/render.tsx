@@ -5,6 +5,8 @@ import {
   ContactMessageEmail,
   contactMessageText,
   LowStockDigestEmail,
+  OpsAlertEmail,
+  opsAlertText,
   lowStockDigestText,
   StaffInviteEmail,
   staffInviteText,
@@ -98,6 +100,10 @@ const views: {
   "low-stock-digest": {
     html: (props) => <LowStockDigestEmail {...props} />,
     text: lowStockDigestText,
+  },
+  "ops-alert": {
+    html: (props) => <OpsAlertEmail {...props} />,
+    text: opsAlertText,
   },
   "contact-message": {
     html: (props) => <ContactMessageEmail {...props} />,

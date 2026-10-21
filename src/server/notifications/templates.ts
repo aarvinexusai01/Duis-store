@@ -120,6 +120,17 @@ export const emailTemplates = {
     }),
     subject: () => "Duis: items low on stock",
   },
+  "ops-alert": {
+    props: z.object({
+      environment: z.string().max(20),
+      url: z.url({ protocol: /^https?$/ }),
+      problems: z
+        .array(z.object({ label: z.string(), detail: z.string().max(500) }))
+        .max(30),
+      resolved: z.array(z.string()).max(30),
+    }),
+    subject: () => "Duis: server checks",
+  },
   "contact-message": {
     props: z.object({
       name: z.string().min(1).max(100),

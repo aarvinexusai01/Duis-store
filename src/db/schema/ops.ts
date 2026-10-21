@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -86,3 +87,19 @@ export const notificationLogs = pgTable(
     index("notification_logs_user_idx").on(t.userId, t.createdAt),
   ],
 )
+
+/**
+ * Operational health (doc/07 §7, Phase 7): one row per check. The backup
+ * container and the host-check script write their own rows as the database
+ * superuser; the worker fills in the rest and emails ops when one fails.
+ */
+export const opsChecks = pgTable("ops_checks", {
+  key: text().primaryKey(),
+  ok: boolean().notNull(),
+  // Short and free of personal data: it is shown on the System page and emailed.
+  detail: text(),
+  checkedAt: timestamptz().notNull().defaultNow(),
+  lastOkAt: timestamptz(),
+  // When ops were last emailed about this check failing; cleared once it recovers.
+  alertedAt: timestamptz(),
+})
