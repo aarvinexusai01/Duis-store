@@ -103,3 +103,14 @@ export const opsChecks = pgTable("ops_checks", {
   // When ops were last emailed about this check failing; cleared once it recovers.
   alertedAt: timestamptz(),
 })
+
+/**
+ * Fixed-window request counters shared by every web replica (doc/06 Phase 8
+ * audit): checkout attempts, coupon tries, search suggestions. One row per
+ * key; old rows are swept as new ones are written.
+ */
+export const appRateLimits = pgTable("app_rate_limits", {
+  key: text().primaryKey(),
+  windowStart: timestamptz().notNull().defaultNow(),
+  count: integer().notNull().default(0),
+})

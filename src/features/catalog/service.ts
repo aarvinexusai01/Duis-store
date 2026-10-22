@@ -22,6 +22,7 @@ import { writeAudit } from "@/server/audit"
 import { requestRevalidation } from "@/server/cache/revalidate"
 import { cacheTags } from "@/server/cache/tags"
 import { withTransaction, type Transaction } from "@/server/db/transaction"
+import { checkVersion } from "@/server/db/versioning"
 import { DomainError, isUniqueViolation } from "@/server/errors"
 import { enqueue } from "@/server/jobs/enqueue"
 import { QUEUES } from "@/server/jobs/queues"
@@ -188,12 +189,13 @@ export const updateCategory = defineOperation({
   name: "catalog.updateCategory",
   access: { catalog: ["update"] },
   input: updateCategorySchema,
-  async handler({ actor }, { id, ...changes }) {
+  async handler({ actor }, { id, expectedVersion, ...changes }) {
     const before = changes.slug ? await categoryHrefs() : null
     const result = await withTransaction(async (tx) => {
+      await checkVersion(tx, "categories", id, expectedVersion, "category")
       const [row] = await tx
         .update(categories)
-        .set(changes)
+        .set({ ...changes, updatedAt: new Date() })
         .where(eq(categories.id, id))
         .returning({ id: categories.id })
         .catch((err) =>

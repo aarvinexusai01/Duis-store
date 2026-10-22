@@ -15,6 +15,8 @@ export const ERROR_STATUS = {
   UNSUPPORTED_MEDIA: 415,
   PAYLOAD_TOO_LARGE: 413,
   RATE_LIMITED: 429,
+  // The payment provider can't be reached; the order and its stock are kept.
+  PAYMENT_UNAVAILABLE: 503,
 } as const
 
 export type DomainErrorCode = keyof typeof ERROR_STATUS

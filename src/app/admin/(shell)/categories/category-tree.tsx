@@ -224,6 +224,8 @@ function CategoryDialog({
           ...fields,
           id: editing.category.id,
           isActive: form.get("isActive") === "on",
+          // Refused if someone saved this category since the page loaded.
+          expectedVersion: editing.category.version,
         })
         const parentId = text("parentId") || null
         if (result.ok && parentId !== editing.category.parentId) {

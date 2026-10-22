@@ -23,6 +23,18 @@ function errorMessage(source: Record<string, string | undefined>): string {
 }
 
 describe("parseServerEnv", () => {
+  it("treats an empty value as not set", () => {
+    const env = parseServerEnv({
+      ...valid,
+      TURNSTILE_SITE_KEY: "",
+      TURNSTILE_SECRET_KEY: "",
+      LOG_LEVEL: "",
+    })
+    expect(env.TURNSTILE_SITE_KEY).toBeUndefined()
+    expect(env.TURNSTILE_SECRET_KEY).toBeUndefined()
+    expect(env.LOG_LEVEL).toBe("info")
+  })
+
   it("applies defaults for optional settings", () => {
     const env = parseServerEnv(valid)
     expect(env.APP_ENV).toBe("development")

@@ -87,9 +87,6 @@ export function ProductForm({
     product?.descriptiveValueIds ?? [],
   )
   const [specs, setSpecs] = useState(product?.specifications ?? [])
-  // The saved version this form is based on; a save from an older one is
-  // refused, so two people editing at once never overwrite each other.
-  const [version, setVersion] = useState(product?.version)
 
   const categories = useMemo(
     () => options.categories.filter((c) => c.departmentId === departmentId),
@@ -141,10 +138,13 @@ export function ProductForm({
         : await updateProductAction({
             ...fields,
             id: product.id,
-            expectedVersion: version,
+            // The version this page loaded; every save (and publish or
+            // archive) refreshes the page, so it stays current. A save from
+            // an older one is refused, so two people never overwrite each
+            // other.
+            expectedVersion: product.version,
           })
       if (result.ok) {
-        if ("version" in result) setVersion(result.version)
         toast.success("Product saved")
       } else {
         setErrors(result.fieldErrors ?? {})

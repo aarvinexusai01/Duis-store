@@ -86,6 +86,9 @@ export const refunds = pgTable(
   },
   (t) => [
     index("refunds_order_idx").on(t.orderId),
+    // Refunds are summed per payment inside the cancellation, refund and
+    // late-payment transactions (doc/06 Phase 8 audit).
+    index("refunds_payment_idx").on(t.paymentId),
     check("refunds_amount_check", sql`${t.amountPaise} > 0`),
   ],
 )

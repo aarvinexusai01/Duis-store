@@ -282,7 +282,12 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>
 export function parseServerEnv(
   source: Record<string, string | undefined>,
 ): ServerEnv {
-  const result = serverEnvSchema.safeParse(source)
+  // An empty value means "not set" (KEY= in an env file, or a variable
+  // cleared to switch a feature off), never an invalid one.
+  const cleaned = Object.fromEntries(
+    Object.entries(source).filter(([, value]) => value !== ""),
+  )
+  const result = serverEnvSchema.safeParse(cleaned)
   if (!result.success) {
     // Never echo values: they may contain credentials.
     throw new Error(

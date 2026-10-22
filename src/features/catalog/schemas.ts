@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { expectedVersionField } from "@/lib/version"
+
 import { richTextSchema } from "@/lib/rich-text"
 import { seoSchema } from "@/lib/seo"
 import { slugSchema } from "@/lib/slug-schema"
@@ -33,7 +35,11 @@ export const createCategorySchema = z
 export const updateCategorySchema = createCategorySchema
   .omit({ departmentId: true, parentId: true })
   .partial()
-  .extend({ id, isActive: z.boolean().optional() })
+  .extend({
+    id,
+    isActive: z.boolean().optional(),
+    expectedVersion: expectedVersionField,
+  })
 
 export const moveCategorySchema = z.object({ id, parentId: id.nullable() })
 

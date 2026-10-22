@@ -2,6 +2,7 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { z } from "zod"
 
+import { versionOf } from "@/lib/version"
 import { getDb } from "@/server/db/client"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
@@ -56,6 +57,8 @@ export const adminListCollections = defineOperation({
 
 export type AdminCollection = {
   id: string
+  /** Sent back on every save to catch overlapping edits. */
+  version: string
   slug: string
   title: string
   description: string | null
@@ -101,9 +104,10 @@ export const adminGetCollection = defineOperation({
       seo_title: string | null
       seo_description: string | null
       noindex: boolean
+      updated_at: Date
     }>(sql`
       select c.id, c.slug::text, c.title, c.description, c.type, c.status, c.sort_mode, c.rules, c.rule_match,
-             c.seo_title, c.seo_description, c.noindex,
+             c.seo_title, c.seo_description, c.noindex, c.updated_at,
              im.id as image_id, im.storage_key as image_key, bm.id as banner_id, bm.storage_key as banner_key
       from collections c
       left join media_assets im on im.id = c.image_media_id
@@ -125,6 +129,7 @@ export const adminGetCollection = defineOperation({
       where cp.collection_id = ${id} order by cp.position, p.id`)
     return {
       id: c.id,
+      version: versionOf(c.updated_at),
       slug: c.slug,
       title: c.title,
       description: c.description,

@@ -9,6 +9,7 @@ import { requestRevalidation } from "@/server/cache/revalidate"
 import { cacheTags } from "@/server/cache/tags"
 import { uuidArray, textArray } from "@/server/db/sql"
 import { withTransaction, type Transaction } from "@/server/db/transaction"
+import { checkVersion } from "@/server/db/versioning"
 import { DomainError, isUniqueViolation } from "@/server/errors"
 import { enqueue } from "@/server/jobs/enqueue"
 import { QUEUES } from "@/server/jobs/queues"
@@ -98,9 +99,14 @@ async function refreshOne(
     where p.status = 'active' and (${combined})
     on conflict (collection_id, product_id) do nothing
   `)
+  // Bookkeeping, not an edit: updated_at (the editors' version) stays as it
+  // was, or every catalogue change would make open editors look stale.
   await tx
     .update(collections)
-    .set({ rulesRefreshedAt: new Date() })
+    .set({
+      rulesRefreshedAt: new Date(),
+      updatedAt: sql`${collections.updatedAt}`,
+    })
     .where(eq(collections.id, collectionId))
   return inserted.rowCount ?? 0
 }
@@ -187,8 +193,9 @@ export const updateCollection = defineOperation({
   name: "collections.updateCollection",
   access: { collection: ["update"] },
   input: updateCollectionSchema,
-  async handler({ actor }, { id, ...changes }) {
+  async handler({ actor }, { id, expectedVersion, ...changes }) {
     return withTransaction(async (tx) => {
+      await checkVersion(tx, "collections", id, expectedVersion, "collection")
       const [current] = await tx
         .select({
           type: collections.type,
@@ -208,7 +215,7 @@ export const updateCollection = defineOperation({
 
       await tx
         .update(collections)
-        .set(changes)
+        .set({ ...changes, updatedAt: new Date() })
         .where(eq(collections.id, id))
         .catch(conflict)
       // A collection that has been live keeps its old address working.
@@ -242,7 +249,7 @@ export const setCollectionProducts = defineOperation({
   name: "collections.setCollectionProducts",
   access: { collection: ["update"] },
   input: setCollectionProductsSchema,
-  async handler({ actor }, { collectionId, productIds }) {
+  async handler({ actor }, { collectionId, productIds, expectedVersion }) {
     const unique = [...new Set(productIds)]
     if (unique.length !== productIds.length) {
       throw new DomainError(
@@ -251,6 +258,13 @@ export const setCollectionProducts = defineOperation({
       )
     }
     return withTransaction(async (tx) => {
+      await checkVersion(
+        tx,
+        "collections",
+        collectionId,
+        expectedVersion,
+        "collection",
+      )
       const [collection] = await tx
         .select({ type: collections.type })
         .from(collections)
@@ -289,6 +303,11 @@ export const setCollectionProducts = defineOperation({
           })),
         )
       }
+      // The product list is part of the collection: its version moves on.
+      await tx
+        .update(collections)
+        .set({ updatedAt: new Date() })
+        .where(eq(collections.id, collectionId))
       // collectionsList too: CMS pages (the home page's "Best sellers"
       // section) are cached under it, as for every other collection change.
       await requestRevalidation(

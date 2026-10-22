@@ -6,8 +6,10 @@ import { z } from "zod"
 
 import type { DiscountEligibility } from "@/db/schema"
 import { writeAudit } from "@/server/audit"
+import { expectedVersionField, versionOf } from "@/lib/version"
 import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
+import { checkVersion } from "@/server/db/versioning"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
 
@@ -107,6 +109,8 @@ export const adminListDiscounts = defineOperation({
 
 export type AdminDiscountDetail = {
   id: string
+  /** Sent back on save to catch overlapping edits. */
+  version: string
   name: string
   kind: "automatic" | "coupon"
   valueType: "percentage" | "fixed"
@@ -159,6 +163,7 @@ export const adminGetDiscount = defineOperation({
       ends_at: Date | null
       usage_limit_total: number | null
       usage_limit_per_customer: number | null
+      updated_at: Date
     }>(sql`select * from discounts where id = ${id}`)
     const d = found.rows[0]
     if (!d) throw new DomainError("NOT_FOUND", "Discount not found.")
@@ -200,6 +205,7 @@ export const adminGetDiscount = defineOperation({
     ])
     return {
       id: d.id,
+      version: versionOf(d.updated_at),
       name: d.name,
       kind: d.kind,
       valueType: d.value_type,
@@ -245,7 +251,7 @@ export const updateDiscount = defineOperation({
   name: "discounts.update",
   access: { discount: ["update"] },
   input: discountFieldsSchema
-    .extend({ id: z.uuid() })
+    .extend({ id: z.uuid(), expectedVersion: expectedVersionField })
     .refine((d) => d.valueType !== "percentage" || d.value <= 10_000, {
       path: ["value"],
       message: "A percentage is at most 100%.",
@@ -256,6 +262,13 @@ export const updateDiscount = defineOperation({
     }),
   async handler({ actor }, input) {
     return withTransaction(async (tx) => {
+      await checkVersion(
+        tx,
+        "discounts",
+        input.id,
+        input.expectedVersion,
+        "discount",
+      )
       const updated = await tx.execute<{ id: string }>(sql`
         update discounts set name = ${input.name}, value_type = ${input.valueType}, value = ${input.value},
           max_discount_paise = ${input.maxDiscountPaise}, min_order_paise = ${input.minOrderPaise},

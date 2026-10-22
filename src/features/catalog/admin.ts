@@ -7,6 +7,7 @@ import type { RichTextDocument } from "@/lib/rich-text"
 import { slugSchema } from "@/lib/slug-schema"
 import { writeAudit } from "@/server/audit"
 import { getDb } from "@/server/db/client"
+import { versionOf } from "@/lib/version"
 import { withTransaction } from "@/server/db/transaction"
 import { DomainError, isUniqueViolation } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
@@ -270,6 +271,8 @@ export type CatalogOptions = {
     description: string | null
     exchangeAllowed: boolean
     productCount: number
+    /** Sent back on save to catch overlapping edits. */
+    version: string
   }[]
   attributes: {
     id: string
@@ -316,9 +319,10 @@ export const adminCatalogOptions = defineOperation({
           size_chart_id: string | null
           description: string | null
           product_count: number
+          updated_at: Date
         }>(sql`
         select c.id, c.department_id, c.parent_id, c.name, c.slug::text, nlevel(c.path) - 1 as depth, c.position,
-               c.is_active, c.default_hsn_code, c.size_chart_id, c.description, c.exchange_allowed,
+               c.is_active, c.default_hsn_code, c.size_chart_id, c.description, c.exchange_allowed, c.updated_at,
                (select count(*)::int from product_categories pc where pc.category_id = c.id) as product_count
         from categories c order by c.path`),
         db.execute<{
@@ -362,6 +366,7 @@ export const adminCatalogOptions = defineOperation({
         sizeChartId: c.size_chart_id,
         description: c.description,
         productCount: c.product_count,
+        version: versionOf(c.updated_at),
       })),
       attributes: attributes.rows.map((a) => ({
         id: a.id,

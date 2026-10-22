@@ -21,6 +21,10 @@ const sharedEnv = {
   APP_ENV: "test",
   // Never real payments in automated tests, whatever .env says.
   PAYMENT_PROVIDER: "fake",
+  // No Cloudflare challenge on sign-up and sign-in codes: a test browser
+  // can't solve one (empty means off, config/env.ts).
+  TURNSTILE_SITE_KEY: "",
+  TURNSTILE_SECRET_KEY: "",
   // Placeholder IDs: the consent spec intercepts both scripts, so nothing
   // reaches Google or Meta.
   GA4_MEASUREMENT_ID: "G-E2ETEST000",

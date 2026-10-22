@@ -87,6 +87,7 @@ export function RuleBuilder({
         id: collection.id,
         rules,
         ruleMatch: match,
+        expectedVersion: collection.version,
       })
       if (result.ok)
         toast.success(

@@ -124,7 +124,11 @@ export function CollectionDetails({
                   ruleMatch: "all",
                 },
           )
-        : await updateCollectionAction({ ...fields, id: collection.id })
+        : await updateCollectionAction({
+            ...fields,
+            id: collection.id,
+            expectedVersion: collection.version,
+          })
       if (result.ok) toast.success("Collection saved")
       else {
         setErrors(result.fieldErrors ?? {})

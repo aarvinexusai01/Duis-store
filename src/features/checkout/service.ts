@@ -19,10 +19,17 @@ import {
 } from "@/features/payments"
 import { debitWallet } from "@/features/wallet"
 import { getServerEnv } from "@/config/env"
+import { STORE_POLICY } from "@/config/store-policy"
 import type { Actor, UserActor } from "@/server/auth/actor"
 import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
 import { DomainError, isUniqueViolation } from "@/server/errors"
+import {
+  hitLimit,
+  LIMITS,
+  overLimit,
+  rateLimited,
+} from "@/server/security/shared-rate-limit"
 import { defineOperation } from "@/server/operation"
 
 import { buildCheckoutContext, type CheckoutContext } from "./context"
@@ -74,7 +81,28 @@ export const getCheckoutQuote = defineOperation({
   access: "authenticated",
   input: choicesSchema,
   async handler({ actor }, choices): Promise<CheckoutView> {
-    return view(await buildCheckoutContext(userOf(actor), choices))
+    const user = userOf(actor)
+    // Rate limits (doc/06 Phase 8 audit): quotes are database-heavy, and
+    // failed coupon codes are how codes get guessed.
+    if (!(await hitLimit(`quote:${user.userId}`, LIMITS.checkoutQuote))) {
+      throw rateLimited(
+        "You're updating checkout very quickly. Please wait a moment.",
+      )
+    }
+    const couponFailures = `coupon-fail:${user.userId}`
+    if (
+      choices.couponCode &&
+      (await overLimit(couponFailures, LIMITS.couponFailures))
+    ) {
+      throw rateLimited(
+        "Too many coupon codes tried. Please wait a minute and try again.",
+      )
+    }
+    const ctx = await buildCheckoutContext(user, choices)
+    if (choices.couponCode && ctx.couponError) {
+      await hitLimit(couponFailures, LIMITS.couponFailures)
+    }
+    return view(ctx)
   },
 })
 
@@ -190,6 +218,11 @@ export const placeOrder = defineOperation({
     const key = `place:${user.userId}:${input.idempotencyKey}`
     const repeated = await existingOrder(key, user.userId)
     if (repeated) return repeated
+    if (!(await hitLimit(`place:${user.userId}`, LIMITS.placeOrder))) {
+      throw rateLimited(
+        "Too many checkout attempts. Please wait a few minutes and try again.",
+      )
+    }
 
     const ctx = await buildCheckoutContext(user, input)
     const blocking = ctx.quote.issues.filter((i) => i.blocking)
@@ -220,6 +253,22 @@ export const placeOrder = defineOperation({
     let orderId: string
     try {
       orderId = await withTransaction(async (tx) => {
+        // Unpaid orders hold stock, so one customer may only have a few at
+        // once; otherwise one account could make an item look sold out. The
+        // customer's row is locked so two checkouts at once count each other.
+        await tx.execute(
+          sql`select id from users where id = ${user.userId} for no key update`,
+        )
+        const open = await tx.execute<{ n: number }>(sql`
+          select count(*)::int as n from orders
+          where user_id = ${user.userId} and status = 'pending_payment'
+            and reservation_expires_at > now()`)
+        if (open.rows[0]!.n >= STORE_POLICY.maxOpenUnpaidOrders) {
+          throw new DomainError(
+            "CONFLICT",
+            `You already have ${STORE_POLICY.maxOpenUnpaidOrders} unpaid orders. Pay for one of them in My orders, or wait up to 15 minutes for it to lapse, then try again.`,
+          )
+        }
         const inserted = await tx.execute<{ id: string }>(sql`
           insert into orders (user_id, payment_mode, destination_country, is_export,
             subtotal_paise, discount_paise, shipping_fee_paise, cod_fee_paise, tax_total_paise, total_paise,

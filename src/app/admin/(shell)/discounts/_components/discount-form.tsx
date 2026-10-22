@@ -95,7 +95,12 @@ export function DiscountForm({
     }
     startTransition(async () => {
       const result = discount
-        ? await updateDiscountAction({ id: discount.id, ...fields })
+        ? await updateDiscountAction({
+            id: discount.id,
+            ...fields,
+            // Refused if someone saved this discount since the page loaded.
+            expectedVersion: discount.version,
+          })
         : await createDiscountAction({
             ...fields,
             kind,

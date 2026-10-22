@@ -944,6 +944,68 @@ Tasks:
 
 ## Phase 8: Hardening, verification & launch
 
+**Production-readiness audit (2026-10-22, before building fixes).** The owner asked for a senior-architect and QA audit before go-live. Findings from reading the code, querying the dev database and scanning the last production build:
+
+- **Already verified, no action needed:**
+  - **Race conditions:** 27 scenarios at the database level and 5 through Nginx and both app copies (ADR-0032).
+  - **Price tampering:** the server recomputes the quote and refuses a total the customer didn't see (integration test).
+  - **Payments:** webhooks are signed, deduplicated and idempotent. Reconciliation and expiry jobs catch dropped callbacks.
+  - **Access control:** every operation is in the RBAC matrix test, and every API route checks its caller (staff session, signed webhook, signed internal call, or test-only).
+  - **XSS and SQL injection:** the only raw HTML is escaped JSON-LD, and there is no raw SQL.
+  - **Secrets:** no secret from `.env` appears in the browser bundle (scanned).
+  - **Edge and monitoring:** CSP and HSTS are set. Sentry, health endpoints, server checks, backups and restore drills are in place (Phase 7a).
+  - **Media:** images are pre-sized WebP with immutable caching behind Cloudflare.
+- **Findings, most critical first:**
+  1. **Stock can be held hostage.**
+     - A signed-in customer can place any number of unpaid orders; each holds up to 10 per line for 15 minutes, renewable by placing again.
+     - One account or bot can make a popular item look sold out during a drop.
+     - Nothing caps open unpaid orders, and placing orders isn't rate-limited.
+  2. **Unprotected expensive public endpoints.**
+     - `/api/search/suggest` (full-text and trigram queries on every keystroke) has no limit, though doc/08 says it does.
+     - The checkout quote, coupon-apply and place-order actions have none either.
+     - Cloudflare's free plan allows one rate-limit rule, already used for sign-in. So a scraper or bot can load the database directly.
+  3. **A missing index on a hot path:** `refunds.payment_id`, summed on every cancellation, refund and late payment, inside the order lock.
+
+     Sixty foreign keys have no single-column index. Checked against the code, the others are already covered by composite indexes (coupon redemptions, cart lines), or are only scanned when a user or product is deleted, which is rare.
+  4. **A payment-provider outage shows a generic error.** If Razorpay can't create the payment, the customer sees "Something went wrong". It should say payments are briefly unavailable and their items are held for 15 minutes.
+  5. **Error screens:** admin, checkout and sign-in have no error screen of their own. An error there replaces the whole page with the global one, losing the header and the way back.
+  6. **Admin edits:** categories, collections, discounts and settings still save last-write-wins (products are protected since ADR-0032).
+  7. **Dependencies (corrected on inspection):** the 4 moderate `npm audit` advisories come from `drizzle-kit`'s bundled esbuild. `drizzle-kit` is already a dev dependency; it appears under production only because Better Auth declares it (for its schema CLI). It isn't in the standalone server output, so nothing to change.
+- **Plan (on approval):**
+  - **Fixes:** one slice, with a test proving each:
+    - cap open unpaid orders per customer;
+    - rate-limit order placement, quote and coupon attempts, and search suggestions;
+    - add the hot-path indexes (one migration, created concurrently where tables may be large);
+    - a friendly message when the payment provider fails;
+    - error screens for admin, checkout and sign-in;
+    - version checks for categories, collections and discounts.
+  - **On the real server (7b and Phase 8):**
+    - k6 load test of browsing, search and a checkout burst;
+    - Lighthouse and axe on every template;
+    - security headers checked on the live domain;
+    - `nmap` from outside;
+    - Trivy image scan;
+    - a real Razorpay test payment and a Shiprocket test shipment.
+
+- **Audit fixes, built 2026-10-22** (owner decisions: at most 2 unpaid orders, "balanced" limits, all fixes):
+  - **Unpaid orders:** at most 2 open per customer, counted under a lock on the customer's row, so three tabs at once still get 2.
+  - **Rate limits, shared by both app copies** (`app_rate_limits`):
+    - search suggestions: 60 a minute per visitor;
+    - checkout quotes: 60 a minute;
+    - wrong coupon codes: 10 a minute;
+    - placing orders: 5 per 10 minutes per customer.
+  - **Index:** `refunds_payment_idx`.
+  - **Payment outage:** the message is now "Payments are briefly unavailable. Your items are held for 15 minutes…" (`PAYMENT_UNAVAILABLE`, 503). The order and its stock stay, and Pay works again once the provider is back.
+  - **Error screens:** admin, checkout and sign-in each have their own, inside their layout.
+  - **Stale saves refused for categories, collections and discounts**, as for products:
+    - a collection's details, rules and product list share one version;
+    - the worker's automatic refresh doesn't count as an edit;
+    - the product form now reads its version from the page, so publishing then editing works.
+  - **Tests:** `tests/integration/hardening.test.ts` and `payment-outage.test.ts`.
+  - **Also fixed:**
+    - an empty value in the env counts as not set;
+    - E2E runs with Turnstile off, because once real keys were added to `.env`, every test sign-up was refused by the challenge.
+
 Tasks:
 1. **Security review** against the [08 checklist](08-security-compliance.md): authorization on every action, headers and CSP, upload fuzzing, webhook replay, rate limits, secret scan, `npm audit`, container image scan, Postgres not exposed.
 2. **Load test (k6):** browsing at an expected peak of 5–10× the average, search, and a checkout-initiation burst on the same SKUs. Tune Postgres, the connection pool and replica settings. Revisit ADR-008 if needed.

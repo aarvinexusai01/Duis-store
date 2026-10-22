@@ -71,11 +71,25 @@ export async function ensureGatewayOrder(input: {
       publicKey: gateway.publicKey,
     }
   }
-  const order = await gateway.createOrder({
-    amountPaise: input.amountPaise,
-    receipt: input.orderNumber,
-    notes: { order_id: input.orderId, order_number: input.orderNumber },
-  })
+  let order: Awaited<ReturnType<typeof gateway.createOrder>>
+  try {
+    order = await gateway.createOrder({
+      amountPaise: input.amountPaise,
+      receipt: input.orderNumber,
+      notes: { order_id: input.orderId, order_number: input.orderNumber },
+    })
+  } catch (error) {
+    // Razorpay down or unreachable (doc/06 Phase 8 audit): the order and
+    // its reserved stock stay; the customer can press Pay again.
+    logger.error(
+      { err: error, orderNumber: input.orderNumber },
+      "payment provider could not create the order",
+    )
+    throw new DomainError(
+      "PAYMENT_UNAVAILABLE",
+      "Payments are briefly unavailable. Your items are held for 15 minutes, so please try again in a moment.",
+    )
+  }
   if (order.amountPaise !== input.amountPaise || order.currency !== "INR") {
     throw new Error("gateway order amount mismatch")
   }

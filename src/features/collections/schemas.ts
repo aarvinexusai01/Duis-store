@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { expectedVersionField } from "@/lib/version"
+
 import { seoSchema } from "@/lib/seo"
 import { slugSchema } from "@/lib/slug-schema"
 
@@ -68,10 +70,12 @@ export const updateCollectionSchema = z
   .partial()
   .required({ id: true })
   .extend(seoSchema.shape)
+  .extend({ expectedVersion: expectedVersionField })
 
 export const setCollectionProductsSchema = z.object({
   collectionId: id,
   productIds: z.array(id).max(500),
+  expectedVersion: expectedVersionField,
 })
 
 export const collectionIdSchema = z.object({ id })

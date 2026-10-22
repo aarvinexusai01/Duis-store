@@ -52,6 +52,9 @@ export function CollectionProducts({
       const result = await setCollectionProductsAction({
         collectionId: collection.id,
         productIds: items.map((i) => i.id),
+        // Read from the page's data, which refreshes after every save, so
+        // the details and rules editors here stay in step.
+        expectedVersion: collection.version,
       })
       if (result.ok) toast.success("Products saved")
       else toast.error(result.message)
