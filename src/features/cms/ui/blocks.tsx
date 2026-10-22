@@ -1,5 +1,6 @@
 import type { Route } from "next"
 import Link from "next/link"
+import type { ReactNode } from "react"
 
 import { SectionHeading } from "@/components/brand/section-heading"
 import { MediaImage } from "@/components/media-image"
@@ -16,6 +17,7 @@ import { NewsletterForm } from "@/components/newsletter-form"
 import { cn } from "@/lib/utils"
 
 import type { ResolvedBlock } from "../resolve"
+import { HeroCarousel } from "./hero-carousel"
 import { BannerImage } from "./hero-image"
 
 type Of<T extends ResolvedBlock["type"]> = Extract<ResolvedBlock, { type: T }>
@@ -143,13 +145,7 @@ function Slides({
       aria-label={hero ? "Featured" : "Promotions"}
       className={cn(!hero && "page-container py-8")}
     >
-      <ul
-        tabIndex={many ? 0 : undefined}
-        className={cn(
-          many && "flex snap-x snap-mandatory overflow-x-auto",
-          !hero && "gap-4",
-        )}
-      >
+      <SlideList hero={hero} count={block.slides.length}>
         {block.slides.map((slide, index) => (
           <li
             key={index}
@@ -174,6 +170,8 @@ function Slides({
               <div
                 className={cn(
                   "absolute inset-0 flex flex-col justify-end gap-4 p-6 sm:p-10 lg:p-16",
+                  // Room for the slideshow's dots and pause button below.
+                  hero && many && "pb-16 sm:pb-16",
                   slide.textTone === "light"
                     ? "bg-gradient-to-t from-ink/70 via-ink/20 to-transparent text-paper"
                     : "bg-gradient-to-t from-paper/70 via-paper/10 to-transparent text-ink",
@@ -206,8 +204,42 @@ function Slides({
             )}
           </li>
         ))}
-      </ul>
+      </SlideList>
     </section>
+  )
+}
+
+/**
+ * The hero moves on its own every 3 seconds when it has several slides
+ * (HeroCarousel); the promo slider and a single slide are swiped by hand.
+ */
+function SlideList({
+  hero,
+  count,
+  children,
+}: {
+  hero: boolean
+  count: number
+  children: ReactNode
+}) {
+  const many = count > 1
+  if (hero && many) {
+    return (
+      <HeroCarousel count={count} label="Featured slides">
+        {children}
+      </HeroCarousel>
+    )
+  }
+  return (
+    <ul
+      tabIndex={many ? 0 : undefined}
+      className={cn(
+        many && "flex snap-x snap-mandatory overflow-x-auto",
+        !hero && "gap-4",
+      )}
+    >
+      {children}
+    </ul>
   )
 }
 

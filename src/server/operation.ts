@@ -63,7 +63,13 @@ export function authorize(actor: Actor, access: OperationAccess): void {
 export function defineOperation<Input extends z.ZodType, Output>(
   definition: OperationDefinition<Input, Output>,
 ): Operation<Input, Output> {
-  if (operationRegistry.has(definition.name)) {
+  // Two operations with one name is a bug (the RBAC test would miss one).
+  // In development, hot reload runs an edited module again while the
+  // registry survives, so its operations replace their earlier selves.
+  if (
+    operationRegistry.has(definition.name) &&
+    process.env.NODE_ENV !== "development"
+  ) {
     throw new Error(`Duplicate operation name: ${definition.name}`)
   }
 

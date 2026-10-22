@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm"
+import { asc, eq, sql } from "drizzle-orm"
 import { describe, expect, it } from "vitest"
 
 import { collectionProducts } from "@/db/schema"
@@ -58,6 +58,28 @@ describe("manual collections", () => {
       productIds: [b.productId, a.productId],
     })
     expect(await members(id)).toEqual([b.productId, a.productId])
+  })
+
+  it("refreshes pages that show the collection, the home page included", async () => {
+    const product = await createProductFixture()
+    const { id } = await createCollection(system, {
+      type: "manual",
+      slug: unique("best"),
+      title: "Best Sellers",
+    })
+    await setCollectionProducts(system, {
+      collectionId: id,
+      productIds: [product.productId],
+    })
+    // CMS pages (the home page's "Best sellers" section) are cached under
+    // the collections tag, not each collection's own one.
+    const jobs = await getDb().execute<{ tags: string[] }>(sql`
+      select data->'tags' as tags from pgboss.job
+      where name = 'cache.revalidate' and data->'tags' ? ${`collection:${id}`}
+      order by created_on desc limit 1`)
+    expect(jobs.rows[0]?.tags).toEqual(
+      expect.arrayContaining([`collection:${id}`, "collections:list"]),
+    )
   })
 
   it("rejects rules on manual collections and duplicate slugs", async () => {

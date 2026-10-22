@@ -289,7 +289,12 @@ export const setCollectionProducts = defineOperation({
           })),
         )
       }
-      await requestRevalidation([cacheTags.collection(collectionId)], { tx })
+      // collectionsList too: CMS pages (the home page's "Best sellers"
+      // section) are cached under it, as for every other collection change.
+      await requestRevalidation(
+        [cacheTags.collection(collectionId), cacheTags.collectionsList],
+        { tx },
+      )
       await writeAudit(tx, actor, {
         action: "collection.set_products",
         entityType: "collection",
