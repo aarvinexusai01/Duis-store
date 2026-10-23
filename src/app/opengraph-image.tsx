@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+
 import { ImageResponse } from "next/og"
 
 import { SITE } from "@/config/site"
@@ -6,8 +9,12 @@ export const alt = SITE.defaultTitle
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
-/** Default social card: wordmark on ink with the rust bar (no product imagery). */
-export default function OpengraphImage() {
+/** Default social card: the emblem and wordmark on ink with the rust bar. */
+export default async function OpengraphImage() {
+  const emblem = await readFile(
+    path.join(process.cwd(), "public/brand/emblem-512.png"),
+  )
+  const emblemSrc = `data:image/png;base64,${emblem.toString("base64")}`
   return new ImageResponse(
     <div
       style={{
@@ -21,15 +28,18 @@ export default function OpengraphImage() {
         color: "#f4f1ea",
       }}
     >
-      <div
-        style={{
-          fontSize: 220,
-          fontWeight: 900,
-          letterSpacing: 8,
-          lineHeight: 1,
-        }}
-      >
-        DUIS
+      <div style={{ display: "flex", alignItems: "center", gap: 48 }}>
+        <img src={emblemSrc} width={240} height={240} alt="" />
+        <div
+          style={{
+            fontSize: 220,
+            fontWeight: 900,
+            letterSpacing: 8,
+            lineHeight: 1,
+          }}
+        >
+          DUIS
+        </div>
       </div>
       <div
         style={{ width: 360, height: 24, background: "#b43b0b", marginTop: 32 }}

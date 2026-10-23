@@ -20,7 +20,7 @@ export function SiteFooter({ draft }: { draft?: ChromeDraft } = {}) {
     <footer className="mt-16 bg-ink text-paper">
       <div className="page-container grid gap-12 py-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:py-16">
         <div>
-          <Wordmark className="text-5xl" />
+          <Wordmark className="text-5xl" large />
           <h2 className="mt-6 font-display text-2xl tracking-wide uppercase">
             Get first dibs on drops
           </h2>

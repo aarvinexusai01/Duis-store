@@ -16,7 +16,7 @@ export default function TwoFactorPage() {
       id="main"
       className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-12"
     >
-      <Wordmark className="text-4xl" />
+      <Wordmark className="text-4xl" large />
       <h1 className="display-heading text-4xl">Secure your staff account</h1>
       <Suspense fallback={null}>
         <Setup />

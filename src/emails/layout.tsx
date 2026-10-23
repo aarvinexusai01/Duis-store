@@ -54,7 +54,19 @@ export function EmailLayout({
                           textTransform: "uppercase",
                         }}
                       >
-                        Duis
+                        {/* eslint-disable-next-line @next/next/no-img-element -- emails need a plain absolute image */}
+                        <img
+                          src={`${process.env.APP_URL ?? ""}/brand/emblem-128.png`}
+                          width={40}
+                          height={40}
+                          alt=""
+                          style={{
+                            verticalAlign: "middle",
+                            marginRight: 12,
+                            border: 0,
+                          }}
+                        />
+                        <span style={{ verticalAlign: "middle" }}>Duis</span>
                       </td>
                     </tr>
                     <tr>

@@ -25,8 +25,12 @@ export const metadata: Metadata = {
   applicationName: SITE.name,
   formatDetection: { telephone: false, email: false, address: false },
   openGraph: { siteName: SITE.name, locale: "en_IN", type: "website" },
-  // Served from site settings (or a monogram), so staff can change it.
-  icons: { icon: "/brand/icon" },
+  // Served from site settings (or the emblem), so staff can change it. The
+  // home-screen icon is the emblem on ink (scripts/make-brand-assets.mjs).
+  icons: {
+    icon: "/brand/icon",
+    apple: "/brand/apple-touch-icon.png",
+  },
 }
 
 export const viewport: Viewport = {

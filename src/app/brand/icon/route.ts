@@ -5,7 +5,7 @@ import { getPublishedSiteSettings } from "@/features/cms/queries"
 
 /**
  * The browser-tab icon (doc/06 Phase 6b): the favicon from site settings,
- * or a DUIS monogram. Linked from the root layout's metadata.
+ * or the Duis emblem. Linked from the root layout's metadata.
  */
 export async function GET() {
   await connection()
@@ -21,10 +21,11 @@ export async function GET() {
       },
     })
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#111111"/><text x="32" y="46" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="40" fill="#f4f1ea">D</text></svg>`
-  return new Response(svg, {
+  // The Duis emblem (scripts/make-brand-assets.mjs).
+  return new Response(null, {
+    status: 307,
     headers: {
-      "content-type": "image/svg+xml",
+      location: "/brand/favicon-64.png",
       "cache-control": "public, max-age=300",
     },
   })

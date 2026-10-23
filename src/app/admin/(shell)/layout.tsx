@@ -5,6 +5,7 @@ import { AdminMobileNav } from "@/components/admin/admin-mobile-nav"
 import { CommandPalette } from "@/components/admin/command-palette"
 import { AdminNavLinks } from "@/components/admin/admin-sidebar"
 import { AdminSignOut } from "@/components/admin/sign-out-button"
+import { Emblem } from "@/components/brand/wordmark"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ADMIN_NAV, can, requireStaff } from "@/features/staff"
 
@@ -35,8 +36,9 @@ async function Shell({ children }: { children: React.ReactNode }) {
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto bg-ink p-4 text-paper lg:flex">
         <Link
           href="/admin"
-          className="font-display text-2xl tracking-wide uppercase"
+          className="flex items-center gap-2 font-display text-2xl tracking-wide uppercase"
         >
+          <Emblem className="size-8" />
           Duis <span className="text-sm text-chrome-muted">admin</span>
         </Link>
         <AdminNavLinks groups={groups} />
