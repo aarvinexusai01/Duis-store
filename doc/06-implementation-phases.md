@@ -1006,6 +1006,17 @@ Tasks:
     - an empty value in the env counts as not set;
     - E2E runs with Turnstile off, because once real keys were added to `.env`, every test sign-up was refused by the challenge.
 
+**Owner's size charts (2026-10-23).** The four charts from the owner's artwork replace the demo tops chart where it applies (migration `0016_owner_size_charts.sql`, also used by the seed):
+- Oversized Hoodie → Hoodies.
+- Oversized Sweatshirt → Sweatshirts.
+- Oversized T-Shirt → Oversized and Graphic T-Shirts.
+- Regular Fit T-Shirt → Regular Fit and Polo T-Shirts.
+
+Notes:
+- Charts are stored in inches. The size guide has an Inches/CM switch; converting with × 2.54, rounded to 0.1, reproduces the artwork's cm tables exactly (`src/lib/size-units.test.ts`).
+- A chart is linked only where a category has none, so a chart staff already chose is never replaced. Parent categories keep the general chart.
+- Customers now see "2XL" instead of "XXL". The value's slug stays `xxl`, so filter links and variants are unchanged, and past orders keep the label they were bought under.
+
 Tasks:
 1. **Security review** against the [08 checklist](08-security-compliance.md): authorization on every action, headers and CSP, upload fuzzing, webhook replay, rate limits, secret scan, `npm audit`, container image scan, Postgres not exposed.
 2. **Load test (k6):** browsing at an expected peak of 5–10× the average, search, and a checkout-initiation burst on the same SKUs. Tune Postgres, the connection pool and replica settings. Revisit ADR-008 if needed.
@@ -1023,3 +1034,4 @@ Tasks:
    - First-week daily checks: payments reconciliation, stuck orders, dead letters, error rate, backup status
 
 **Exit criteria:** every checklist item is signed off, and launch is approved by you.
+

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 import { getServerEnv } from "@/config/env"
 import { departments, users } from "@/db/schema"
@@ -188,7 +188,8 @@ async function main() {
         await createAttributeValue(actor, {
           attributeId: attributeIds.size!,
           slug,
-          label: slug.toUpperCase(),
+          // Customers see "2XL" (owner decision 2026-10-23); the slug stays.
+          label: slug === "xxl" ? "2XL" : slug.toUpperCase(),
           position,
         })
       ).id
@@ -213,6 +214,14 @@ async function main() {
         })
       ).id,
     }
+    // The owner's charts come from migration 0016_owner_size_charts.
+    const ownerCharts = Object.fromEntries(
+      (
+        await getDb().execute<{ id: string; name: string }>(
+          sql`select id, name from size_charts`,
+        )
+      ).rows.map((r) => [r.name, r.id]),
+    )
     const men = await createDepartment(actor, { slug: "men", name: "Men" })
     categoryIds.men = men.id
     for (const [position, root] of CATEGORY_TREE.entries()) {
@@ -233,6 +242,9 @@ async function main() {
             slug: child.slug,
             name: child.name,
             defaultHsnCode: child.hsn,
+            sizeChartId: child.ownerChart
+              ? (ownerCharts[child.ownerChart] ?? null)
+              : null,
             position: childPosition,
           })
         ).id

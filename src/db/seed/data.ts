@@ -52,7 +52,7 @@ export const SIZE_CHARTS = {
       { size: "M", values: ["42", "28", "18.5"] },
       { size: "L", values: ["44", "29", "19"] },
       { size: "XL", values: ["46", "30", "20"] },
-      { size: "XXL", values: ["48", "31", "21"] },
+      { size: "2XL", values: ["48", "31", "21"] },
       { size: "3XL", values: ["50", "32", "22"] },
     ],
   },
@@ -71,6 +71,8 @@ type CategorySeed = {
   name: string
   hsn?: string
   chart?: keyof typeof SIZE_CHARTS
+  /** One of the owner's charts, added by migration 0016_owner_size_charts. */
+  ownerChart?: string
   children?: CategorySeed[]
 }
 
@@ -81,10 +83,27 @@ export const CATEGORY_TREE: CategorySeed[] = [
     hsn: "6109",
     chart: "tops",
     children: [
-      { slug: "oversized-t-shirts", name: "Oversized T-Shirts" },
-      { slug: "regular-fit-t-shirts", name: "Regular Fit T-Shirts" },
-      { slug: "graphic-t-shirts", name: "Graphic T-Shirts" },
-      { slug: "polo-t-shirts", name: "Polo T-Shirts", hsn: "6105" },
+      {
+        slug: "oversized-t-shirts",
+        name: "Oversized T-Shirts",
+        ownerChart: "Oversized T-Shirt",
+      },
+      {
+        slug: "regular-fit-t-shirts",
+        name: "Regular Fit T-Shirts",
+        ownerChart: "Regular Fit T-Shirt",
+      },
+      {
+        slug: "graphic-t-shirts",
+        name: "Graphic T-Shirts",
+        ownerChart: "Oversized T-Shirt",
+      },
+      {
+        slug: "polo-t-shirts",
+        name: "Polo T-Shirts",
+        hsn: "6105",
+        ownerChart: "Regular Fit T-Shirt",
+      },
     ],
   },
   {
@@ -104,8 +123,12 @@ export const CATEGORY_TREE: CategorySeed[] = [
     hsn: "6110",
     chart: "tops",
     children: [
-      { slug: "hoodies", name: "Hoodies" },
-      { slug: "sweatshirts", name: "Sweatshirts" },
+      { slug: "hoodies", name: "Hoodies", ownerChart: "Oversized Hoodie" },
+      {
+        slug: "sweatshirts",
+        name: "Sweatshirts",
+        ownerChart: "Oversized Sweatshirt",
+      },
     ],
   },
   {
