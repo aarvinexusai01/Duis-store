@@ -29,6 +29,9 @@ x-app-env: &app-env
   MEDIA_ROOT: /data/media
   STORAGE_PRIVATE_ROOT: /data/private
   INTERNAL_REVALIDATE_URLS: http://web_a:3000,http://web_b:3000
+  REDIS_URL: redis://:${REDIS_PASSWORD:?set in .env.infra}@redis:6379/0
+  ELASTICSEARCH_URL: http://elasticsearch:9200
+  ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:?set in .env.infra}
 
 x-app: &app
   <<: *hardening
@@ -75,6 +78,8 @@ services:
       - ./docker/nginx:/etc/nginx/duis:ro
       - ./state/nginx:/etc/nginx/site:ro
       - media:/srv/media:ro
+      # Page and build-file caches (ADR-0033); safe to lose.
+      - nginx_cache:/var/cache/nginx
     tmpfs:
       - /tmp
     networks:
@@ -181,9 +186,9 @@ services:
       - -c
       - config_file=/etc/postgresql/postgresql.conf
       - -c
-      - shared_buffers=${PG_SHARED_BUFFERS:-4GB}
+      - shared_buffers=${PG_SHARED_BUFFERS:-3GB}
       - -c
-      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-10GB}
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-8GB}
     environment:
       <<: *pgbackrest-env
       POSTGRES_DB: duis
@@ -221,7 +226,81 @@ services:
     deploy:
       resources:
         limits:
-          memory: ${PG_MEMORY:-6G}
+          memory: ${PG_MEMORY:-5G}
+
+  # Shared cache for both web replicas and product-page stock (ADR-0033).
+  # Only a cache: nothing is saved to disk, and the app falls back to
+  # Postgres while it's down. Entries all carry a TTL, and volatile-lru
+  # evicts only those, never the invalidation list.
+  redis:
+    <<: *hardening
+    image: redis:8.10.2-alpine
+    user: redis
+    # The password goes into a config file in memory, not the process list.
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        printf 'requirepass "%s"\n' "$$REDISCLI_AUTH" > /tmp/redis.conf &&
+        exec redis-server /tmp/redis.conf --dir /tmp
+        --maxmemory ${REDIS_MAXMEMORY:-512mb} --maxmemory-policy volatile-lru
+        --save "" --appendonly no
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?set in .env.infra}
+    tmpfs:
+      - /tmp
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY:-768M}
+
+  # Product search (ADR-0033). Holds only a copy of the catalogue, rebuilt
+  # from Postgres at any time, so it isn't backed up. Single node, security
+  # on, plain HTTP on the private network. The root filesystem stays
+  # writable: Elasticsearch writes its keystore and logs under its home.
+  elasticsearch:
+    image: elasticsearch:9.5.5
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"
+      xpack.ml.enabled: "false"
+      # Indexes are only ever created with their mappings (the indexer).
+      action.auto_create_index: "false"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?set in .env.infra}
+      ES_JAVA_OPTS: -Xms${ES_HEAP:-1g} -Xmx${ES_HEAP:-1g}
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - backend
+    ulimits:
+      nofile: { soft: 65535, hard: 65535 }
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'curl -sf -u "elastic:$$ELASTIC_PASSWORD" "localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s" > /dev/null',
+        ]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: ${ES_MEMORY:-2G}
 
   # Scheduled backups (docker/postgres/conf/crontab) and their status.
   backup:
@@ -287,3 +366,5 @@ volumes:
   private:
   next_cache_a:
   next_cache_b:
+  esdata:
+  nginx_cache:

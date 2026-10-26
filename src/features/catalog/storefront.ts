@@ -3,6 +3,7 @@ import { sql, type SQL } from "drizzle-orm"
 
 import type { RichTextDocument } from "@/lib/rich-text"
 import {
+  FACET_KEYS,
   PAGE_SIZE,
   type FacetKey,
   type ListingParams,
@@ -195,9 +196,11 @@ export type Listing = {
   pageCount: number
   facets: Record<FacetKey, FacetOption[]>
   priceRange: { minPaise: number; maxPaise: number } | null
+  /** Search couldn't run right now (./search/query.ts); try again shortly. */
+  busy?: true
 }
 
-type FacetValue = {
+export type FacetValue = {
   id: string
   code: string
   slug: string
@@ -207,7 +210,7 @@ type FacetValue = {
   position: number
 }
 
-async function loadFacetValues(): Promise<FacetValue[]> {
+export async function loadFacetValues(): Promise<FacetValue[]> {
   return rows<FacetValue>(
     await getDb().execute(sql`
       select v.id, a.code::text as code, v.slug::text as slug, v.label, v.swatch_hex as hex,
@@ -243,7 +246,7 @@ function scopeCondition(scope: ListingScope): SQL {
   }
 }
 
-function valueIds(
+export function valueIds(
   values: FacetValue[],
   key: FacetKey,
   slugs: string[],
@@ -309,43 +312,22 @@ function orderBy(scope: ListingScope, params: ListingParams): SQL {
 
 const BASE = sql`products p join product_listing_cache lc on lc.product_id = p.id`
 
-export async function loadListing(
-  scope: ListingScope,
+/** Products per attribute value, for each filter (value id → count). */
+export type FacetCounts = Record<FacetKey, Map<string, number>>
+
+/**
+ * Turns counts into the filter options a listing shows, whichever engine
+ * counted (Postgres here, Elasticsearch in ./search). Options with no
+ * products are hidden unless selected.
+ */
+export function shapeFacets(
+  counts: FacetCounts,
   params: ListingParams,
-): Promise<Listing> {
-  const db = getDb()
-  const values = await loadFacetValues()
-  const where = (conditions: SQL[]) =>
-    sql.join(
-      [sql`p.status = 'active'`, scopeCondition(scope), ...conditions],
-      sql` and `,
-    )
-
-  const page = rows<{ id: string; total: number }>(
-    await db.execute(sql`
-      select p.id, count(*) over ()::int as total
-      from ${BASE}
-      where ${where(filterConditions(params, values))}
-      order by ${orderBy(scope, params)}
-      limit ${PAGE_SIZE} offset ${(params.page - 1) * PAGE_SIZE}
-    `),
-  )
-  const total = page[0]?.total ?? 0
-  const items = await loadProductCards(page.map((row) => row.id))
-
+  values: FacetValue[],
+): Record<FacetKey, FacetOption[]> {
   const facets = {} as Record<FacetKey, FacetOption[]>
-  for (const key of ["color", "size", "fit", "pattern", "sleeve"] as const) {
-    const column =
-      key === "size" ? sql`lc.in_stock_value_ids` : sql`lc.filter_value_ids`
-    const counts = rows<{ value_id: string; count: number }>(
-      await db.execute(sql`
-        select value_id, count(*)::int as count
-        from ${BASE} cross join lateral unnest(${column}) as value_id
-        where ${where(filterConditions(params, values, key))}
-        group by value_id
-      `),
-    )
-    const countById = new Map(counts.map((row) => [row.value_id, row.count]))
+  for (const key of FACET_KEYS) {
+    const countById = counts[key]
     const facetValues = values.filter((v) => v.code === key)
 
     if (key === "color") {
@@ -378,6 +360,48 @@ export async function loadListing(
         )
     }
   }
+  return facets
+}
+
+export async function loadListing(
+  scope: ListingScope,
+  params: ListingParams,
+): Promise<Listing> {
+  const db = getDb()
+  const values = await loadFacetValues()
+  const where = (conditions: SQL[]) =>
+    sql.join(
+      [sql`p.status = 'active'`, scopeCondition(scope), ...conditions],
+      sql` and `,
+    )
+
+  const page = rows<{ id: string; total: number }>(
+    await db.execute(sql`
+      select p.id, count(*) over ()::int as total
+      from ${BASE}
+      where ${where(filterConditions(params, values))}
+      order by ${orderBy(scope, params)}
+      limit ${PAGE_SIZE} offset ${(params.page - 1) * PAGE_SIZE}
+    `),
+  )
+  const total = page[0]?.total ?? 0
+  const items = await loadProductCards(page.map((row) => row.id))
+
+  const counts = {} as FacetCounts
+  for (const key of FACET_KEYS) {
+    const column =
+      key === "size" ? sql`lc.in_stock_value_ids` : sql`lc.filter_value_ids`
+    const found = rows<{ value_id: string; count: number }>(
+      await db.execute(sql`
+        select value_id, count(*)::int as count
+        from ${BASE} cross join lateral unnest(${column}) as value_id
+        where ${where(filterConditions(params, values, key))}
+        group by value_id
+      `),
+    )
+    counts[key] = new Map(found.map((row) => [row.value_id, row.count]))
+  }
+  const facets = shapeFacets(counts, params, values)
 
   const [range] = rows<{ min: number | null; max: number | null }>(
     await db.execute(sql`
@@ -546,11 +570,7 @@ export async function loadSuggestions(
   query: string,
   tree: CatalogTree,
 ): Promise<Suggestions> {
-  const words =
-    query
-      .toLowerCase()
-      .match(/[a-z0-9]+/g)
-      ?.slice(0, 5) ?? []
+  const words = searchWords(query)
   if (words.length === 0) return { products: [], categories: [] }
   const tsquery = words.map((word) => `${word}:*`).join(" & ")
 
@@ -564,9 +584,32 @@ export async function loadSuggestions(
     `),
   ).map((row) => row.id)
   const cards = await loadProductCards(ids)
+  return {
+    products: cards.map(suggestedProduct),
+    categories: suggestCategories(query, tree),
+  }
+}
 
+export function suggestedProduct(
+  card: ProductCard,
+): Suggestions["products"][number] {
+  return {
+    slug: card.slug,
+    title: card.title,
+    pricePaise: card.pricePaise,
+    image: card.image,
+  }
+}
+
+/** Categories whose name contains what was typed (from the cached tree). */
+export function suggestCategories(
+  query: string,
+  tree: CatalogTree,
+): Suggestions["categories"] {
+  const words = searchWords(query)
+  if (words.length === 0) return []
   const needle = words.join(" ")
-  const categories = tree.categories
+  return tree.categories
     .filter(
       (c) =>
         c.name.toLowerCase().includes(needle) ||
@@ -574,16 +617,15 @@ export async function loadSuggestions(
     )
     .slice(0, 4)
     .map((c) => ({ name: c.name, href: c.href }))
+}
 
-  return {
-    products: cards.map((card) => ({
-      slug: card.slug,
-      title: card.title,
-      pricePaise: card.pricePaise,
-      image: card.image,
-    })),
-    categories,
-  }
+function searchWords(query: string): string[] {
+  return (
+    query
+      .toLowerCase()
+      .match(/[a-z0-9]+/g)
+      ?.slice(0, 5) ?? []
+  )
 }
 
 // --- Product detail -------------------------------------------------------------

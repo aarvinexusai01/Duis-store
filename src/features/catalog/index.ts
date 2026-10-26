@@ -17,7 +17,22 @@ export {
 } from "./service"
 export { refreshListingCache, refreshSearchKeywords } from "./derived"
 export {
+  closeSearchClient,
+  getSearchClient,
+  searchIndexAlias,
+} from "./search/client"
+export {
+  drainSearchQueue,
+  ensureSearchIndex,
+  rebuildSearchIndex,
+  reconcileSearchIndex,
+} from "./search/indexer"
+export { searchListing, searchSuggestions } from "./search/query"
+/** Postgres notifies this when products are queued for indexing (0018). */
+export const SEARCH_CHANNEL = "duis_search"
+export {
   loadCatalogTree,
+  loadFacetValues,
   loadListing,
   loadMediaRefs,
   loadNewestProductIds,

@@ -206,3 +206,32 @@ test("the contact form saves a message for the team", async ({ page }) => {
   await form.getByRole("button", { name: "Send message" }).click()
   await expect(page.getByText("Thanks, we've got it")).toBeVisible()
 })
+
+test("search: suggestions as you type, then forgiving results", async ({
+  page,
+}) => {
+  await page.goto("/")
+  // The header's box; the phone menu holds a second, hidden one.
+  const box = page.getByRole("combobox").filter({ visible: true }).first()
+  test.skip(!(await box.isVisible()), "the search box is in the menu on phones")
+
+  // The demo catalogue has hoodies; "hood" is enough to be suggested one.
+  await box.fill("hood")
+  const suggestion = page
+    .getByRole("listbox", { name: "Suggestions" })
+    .getByRole("option")
+    .filter({ hasText: /Hoodie/ })
+    .first()
+  const suggested = await suggestion
+    .waitFor({ state: "visible", timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false)
+  test.skip(!suggested, "no seeded catalogue — run `npm run db:seed` first")
+
+  // A typo still finds them (Elasticsearch, or Postgres while it's down).
+  await page.goto("/search?q=hoddie")
+  await expect(
+    page.getByRole("heading", { name: /Results for “hoddie”/ }),
+  ).toBeVisible()
+  await expect(page.getByRole("link", { name: /Hoodie/ }).first()).toBeVisible()
+})

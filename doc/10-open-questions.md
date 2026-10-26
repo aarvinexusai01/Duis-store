@@ -52,7 +52,7 @@ These come from [01 §4](01-requirements-and-decisions.md#4-assumptions-please-c
 - [ ] Wishlist requires login
 - [ ] Staff 2FA mandatory
 - [ ] Roles defined in code (no UI permission editor)
-- [ ] Postgres full-text search at launch (Meilisearch only if needed)
+- [x] Search engine: Elasticsearch, with Postgres search as the fallback (owner decision 2026-10-23, ADR-033)
 - [ ] GitHub Actions runs checks on PRs (free private-repo minutes are enough), even though deploys build on the server
 - [ ] A staging environment (small separate VPS, or a Compose project behind Cloudflare Access) for real Razorpay test mode and Shiprocket checks
 

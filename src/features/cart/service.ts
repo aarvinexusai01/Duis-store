@@ -252,8 +252,12 @@ export const getCart = defineOperation({
   async handler({ actor }, { guestToken: token }): Promise<CartView> {
     const db = getDb()
     const cartId = await findCartId(db, actor, token)
+    // Every page's header asks, mostly for visitors with no bag: answer
+    // those without a query (ADR-0033). The free-shipping nudge only shows
+    // with items in the bag.
+    if (!cartId) return buildView([], 0)
     const [lines, policy] = await Promise.all([
-      cartId ? loadLines(db, cartId) : Promise.resolve([]),
+      loadLines(db, cartId),
       loadStorePolicy(),
     ])
     return buildView(lines, policy.freeShippingThresholdPaise)

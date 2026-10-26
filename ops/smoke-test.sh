@@ -49,6 +49,13 @@ main() {
     echo "${code:-000}"
   }
   body() { "${CURL[@]}" "$@" 2>/dev/null || true; }
+  # Nginx's page-cache verdict (ADR-0033); "none" when it doesn't apply.
+  cache_status() {
+    local value
+    value=$("${CURL[@]}" -o /dev/null -D - "$@" 2>/dev/null |
+      awk 'tolower($1) == "x-cache-status:" { print $2 }' | tr -d '\r') || true
+    echo "${value:-none}"
+  }
 
   log "smoke test against $BASE"
   check "liveness" 200 "$(status "$BASE/api/health")"
@@ -78,9 +85,18 @@ main() {
     local image
     image=$(body "$BASE$product" | grep -oE '/media/[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+\.webp' | head -n 1 || true)
     [ -n "$image" ] && check "image from the media volume" 200 "$(status "$BASE$image")"
+    # The 10-second page cache: stored for signed-out visitors with no bag,
+    # skipped for anyone with one.
+    cache_status "$BASE$product" >/dev/null
+    check "page cache serves a product page" "HIT|STALE|UPDATING" "$(cache_status "$BASE$product")"
+    check "page cache skipped with a bag" BYPASS \
+      "$(cache_status -H 'Cookie: duis_cart=smoke-test' "$BASE$product")"
   else
     printf '  skip  product page (no products in the sitemap yet)\n'
   fi
+
+  check "the bag is never cached" none "$(cache_status "$BASE/cart")"
+  check "search" 200 "$(status "$BASE/search?q=shirt")"
 
   check "internal API blocked" 404 "$(status "$BASE/api/internal/revalidate")"
   check "payment webhook rejects a bad signature" 401 \

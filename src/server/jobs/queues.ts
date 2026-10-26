@@ -29,6 +29,7 @@ export const QUEUES = {
   metaPurchase: "analytics.meta-purchase",
   publishScheduledContent: "cms.publish-scheduled",
   opsCheck: "system.ops-check",
+  reconcileSearch: "search.reconcile",
 } as const
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES]
@@ -67,6 +68,7 @@ export type JobPayloads = {
   "analytics.meta-purchase": { orderId: string }
   "cms.publish-scheduled": null
   "system.ops-check": null
+  "search.reconcile": null
 }
 
 type QueuePolicy = Parameters<PgBoss["createQueue"]>[1]
@@ -199,6 +201,13 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
     retryDelay: 15,
     expireInSeconds: 120,
     deadLetter,
+  },
+  // Nightly: products missing from or stale in the search index (ADR-0033).
+  "search.reconcile": {
+    policy: "stately",
+    retryLimit: 2,
+    retryDelay: 600,
+    expireInSeconds: 600,
   },
   // Server health (doc/07 §7); the next run covers a failed one.
   "system.ops-check": {

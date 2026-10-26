@@ -23,13 +23,12 @@ import {
 } from "@/features/catalog/queries"
 import { getProductReviews } from "@/features/reviews"
 import { describeCodAdvance, getStorePolicy } from "@/features/settings"
-import { getAvailability } from "@/features/inventory"
+import { getCachedAvailability } from "@/features/inventory"
 import { WishlistButton } from "@/features/wishlist/ui/wishlist-button"
 import { countryName } from "@/lib/countries"
 import { formatPaise } from "@/lib/money"
 import { SLUG } from "@/lib/slug"
 import type { Stock } from "@/lib/variant-selection"
-import { anonymousActor } from "@/server/auth/actor"
 import { absoluteUrl } from "@/server/site-url"
 
 import { PincodeCheck } from "./_components/pincode-check"
@@ -80,13 +79,11 @@ export default function ProductPage({ params }: Props) {
   )
 }
 
-/** Stock is read fresh on every request and never cached (doc/06, Phase 2). */
+/** Stock comes from Redis, cleared on every change (ADR-0033), else Postgres. */
 async function loadStock(variantIds: string[]): Promise<Stock> {
   if (variantIds.length === 0) return {}
   try {
-    return Object.fromEntries(
-      await getAvailability(anonymousActor(), { variantIds }),
-    )
+    return Object.fromEntries(await getCachedAvailability(variantIds))
   } catch {
     return null
   }

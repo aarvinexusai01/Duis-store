@@ -278,6 +278,8 @@ export const createDiscount = defineOperation({
   async handler({ actor }, input) {
     try {
       return await withTransaction(async (tx) => {
+        // "Starts now" is the database's now: checkout compares starts_at
+        // with now(), and the app's clock can run ahead of it.
         const created = await tx.execute<{ id: string }>(sql`
           insert into discounts (name, kind, value_type, value, max_discount_paise, min_order_paise,
                                  applies_to, eligibility, combinable, priority, starts_at, ends_at,
@@ -285,7 +287,7 @@ export const createDiscount = defineOperation({
           values (${input.name}, ${input.kind}, ${input.valueType}, ${input.value}, ${input.maxDiscountPaise},
                   ${input.minOrderPaise}, ${input.targets.length > 0 ? "targets" : "all"},
                   ${JSON.stringify(input.eligibility)}::jsonb, ${input.combinable}, ${input.priority},
-                  ${input.startsAt ?? new Date()}, ${input.endsAt}, ${input.usageLimitTotal},
+                  ${input.startsAt ?? sql`now()`}, ${input.endsAt}, ${input.usageLimitTotal},
                   ${input.usageLimitPerCustomer})
           returning id`)
         const id = created.rows[0]!.id

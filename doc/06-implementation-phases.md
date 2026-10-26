@@ -15,6 +15,7 @@ The phases follow technical dependencies while putting the storefront first. Eac
 | 6 | CMS portal | L | **M4:** editors build, preview, review, schedule and publish the homepage and pages, and the storefront updates live. |
 | 7 | Production deployment & operations | M | **M5:** stack running on the VPS behind Cloudflare, with backups, monitoring and rollback |
 | 8 | Hardening, verification & launch | M | All Definition-of-Done scenarios pass. Live credentials are activated. Go-live. |
+| 9 | Search engine & shared caching (before Phase 8's load test) | L | ✅ **Built and verified on a laptop 2026-10-26**; server checks wait for the VPS. Search runs on Elasticsearch. Repeat views of a product or search make almost no Postgres queries, on either app copy. |
 
 Sizes are relative (S < M < L < XL), not calendar estimates.
 
@@ -1035,3 +1036,185 @@ Tasks:
 
 **Exit criteria:** every checklist item is signed off, and launch is approved by you.
 
+---
+
+## Phase 9: Search engine & shared caching
+
+**Plan (written and approved 2026-10-23, before building).** Goal: when traffic grows, Postgres should only do work that has to be live (bags, checkout, orders, admin). Everything visitors browse should come from a cache, and search should run on its own engine.
+
+- **Owner decisions (2026-10-23):**
+  - **Search:** Elasticsearch, with Postgres search kept as the automatic fallback.
+  - **Redis:** a shared cache for all the data the storefront already caches (products, listings, categories, CMS content). Rate limits, sessions and the job queue stay in Postgres.
+  - **Stock on product pages:** cached in Redis and cleared whenever it changes.
+  - **Nginx:** caches static files, plus whole pages for 10 seconds for signed-out visitors with an empty bag.
+
+  These reverse the "Postgres search, no Redis" decisions (doc/01 #13, doc/02, ADR-005). ADR-0033 will record why.
+
+**What happens today, for comparison:**
+- **Product details** (title, photos, prices, sizes, size chart) already come from Next's cache after the first view, until an admin edit clears them. But each app copy keeps its own cache in memory, so the database fills it twice, and both copies start empty after every deploy.
+- **Stock** is read from Postgres on every product view.
+- **Search** results and the search box suggestions run on Postgres for every search. The suggestion rate limit writes to Postgres on every keystroke.
+- **Nginx** caches product photos only.
+
+**Points to be clear about before building:**
+- **Stock can be a few seconds old in one rare case.** A product view that starts just before a sale finishes can put the old stock count back into Redis right after the sale cleared it. Every stock entry therefore expires after 30 seconds at most. This can't cause overselling: adding to the bag and checkout always check the real stock rows under a lock (ADR-0032). The worst case is a customer seeing "in stock" for up to 30 seconds and then being told it sold out.
+- **The 10-second page cache is for signed-out visitors with an empty bag:** first-time visitors, visitors from ads or Instagram, and search engines. That's exactly the group that arrives all at once in a traffic spike. Anyone signed in or with something in their bag skips it and is served by the app, whose data comes from Redis.
+- **Memory:** Elasticsearch needs about 2 GB, and Redis needs about 0.75 GB. The 4 vCPU / 8 GB "launch minimum" in doc/07 no longer fits, so **8 vCPU / 16 GB becomes the minimum**. With reads moved off Postgres, its `shared_buffers` can drop from 4 GB to 3 GB to make room.
+- **Licences:** Elasticsearch 9 (AGPL or Elastic License) and Redis 8 (AGPL or RSAL) are free to run for our own shop without changing their code. No paid tier is needed.
+- **Suggestion rate limit:** the search box limit keeps writing a counter to Postgres on each keystroke (owner decision 2026-10-23: leave it in Postgres). It is one small indexed upsert, and the suggestions themselves come from Elasticsearch.
+
+**Delivery: four slices, each with a review stop.** Work happens on branch `search-and-caching`, cut after the size-chart branch is committed.
+
+**9a: Redis** ✅ Built 2026-10-23 (ADR-0033).
+- **Measured** (production build, two replicas): after one view on replica A, 100 views of the same product on replica B made no Postgres queries beyond background noise, and statement logging showed zero for 40 views across both replicas. An edit sent to one replica showed on the other. With Redis stopped, pages kept answering from Postgres, and both replicas recovered on their own when it came back.
+- **Also found and fixed:** every page's header read the store settings twice for visitors with no bag. That was the last per-view query.
+- **Tests:** 8 for the shared cache, 6 for the stock cache (trigger, listener, rollback, a location switch, Redis down). Integration 1,610 passed; E2E 48 passed, 16 skipped (with Redis).
+
+Plan as approved:
+- **Service:**
+  - a `redis` service (Redis 8, pinned version), on the private `backend` network only, with no published port and a password;
+  - a 512 MB cap that evicts the least-recently-used entries;
+  - no saving to disk: it's a cache, and anything lost is rebuilt from Postgres;
+  - a health check and a 768 MB memory limit.
+  - It's also added to `compose.dev.yaml` (`npm run db:up`) and the local production stack.
+- **Shared Next.js cache:** a custom `cacheHandlers` handler (the hook Next 16 provides for `"use cache"`) stores entries in Redis with Next's own expiry times.
+  - Tag invalidation is shared: an admin edit clears the entry for both app copies at once.
+  - Each copy keeps a small in-memory copy of hot entries, checked against Redis's list of invalidated tags once per request. A popular product then doesn't even need a Redis read on every view.
+  - The existing revalidation fan-out stays as a safety net.
+- **If Redis is down,** the handler falls back to today's per-copy memory cache and logs a warning. The shop keeps working, just with more Postgres reads. `/api/health/ops` reports it.
+- **Stock cache:**
+  - A database trigger on `inventory_levels` sends a Postgres notification for every stock change, from any code path (sales, cancellations, returns, exchanges, admin adjustments, expired holds, even manual SQL). Postgres delivers it only after the change is committed.
+  - The worker listens and deletes that product's stock entry in Redis.
+  - Product pages read stock from Redis first, and from Postgres on a miss, with the 30-second expiry above.
+- **Tests:**
+  - the handler: store, read, expiry, tag invalidation, Redis down;
+  - two handler instances standing in for the two app copies: an entry made by one is used by the other, and an edit on one is seen by the other;
+  - the trigger clears stock on a sale, cancellation and admin adjustment;
+  - **a query-count test: the second view of a product page, from another visitor, makes zero Postgres queries for product data.**
+
+**9b: Elasticsearch** ✅ Built 2026-10-23 (ADR-0033).
+- **Relevance on the demo catalogue:**
+  - "hoddie" finds the 9 hoodies, and "blak hoodie" finds the black ones;
+  - "tee" and "t shirt" find the same 32 T-shirts;
+  - "track pants" finds the joggers.
+- **Matches Postgres:** for the same query and filters, Elasticsearch returns the same products, totals, filter counts, price range and cards as the Postgres search. This is checked in `tests/integration/search.test.ts`.
+- **Changes from the plan:**
+  - The product card is stored in the search document, so a search page makes no Postgres query.
+  - The sync queue is a table fed by triggers, so changes made while the worker or Elasticsearch is down aren't lost.
+- **Fixed along the way:** renaming an attribute value now revalidates cached pages and refreshes search keywords. Revalidation requests with more than 200 tags are split, because the replicas refuse larger ones.
+- **Tests:** 6 integration tests (typos, synonyms, word order, suggestions, parity with Postgres, renames, sell-outs, archiving, repairing a lost document, fallback) and an E2E test of the search box and results.
+
+Plan as approved:
+- **Service:**
+  - an `elasticsearch` service (9.5.x, pinned), single node, security on with a password, on the `backend` network only;
+  - 1 GB heap (512 MB in development, so it fits the laptop's Docker VM), a 2 GB memory limit and a data volume.
+  - `host-check.sh` and `bootstrap.sh` set the host's `vm.max_map_count`, which Elasticsearch requires.
+- **Index:** one document per active product, behind an alias, so a rebuild swaps in with no downtime. It holds:
+  - text fields: title, subtitle, description, tags, category names, and colour, fit and pattern labels, with an English analyser;
+  - a prefix field for the search box;
+  - **synonyms** (tee = t-shirt, hoody = hoodie, joggers = track pants, and so on) in a list we can extend;
+  - the same filter fields as `product_listing_cache`: attribute value IDs, in-stock size IDs, price range, in-stock flag, publish date and category IDs.
+- **Searching:**
+  - the `SearchProvider` interface already planned in doc/02 gets two implementations, `postgres` (today's code) and `elasticsearch`;
+  - the search page and the search box use whichever is available;
+  - Elasticsearch returns matching IDs, totals, filter counts and the price range, and product cards come from the Redis-cached card data. **A search makes no Postgres queries.**
+  - The filter-count shaping (colour families and so on) is shared, so both providers return identical shapes.
+  - If Elasticsearch errors or times out, search switches to Postgres for 30 seconds and then tries again.
+- **Keeping it in sync:**
+  - Every refresh of a product's `product_listing_cache` row (the point that product, price, stock and category changes already pass through) queues a `search.index` job for that product. Repeated changes in quick succession collapse into one job.
+  - Archiving removes the product from the index.
+  - `npm run search:reindex` builds a fresh index and switches the alias.
+  - A nightly job compares the index with Postgres and repairs any drift.
+  - Deploys rebuild the index when its mapping version changes.
+- **Tests (against a real Elasticsearch in the dev stack):**
+  - typos ("hoddie" finds hoodies), synonyms ("tee") and prefixes ("overs");
+  - filters and counts match the Postgres listing for the same query;
+  - the index follows an edit, an archive and a sell-out;
+  - the fallback works while Elasticsearch is stopped;
+  - the E2E search flow is unchanged.
+
+**9c: Nginx cache** ✅ Built 2026-10-26 (ADR-0033).
+- **Checked with the production Nginx config in its container,** in front of two local app copies:
+  - a product page misses once, then hits;
+  - a bag or sign-in cookie, and in-app navigations, skip the cache; the cookie-banner choice doesn't;
+  - the bag, account, checkout and API never get an `X-Cache-Status`;
+  - browsers are still told `no-store`;
+  - after 10 s an old copy is served while a new one is fetched;
+  - with both app copies stopped, cached pages still load (STALE, 200);
+  - build files are cached.
+- **Spike:** 300 simultaneous requests for a cold page; **1 reached the app**.
+- **`ops/smoke-test.sh`** now checks the cache after every deploy.
+
+Plan as approved:
+- **Static files:** `/_next/static/*` is cached at Nginx with long, immutable caching. Media is already served this way.
+- **10-second page cache (all of these rules apply):**
+  - **What is cached:** `GET` and `HEAD` requests for storefront pages only: home, categories, collections, products, search, pages and the journal.
+  - **What is never cached:** `/admin`, `/api`, `/checkout`, `/account`, `/auth`, the bag, `/preview`, and any POST (server actions).
+  - **Who skips the cache:** any request carrying the bag cookie (`duis_cart`) or a session cookie (`duis.*`). The cookie-banner choice is read in the browser, so it doesn't affect the page and doesn't need to skip it.
+  - **What is never stored:** a response that sets a cookie.
+  - **Cache key:** the page address plus Next's navigation headers, so a full page and the app's in-page navigation data are kept apart.
+  - **Lock:** while one copy of a page is being fetched, other visitors to the same page wait for it instead of all going to the app. **1,000 visitors in 10 seconds become one app request.**
+  - **App down:** if both app copies are briefly down, Nginx serves its last copy of the page instead of an error.
+- **What changes for visitors:**
+  - A cached page arrives in one piece instead of streaming, so the first visitor in each 10-second window waits slightly longer and the rest get it instantly.
+  - Browsers and Cloudflare still get `no-cache` for pages, so nothing outside our server keeps a copy.
+  - An `X-Cache-Status` header shows HIT, MISS or BYPASS, for checking.
+- **Tests:** `smoke-test.sh` checks:
+  - a miss followed by a hit;
+  - a bypass with a bag or session cookie;
+  - admin, checkout, API and cookie-setting responses are never cached.
+
+**9d: Proof and documentation** ✅ Done on a laptop 2026-10-26.
+- **Load check:** a third app copy without Redis or Elasticsearch stands in for "before". All figures are Postgres transactions per request; the full method is in ADR-0033.
+
+  | Requests | Before Phase 9 | After, at the app | After, signed out through Nginx |
+  |---|---|---|---|
+  | Product page | 1.03 | 0.05 | 0.01 |
+  | Search | 9.05 | 0.02 | 0.01 |
+
+  Median product-page time at the app went from 156 to 89 ms.
+- **Found and fixed by the load check:** under load, Elasticsearch requests timed out at 1.5 s and every search switched to Postgres, loading the database when it was busiest.
+  - Now the timeout is 5 s, and only an unreachable Elasticsearch, or three timeouts in a row, switches search over.
+  - Each app copy runs at most 4 fallback searches at once; the rest are asked to try again.
+  - Drill: with Elasticsearch stopped and 40 searches at once, 11 were answered and 29 were asked to try again, with no errors. Search returned to Elasticsearch on its own within 30 s of it restarting.
+- **Also found and fixed, while running the full suites:**
+  - **New coupons used straight away were sometimes ignored.** A new discount took its start time from the app's clock, while checkout compares with Postgres's clock. On this laptop the Docker VM's clock runs about 25 ms behind, so a coupon used straight after it was created looked "not started yet". This is why the coupon race tests failed now and then. The start time now comes from Postgres.
+  - **An open item:** the CMS race test "two managers publish the same draft at once" failed once in about 30 runs, only during a heavily loaded full run. It now reports which outcome it got, so the next occurrence can be diagnosed. It's not part of Phase 9.
+- **Docs:**
+  - ADR-0033;
+  - doc/01 #13;
+  - doc/02: the technology table and the ADR log;
+  - doc/07: size, RAM budget and topology;
+  - doc/08: secrets;
+  - doc/09: test layers;
+  - doc/10;
+  - runbook [cache and search](runbooks/cache-and-search.md).
+
+**To do on the VPS, once the owner provides it** (with Phase 7b):
+1. Fill `REDIS_PASSWORD` and `ELASTIC_PASSWORD` in `.env.infra` (random hex). `bootstrap.sh` sets `vm.max_map_count`.
+2. Deploy. `ops/deploy.sh` starts Redis and Elasticsearch, and the worker builds the search index on its first start.
+3. Run `ops/smoke-test.sh`. It includes the cache checks.
+4. Repeat the load check on the server: product, search and spike waves through Nginx, counting Postgres transactions. Then repeat the failure drills: stop Redis, stop Elasticsearch, stop both web copies.
+5. Watch memory under load (`docker stats`) against the RAM budget in doc/07 §1. Adjust `ES_HEAP` or `PG_SHARED_BUFFERS` if needed.
+6. Check that "Shared cache (Redis)" and "Product search (Elasticsearch)" are green on `/admin/system`.
+
+Plan as approved:
+- **Load check** on the local production stack (`compose.local.yaml`):
+  - many simultaneous visitors on one product, a category and a search, measured before and after with `pg_stat_statements`;
+  - **target: warm product, listing and search views make close to zero Postgres queries per view.** The numbers go in this doc.
+- **Failure drills:**
+  - stop Redis, and the shop keeps working;
+  - stop Elasticsearch, and search falls back to Postgres;
+  - start them again, and both recover with no restart of the app.
+- **Docs:**
+  - ADR-0033;
+  - doc/01 #13;
+  - doc/02: the technology table, search, caching and the RAM budget;
+  - doc/07: topology, the 16 GB minimum, and runbooks for "Redis down", "Elasticsearch down" and "rebuild the search index";
+  - doc/08: the new passwords, private network only;
+  - doc/09.
+- Phase 7b (the real server) then sets these services up with the rest.
+
+**Not in this phase:** bags, checkout, accounts, orders and admin stay live on Postgres, as they must. Sessions, rate limits and the job queue stay in Postgres. Cloudflare doesn't cache pages.
+
+**Exit criteria:** all four slices reviewed. The query-count test and the load check show product, listing and search views served without Postgres. The failure drills pass. All existing suites still pass. Met on a laptop on 2026-10-26; repeated on the VPS as listed above.

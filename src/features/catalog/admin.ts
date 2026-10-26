@@ -6,6 +6,8 @@ import { products } from "@/db/schema"
 import type { RichTextDocument } from "@/lib/rich-text"
 import { slugSchema } from "@/lib/slug-schema"
 import { writeAudit } from "@/server/audit"
+import { requestRevalidation } from "@/server/cache/revalidate"
+import { cacheTags } from "@/server/cache/tags"
 import { getDb } from "@/server/db/client"
 import { versionOf } from "@/lib/version"
 import { withTransaction } from "@/server/db/transaction"
@@ -473,7 +475,16 @@ export const updateAttributeValue = defineOperation({
         where vav.attribute_value_id = ${id}
         union select product_id from product_attribute_values where attribute_value_id = ${id}`)
       const ids = affected.rows.map((r) => r.product_id)
-      if (ids.length > 0) await refreshListingCache(tx, ids)
+      if (ids.length > 0) {
+        await refreshListingCache(tx, ids)
+        // Labels are search words too.
+        await refreshSearchKeywords(tx, ids)
+      }
+      // Filters and cards show the label; cached pages must rebuild.
+      await requestRevalidation(
+        [cacheTags.productsList, ...ids.map(cacheTags.product)],
+        { tx },
+      )
       await writeAudit(tx, actor, {
         action: "attribute_value.update",
         entityType: "attribute_value",

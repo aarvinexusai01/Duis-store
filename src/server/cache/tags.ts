@@ -19,5 +19,8 @@ export const cacheTags = {
   storeSettings: "store:settings",
 } as const
 
+/** The most tags one revalidation request carries (larger lists are split). */
+export const MAX_TAGS_PER_JOB = 200
+
 /** Tags are short ASCII identifiers; anything else is rejected on receipt. */
 export const CACHE_TAG = /^[a-z][a-z0-9:_-]{0,127}$/i

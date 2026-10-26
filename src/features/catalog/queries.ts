@@ -4,14 +4,15 @@ import { cacheLife, cacheTag } from "next/cache"
 import type { ListingParams } from "@/lib/listing-params"
 import { cacheTags } from "@/server/cache/tags"
 
+import { searchListing, searchSuggestions } from "./search/query"
 import {
   loadCatalogTree,
+  loadFacetValues,
   loadListing,
   loadProductCards,
   loadProductDetail,
   loadProductSitemap,
   loadRelatedProductIds,
-  loadSuggestions,
   type ListingScope,
 } from "./storefront"
 
@@ -73,7 +74,24 @@ export async function getSuggestions(query: string) {
   "use cache"
   cacheTag(cacheTags.productsList, cacheTags.categoriesTree)
   cacheLife("minutes")
-  return loadSuggestions(query, await loadCatalogTree())
+  return searchSuggestions(query, await getCatalogTree())
+}
+
+/** The filters' labels, swatches and colour families. */
+export async function getFacetValues() {
+  "use cache"
+  cacheTag(cacheTags.productsList)
+  cacheLife("hours")
+  return loadFacetValues()
+}
+
+/**
+ * /search results: Elasticsearch, or Postgres when it's unavailable
+ * (ADR-0033). Not cached: every query would be its own entry, and
+ * Elasticsearch answers without touching Postgres.
+ */
+export async function searchCatalog(query: string, params: ListingParams) {
+  return searchListing(query, params, await getFacetValues())
 }
 
 export async function getProductSitemap() {

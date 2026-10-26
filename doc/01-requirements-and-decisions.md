@@ -28,7 +28,7 @@ A production-ready, self-hosted e-commerce platform for **Duis**, a single-merch
 | 10 | GST invoices | **Issued by an external tool** (Zoho Books, Tally or Shiprocket) | The platform still calculates and saves GST per order line (HSN, rate, taxable value, CGST/SGST/IGST) and provides CSV exports. It does not number or print invoices. |
 | 11 | Shipping fee | **Free at or above ₹999; below that, the live courier rate for the PIN code** | The threshold can be edited in admin. Below it, the customer pays the rate Shiprocket quotes for that PIN code and parcel weight, so product weights must be accurate. If no rate can be fetched, checkout says so; it never invents a rate. International shipping fees are open (doc/10 §1b). |
 | 12 | Catalogue data | **None yet, so demo data** | A deterministic seed creates realistic demo products, variants, stock, collections and CMS content with generated placeholder images. CSV import is deferred. |
-| 13 | Scale | **Medium**: 500–5,000 products, 100–1,000 orders a day | One server with two web replicas (no downtime during deploys, uses more CPU cores) and PostgreSQL full-text search. No Redis. Load tested before launch. |
+| 13 | Scale | **Medium**: 500–5,000 products, 100–1,000 orders a day | One server with two web replicas (no downtime during deploys, uses more CPU cores). Revised 2026-10-23 (owner, ADR-033): Elasticsearch for search, Redis as a shared cache, and a 10-second Nginx page cache, so browsing doesn't load Postgres as visitors grow. Load tested before launch. |
 | 14 | Server | **Cloud VPS in an Indian region** | Recommended size is about 8 vCPU, 16 GB RAM and 160 GB+ SSD, running Ubuntu LTS. |
 | 15 | Edge | **Cloudflare proxy (free plan)** | Origin certificate with Full (strict) TLS. The server firewall only accepts connections from Cloudflare. Real client IPs come from `CF-Connecting-IP`, which Nginx trusts only from Cloudflare's IP ranges. Turnstile protects the OTP and auth forms. |
 | 16 | Backups | **S3-compatible bucket** | Encrypted off-site backups. PostgreSQL gets point-in-time recovery (pgBackRest) plus a nightly logical dump. Media is backed up with restic. |
@@ -74,7 +74,7 @@ These are defaults we will build on unless you say otherwise. Each one is also l
 - Staff accounts (all admin and CMS roles) must use **two-factor authentication** (TOTP).
 - Roles and their permissions are **defined in code**: the seven roles in decision 23. Super Admins assign roles to staff in the admin portal, but can't create new permission sets from the UI.
 - An order number looks like `DUIS-100001`.
-- Search uses PostgreSQL full-text search with trigram fuzzy matching. We will reconsider Meilisearch only if relevance testing shows it is needed.
+- Search uses Elasticsearch (owner decision 2026-10-23, ADR-033), with PostgreSQL full-text search and trigram matching kept as the fallback.
 
 ## 5. Out of scope for the first release
 

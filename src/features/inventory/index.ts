@@ -22,3 +22,9 @@ export {
   type StockRow,
 } from "./admin"
 export { sendLowStockDigest } from "./digest"
+export {
+  forgetStock,
+  getCachedAvailability,
+  STOCK_CHANNEL,
+  STOCK_TTL_SECONDS,
+} from "./stock-cache"

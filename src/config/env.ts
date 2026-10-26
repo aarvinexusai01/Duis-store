@@ -137,6 +137,26 @@ export const serverEnvSchema = z
     // Cache invalidation fan-out to every web replica (ADR-008, ADR-017).
     INTERNAL_REVALIDATE_SECRET: z.string().min(32),
     INTERNAL_REVALIDATE_URLS: urlList,
+
+    // Shared cache for both web replicas and product-page stock (ADR-0033).
+    // Unset: each process caches in its own memory and stock is read live.
+    REDIS_URL: z.url({ protocol: /^rediss?$/ }).optional(),
+    // Product search (ADR-0033). Unset: search runs on Postgres.
+    ELASTICSEARCH_URL: httpUrl.optional(),
+    ELASTICSEARCH_USERNAME: z.string().min(1).default("elastic"),
+    ELASTICSEARCH_PASSWORD: z.string().min(1).optional(),
+    // How long a search waits for Elasticsearch before using Postgres.
+    ELASTICSEARCH_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .min(100)
+      .max(30_000)
+      .default(5_000),
+    // The alias searches use; each rebuild creates a new index behind it.
+    ELASTICSEARCH_INDEX: z
+      .string()
+      .regex(/^[a-z][a-z0-9-]{2,60}$/)
+      .default("duis-products"),
   })
   .superRefine((env, ctx) => {
     if (Boolean(env.GOOGLE_CLIENT_ID) !== Boolean(env.GOOGLE_CLIENT_SECRET)) {

@@ -120,6 +120,20 @@
       "when": 1792743962333,
       "tag": "0016_owner_size_charts",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792748691138,
+      "tag": "0017_stock_notify",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792750512204,
+      "tag": "0018_search_index_queue",
+      "breakpoints": true
     }
   ]
 }

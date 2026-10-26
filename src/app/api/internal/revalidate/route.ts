@@ -3,7 +3,7 @@ import { connection } from "next/server"
 import { z } from "zod"
 
 import { getServerEnv } from "@/config/env"
-import { CACHE_TAG } from "@/server/cache/tags"
+import { CACHE_TAG, MAX_TAGS_PER_JOB } from "@/server/cache/tags"
 import {
   SIGNATURE_HEADER,
   TIMESTAMP_HEADER,
@@ -13,7 +13,7 @@ import {
 const MAX_BODY_BYTES = 16 * 1024
 
 const bodySchema = z.object({
-  tags: z.array(z.string().regex(CACHE_TAG)).min(1).max(200),
+  tags: z.array(z.string().regex(CACHE_TAG)).min(1).max(MAX_TAGS_PER_JOB),
 })
 
 /**

@@ -192,6 +192,8 @@ cat >/etc/sysctl.d/90-duis.conf <<'EOF'
 vm.swappiness = 10
 vm.overcommit_memory = 1
 net.core.somaxconn = 4096
+# Elasticsearch maps its index files into memory (ADR-0033).
+vm.max_map_count = 262144
 EOF
 sysctl --system >/dev/null
 

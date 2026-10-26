@@ -1,5 +1,7 @@
 // Bundles the non-Next entry points (worker, migrate) into self-contained ESM
 // files in dist/, so the runtime image needs no node_modules for them.
+// Also the "use cache" handler, which Next imports at runtime with plain Node,
+// so `npm run build` runs this before `next build` (next.config.ts).
 //   npm run build:server
 import { rm } from "node:fs/promises"
 
@@ -23,10 +25,12 @@ await rm(OUT_DIR, { recursive: true, force: true })
 await build({
   entryPoints: {
     worker: "src/worker/index.ts",
+    "cache-handler": "src/server/cache/next-cache-handler.ts",
     migrate: "src/db/migrate.ts",
     seed: "src/db/seed/index.ts",
     "swap-photos": "src/db/seed/swap-photos.ts",
     "create-super-admin": "src/cli/create-super-admin.ts",
+    "search-reindex": "src/cli/search-reindex.ts",
     // Fixtures for the HTTP race suite; refuses to run without fake payments.
     "race-fixtures": "src/cli/race-fixtures.ts",
   },

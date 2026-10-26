@@ -16,6 +16,7 @@ step says otherwise.
 | [Adding a replica](add-replica.md) | Two web replicas are no longer enough |
 | [Moving media to R2](media-to-r2.md) | The media volume outgrows the server's disk |
 | [Local production stack](local-stack.md) | Trying deploys, rollbacks or restores on a laptop |
+| [Cache and search](cache-and-search.md) | Redis or Elasticsearch is failing, search shows old results, or a page shows old content |
 
 ## Which alert, which runbook
 
@@ -29,4 +30,5 @@ Alert emails (from `OPS_ALERT_EMAIL`) and the **Server checks** panel on
 | Monthly restore drill | [Restore drill](restore-drill.md) |
 | Server disk space, Server memory, Containers | [Incident: the server](incident.md#the-server) |
 | Origin certificate | [Secret rotation: origin certificate](secret-rotation.md#origin-certificate) |
+| Shared cache (Redis), Product search (Elasticsearch) | [Cache and search](cache-and-search.md) |
 | UptimeRobot: site down | [Incident: site down](incident.md#site-down) |

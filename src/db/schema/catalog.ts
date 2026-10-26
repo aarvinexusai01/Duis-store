@@ -386,3 +386,15 @@ export const productListingCache = pgTable(
     index("product_listing_cache_price_idx").on(t.minPricePaise),
   ],
 )
+
+/**
+ * Products whose search document must be rebuilt (ADR-0033). Triggers on the
+ * product, its listing cache, variants, attribute values and media add rows
+ * (migration 0018); the worker's search indexer sends them to Elasticsearch
+ * and deletes the rows it has handled. No foreign key: a deleted product
+ * still needs its document removed.
+ */
+export const searchIndexQueue = pgTable("search_index_queue", {
+  productId: uuid().primaryKey(),
+  queuedAt: timestamptz().notNull().defaultNow(),
+})

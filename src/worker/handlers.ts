@@ -1,6 +1,7 @@
 import type { Job, PgBoss } from "pg-boss"
 
 import { sendMetaPurchase } from "@/features/analytics"
+import { getSearchClient, reconcileSearchIndex } from "@/features/catalog"
 import { publishScheduled } from "@/features/cms"
 import { refreshAutomaticCollections } from "@/features/collections"
 import { expireReservations, sendLowStockDigest } from "@/features/inventory"
@@ -116,6 +117,11 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
     const sent = await sendLowStockDigest()
     if (sent > 0) logger.info({ sent }, "low-stock digest queued")
   },
+  "search.reconcile": async () => {
+    if (!getSearchClient()) return // search runs on Postgres
+    const drift = await reconcileSearchIndex()
+    if (drift > 0) logger.info({ drift }, "search index repaired")
+  },
   "system.ops-check": async () => {
     const sent = await runOpsChecks()
     if (sent > 0) logger.warn({ sent }, "ops alert emails queued")
@@ -140,6 +146,7 @@ const SCHEDULES: { queue: QueueName; cron: string }[] = [
   { queue: QUEUES.cartReminders, cron: "*/15 * * * *" },
   { queue: QUEUES.publishScheduledContent, cron: "* * * * *" },
   { queue: QUEUES.opsCheck, cron: "*/15 * * * *" },
+  { queue: QUEUES.reconcileSearch, cron: "45 3 * * *" },
 ]
 
 /**

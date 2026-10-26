@@ -30,11 +30,19 @@ const sharedEnv = {
   GA4_MEASUREMENT_ID: "G-E2ETEST000",
   META_PIXEL_ID: "1000000000000",
   INTERNAL_REVALIDATE_URLS: `${baseURL},${secondReplicaURL}`,
+  // Both replicas share one cache, as in production (ADR-0033).
+  REDIS_URL:
+    process.env.E2E_REDIS_URL ?? "redis://:redis_dev_only@localhost:6379/0",
+  // Search on Elasticsearch; the E2E worker keeps the dev index current.
+  ELASTICSEARCH_URL:
+    process.env.E2E_ELASTICSEARCH_URL ?? "http://localhost:9200",
+  ELASTICSEARCH_PASSWORD:
+    process.env.E2E_ELASTICSEARCH_PASSWORD ?? "elastic_dev_only",
 }
 
 /**
  * E2E runs against the standalone production build and the worker bundle
- * (`npm run build && npm run build:server` first), as the Next.js testing
+ * (`npm run build` first; it builds both), as the Next.js testing
  * guide recommends. Locally a server already running on an E2E port is
  * reused. The worker only clears caches, so other jobs aren't processed
  * mid-test; stop any other worker on the same database while it runs.

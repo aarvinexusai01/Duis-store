@@ -87,7 +87,9 @@ Versions are the `latest` npm tags on 2026-10-13. Phase 0 pins exact versions in
 | DB driver | `pg` (node-postgres) | 8.23 | One driver shared by Drizzle, Better Auth and pg-boss. |
 | Validation | Zod | 4.6 | Every boundary: forms, actions, route handlers, webhooks, CMS blocks, environment variables. |
 | Auth | Better Auth | 1.7.7 | See §4.2. |
-| Background jobs | pg-boss | 12.37 | Job queue stored in Postgres: retries, cron, singleton jobs, dead-letter queues. No Redis. |
+| Background jobs | pg-boss | 12.37 | Job queue stored in Postgres: retries, cron, singleton jobs, dead-letter queues. Jobs stay in Postgres; Redis is only a cache. |
+| Product search | Elasticsearch (client `@elastic/elasticsearch`) | 9.5.5 / 9.5.1 | Owner decision 2026-10-23 (ADR-033). Search page and search box; the index is a copy of Postgres kept current by triggers and the worker. Optional: without it, Postgres full-text search. |
+| Shared cache | Redis (client `redis`) | 8.10 / 6.3 | Owner decision 2026-10-23 (ADR-033). The `"use cache"` store shared by both replicas, and product-page stock. Optional: without it the app reads Postgres. |
 | Rich text (CMS, product descriptions) | Tiptap | 3.31 | Stores structured JSON. Rendered server-side through an allow-list. |
 | Drag and drop | dnd-kit (`core` 6.3, `sortable` 10) | — | Reordering CMS sections, menus, product media and collection products. |
 | Forms | react-hook-form + Zod resolver | 7.90 | Accessible forms with server re-validation. |
@@ -240,13 +242,13 @@ Each provider is chosen through environment variables. Development and CI defaul
 | ADR-002 | Plain PostgreSQL 18 + Drizzle; no Supabase | Accepted |
 | ADR-003 | Better Auth for all users; roles and permissions defined in code; staff two-factor required | Accepted |
 | ADR-004 | Custom CMS on the shared schema; JSON block revisions plus foreign-key reference tables | Accepted (business decision) |
-| ADR-005 | pg-boss job queue in a dedicated worker; no Redis | Accepted |
+| ADR-005 | pg-boss job queue in a dedicated worker; no Redis | Accepted; Redis added as a cache only by ADR-033 |
 | ADR-006 | Local media volume with sharp pre-generated widths; `StorageAdapter` for future S3 | Accepted |
 | ADR-007 | Caddy behind Cloudflare (Origin CA, Full strict, origin firewall limited to Cloudflare) | Superseded by ADR-031: Nginx in place of Caddy; the Cloudflare setup is unchanged |
 | ADR-008 | Two web replicas with cache-tag fan-out revalidation | Accepted, revisit after load test |
 | ADR-009 | Integer paise for all money; GST included in prices; tax lines saved per order line | Accepted |
 | ADR-010 | Partial COD: advance via Razorpay, balance as the COD amount sent to Shiprocket | Accepted, **⚠ verify Shiprocket fields** |
-| ADR-011 | Postgres full-text search + `pg_trgm`; `SearchProvider` interface | Accepted |
+| ADR-011 | Postgres full-text search + `pg_trgm`; `SearchProvider` interface | Revised by ADR-033: Elasticsearch serves search; Postgres search remains the fallback |
 | ADR-012 | Build on the server; images tagged by git SHA; rollback without rebuild | Accepted (business decision) |
 | ADR-013 | Drizzle 0.45 stable at start; evaluate 1.0 when it is stable | Closed by ADR-014 (stay on 0.45) |
 | [ADR-014](adr/0014-phase-0-toolchain-baseline.md) | Toolchain: TypeScript 5, ESLint 9, Drizzle 0.45, shadcn on Base UI, esbuild for server bundles | Accepted (Phase 0) |
@@ -266,4 +268,5 @@ Each provider is chosen through environment variables. Development and CI defaul
 | [ADR-028](adr/0028-phase-6a-page-builder-workflow-decisions.md) | Phase 6a: working draft edited in place by autosave with a save token, frozen into versions on submit/schedule/publish; managers publish directly, editors submit; signed 24-hour preview links rendered by the storefront's own components; minute-level scheduled publishing; worker queue filter for the E2E cache-only worker | Accepted (Phase 6a) |
 | [ADR-029](adr/0029-phase-6b-media-navigation-redirects-decisions.md) | Phase 6b: one workflow for pages, menus and site settings (content targets); menu and settings previews around the live home page; redirects served by the request proxy from a 30-second in-memory table, automatic on address changes with chains collapsed; in-use images and collections can't be removed and say where they're used; focal points on CMS images; favicon from settings | Accepted (Phase 6b) |
 | [ADR-031](adr/0031-phase-7a-production-stack-decisions.md) | Phase 7a: open-source Nginx replaces Caddy (deploys mark a replica `down` and reload gracefully); CSP allow-list without nonces; one Postgres image for the database and its backups (pgBackRest + restic to R2); Postgres gets outbound-only access for WAL; server checks in `ops_checks` emailed by the worker and exposed at `/api/health/ops`; drain-then-replace rolling deploys; deploys never restart Postgres; app and infra secrets in separate files | Accepted (Phase 7a) |
+| [ADR-033](adr/0033-search-engine-and-shared-caching.md) | Phase 9: Redis as the shared `"use cache"` store and product-page stock cache (cleared by a Postgres trigger and the worker's listener); Elasticsearch for search, kept in sync through a trigger-fed queue, with Postgres as the fallback; a 10-second Nginx page cache for signed-out visitors with no bag | Accepted |
 | [ADR-030](adr/0030-phase-6c-journal-decisions.md) | Phase 6c: the Journal at /journal on the shared CMS workflow; block bodies (text, image, shoppable products, click-to-play YouTube, consent-gated Instagram); live listing fields copied on publish; author profiles; RSS and sitemap; no comments | Accepted (Phase 6c) |

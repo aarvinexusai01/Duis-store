@@ -5,7 +5,7 @@
 | Item | Plan |
 |---|---|
 | Provider | **Bluehost self-managed VPS, Mumbai** (owner decision 2026-10-21). The scripts assume only Ubuntu, root SSH and nothing provider-specific: no firewall API, no snapshots. |
-| Size (medium scale) | **8 vCPU, 16 GB RAM, 160 GB+ NVMe SSD**, plus provider snapshots enabled. The minimum for launch is 4 vCPU / 8 GB with one web replica. |
+| Size (medium scale) | **8 vCPU, 16 GB RAM, 160 GB+ NVMe SSD**, plus provider snapshots enabled. Since Phase 9 this is also the minimum: Elasticsearch and Redis need about 2.6 GB more (ADR-033), so 4 vCPU / 8 GB no longer fits. |
 | OS | Ubuntu Server LTS (24.04 or 26.04), x86_64 |
 | Access | SSH key only, non-root `deploy` user in the `docker` group, root login disabled |
 | Firewall | ufw (and the provider's firewall): 443 open only to Cloudflare IP ranges, 80 closed (Cloudflare handles redirects), 22 open to admin IPs only |
@@ -14,10 +14,12 @@
 
 | Component | RAM |
 |---|---|
-| Postgres (`shared_buffers` 4 GB) | ~5 GB |
+| Postgres (`shared_buffers` 3 GB; most reads now come from the caches) | ~4 GB |
 | 2 × web | ~1–1.5 GB each |
 | Worker | ~0.5–1 GB |
-| Nginx | ~50 MB |
+| Elasticsearch (1 GB heap, limit 2 GB) | ~2 GB |
+| Redis (512 MB cap, limit 768 MB) | ~0.6 GB |
+| Nginx (its page cache is on disk) | ~50 MB |
 | Backup | ~200 MB |
 | Build headroom during on-server builds | ~4 GB |
 | OS page cache | the rest |
@@ -26,9 +28,11 @@
 
 | Service | Image | Networks | Notes |
 |---|---|---|---|
-| `nginx` | `nginxinc/nginx-unprivileged:1.30.5-alpine` | edge | Runs as uid 101 on 8443, published as 443. Mounts `docker/nginx/` (the folder, so checkouts update it), `state/nginx` (Origin CA cert/key, Cloudflare ranges, the generated upstream and HSTS files) and `media` (read-only). |
+| `nginx` | `nginxinc/nginx-unprivileged:1.30.5-alpine` | edge | Runs as uid 101 on 8443, published as 443. Mounts `docker/nginx/` (the folder, so checkouts update it), `state/nginx` (Origin CA cert/key, Cloudflare ranges, the generated upstream and HSTS files), `media` (read-only) and `nginx_cache` (the 10-second page cache and the build-file cache, ADR-033). |
 | `web_a`, `web_b` | `duis-web:${APP_SHA}` | edge, backend | `node server.js` (standalone). Health check `GET /api/health`; deploys wait for `/api/health/ready`. Non-root, read-only root filesystem, tmpfs `/tmp`, all capabilities dropped. Writable volume for `.next/cache`. `media` and `private` read-write. Memory limit 1.5 GB. |
 | `worker` | `duis-web:${APP_SHA}` | backend, egress | `node dist/worker.mjs`. Health check via heartbeat file. 60 s stop grace. |
+| `elasticsearch` | `elasticsearch:9.5.5` | backend | Product search (ADR-033). Single node, security on (`ELASTIC_PASSWORD` from `.env.infra`), plain HTTP on the private network, automatic index creation off, all capabilities dropped. 1 GB heap (`ES_HEAP`), memory limit 2 GB. Volume `esdata` holds only a copy of the catalogue, rebuilt with `dist/search-reindex.mjs`, so it isn't backed up. The host needs `vm.max_map_count=262144` (bootstrap.sh). Search falls back to Postgres while it's down. |
+| `redis` | `redis:8.10.2-alpine` | backend | Shared cache (ADR-033): the `"use cache"` store for both web replicas, and product-page stock. 512 MB cap with `volatile-lru`, nothing saved to disk, password from `.env.infra` (`REDIS_PASSWORD`) via an in-memory config file. Read-only root filesystem, runs as `redis`. Memory limit 768 MB. The app falls back to Postgres while it's down. |
 | `postgres` | `duis-postgres:<tree hash of docker/postgres>` (postgres:18.6 + pgBackRest + restic + supercronic) | backend, egress | Volume `pgdata` at **`/var/lib/postgresql`** (Postgres 18 image layout). No published ports. `conf/postgresql.conf` and `pg_hba.conf` (superuser on the socket only). WAL archiving through pgBackRest; `egress` is for that alone (ADR-0031). |
 | `backup` | same image, as `postgres` | backend, egress | `duis-backup run`: creates the pgBackRest stanza and restic repository, takes the first full backup, then follows `conf/crontab`. Reads `pgdata` and the media volumes read-only; reaches Postgres through the shared socket volume. |
 | `migrate` | `duis-web:${APP_SHA}` | backend | `profiles: [tools]`. Runs `node dist/migrate.mjs` as `duis_owner`, then exits. |

@@ -105,8 +105,12 @@ export function ListingView(props: ListingViewProps) {
             <ProductGrid products={listing.items} preloadFirst={4} />
           ) : (
             <div className="border border-dashed p-10 text-center">
-              <p className="font-semibold">Nothing matches these filters.</p>
-              {activeCount > 0 && (
+              <p className="font-semibold">
+                {listing.busy
+                  ? "Search is busy right now. Please try again in a moment."
+                  : "Nothing matches these filters."}
+              </p>
+              {!listing.busy && activeCount > 0 && (
                 <Link
                   href={href({ ...EMPTY_PARAMS, sort: params.sort })}
                   className="mt-3 inline-block text-sm underline underline-offset-4"

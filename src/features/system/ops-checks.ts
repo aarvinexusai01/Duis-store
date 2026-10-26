@@ -2,6 +2,8 @@ import "server-only"
 import { sql } from "drizzle-orm"
 
 import { getServerEnv } from "@/config/env"
+import { getSearchClient } from "@/features/catalog"
+import { getRedis } from "@/server/cache/redis"
 import { getDb } from "@/server/db/client"
 import { QUEUES } from "@/server/jobs/queues"
 import { queueEmail } from "@/server/notifications/email"
@@ -49,6 +51,11 @@ async function liveChecks(now: Date): Promise<LiveCheck[]> {
   ])
 
   const checks: LiveCheck[] = []
+  const redis = await redisCheck()
+  if (redis) checks.push(redis)
+  const search = await searchCheck()
+  if (search) checks.push(search)
+
   const beat = heartbeat.rows[0]?.at ? new Date(heartbeat.rows[0].at) : null
   const workerOk =
     beat !== null && now.getTime() - beat.getTime() < WORKER_SILENT_MS
@@ -104,6 +111,60 @@ async function liveChecks(now: Date): Promise<LiveCheck[]> {
     checks.push({ key: "backup.wal", ok, detail })
   }
   return checks
+}
+
+async function redisCheck(): Promise<LiveCheck | null> {
+  const redis = getRedis()
+  if (!redis) return null
+  try {
+    if (redis.isReady && (await redis.ping()) === "PONG") {
+      return { key: "cache.redis", ok: true, detail: null }
+    }
+  } catch {
+    // reported below
+  }
+  return {
+    key: "cache.redis",
+    ok: false,
+    detail:
+      "Unreachable. The shop keeps working by reading everything from Postgres, so pages are slower under load.",
+  }
+}
+
+const SEARCH_QUEUE_STUCK = "10 minutes"
+
+async function searchCheck(): Promise<LiveCheck | null> {
+  const client = getSearchClient()
+  if (!client) return null
+  const key = "search.elasticsearch"
+  try {
+    const health = await client.cluster.health({ timeout: "2s" })
+    if (health.status === "red") {
+      return {
+        key,
+        ok: false,
+        detail: "The index is unavailable (status red). Searches use Postgres.",
+      }
+    }
+  } catch {
+    return {
+      key,
+      ok: false,
+      detail:
+        "Unreachable. Searches fall back to Postgres, which is slower under load.",
+    }
+  }
+  const waiting = await getDb().execute<{ count: number }>(sql`
+    select count(*)::int as count from search_index_queue
+    where queued_at < now() - ${SEARCH_QUEUE_STUCK}::interval`)
+  const stuck = waiting.rows[0]?.count ?? 0
+  return stuck > 0
+    ? {
+        key,
+        ok: false,
+        detail: `${stuck} product change${stuck === 1 ? " has" : "s have"} waited over ${SEARCH_QUEUE_STUCK} to reach search. Is the worker running?`,
+      }
+    : { key, ok: true, detail: null }
 }
 
 async function storedRows(): Promise<OpsRow[]> {

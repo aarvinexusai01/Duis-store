@@ -35,7 +35,7 @@ COPY . .
 # during a rolling deploy. Optional for local builds:
 #   --secret id=next_server_actions_key,env=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 RUN --mount=type=secret,id=next_server_actions_key,env=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
-    npm run build && npm run build:server
+    npm run build
 
 # --- runtime ----------------------------------------------------------------
 FROM ${NODE_IMAGE} AS runtime

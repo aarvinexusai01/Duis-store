@@ -1,3 +1,5 @@
+import path from "node:path"
+
 import type { NextConfig } from "next"
 
 import { contentSecurityPolicy } from "./src/lib/csp"
@@ -31,6 +33,12 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   typedRoutes: true,
   cacheComponents: true,
+  // "use cache" entries shared by both replicas through Redis (ADR-0033),
+  // bundled by `npm run build:server`. The dev server keeps Next's in-memory
+  // store, so `next dev` needs no build step.
+  cacheHandlers: dev
+    ? undefined
+    : { default: path.resolve("dist/cache-handler.mjs") },
   partialPrefetching: true,
   // Crawlers that get metadata in <head> before the body streams. This is
   // Next.js's default list plus Googlebot: by default Next streams metadata to

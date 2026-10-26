@@ -37,6 +37,13 @@ export const OPS_RULES: Record<string, Rule> = {
   worker: { label: "Background worker", external: false },
   "jobs.failed": { label: "Failed background jobs", external: false },
   "jobs.stuck": { label: "Job queues", external: false },
+  // Only reported when REDIS_URL is set (ADR-0033).
+  "cache.redis": { label: "Shared cache (Redis)", external: false },
+  // Only reported when ELASTICSEARCH_URL is set (ADR-0033).
+  "search.elasticsearch": {
+    label: "Product search (Elasticsearch)",
+    external: false,
+  },
   "backup.wal": {
     label: "Continuous database archiving (WAL)",
     external: false,

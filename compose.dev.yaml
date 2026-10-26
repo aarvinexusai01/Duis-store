@@ -39,5 +39,64 @@ services:
       - "127.0.0.1:1025:1025"
       - "127.0.0.1:8025:8025"
 
+  redis:
+    # Shared cache (ADR-0033). Same settings as production; nothing is saved
+    # to disk. Database 0 is the dev server's, 15 the integration tests'.
+    image: redis:8.10.2-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:-redis_dev_only}
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - volatile-lru
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+    ports:
+      - "127.0.0.1:6379:6379"
+    environment:
+      # redis-cli reads the password from here (health check, debugging).
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-redis_dev_only}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  elasticsearch:
+    # Product search (ADR-0033). Single node, security on (user "elastic"),
+    # plain HTTP on localhost only. A smaller heap than production so it fits
+    # a laptop's Docker VM. The index is rebuilt from Postgres at any time
+    # (npm run search:reindex), so its volume holds nothing precious.
+    image: elasticsearch:9.5.5
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"
+      xpack.ml.enabled: "false"
+      # Indexes are only ever created with their mappings (the indexer).
+      action.auto_create_index: "false"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-elastic_dev_only}
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ulimits:
+      nofile: { soft: 65535, hard: 65535 }
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'curl -sf -u "elastic:$$ELASTIC_PASSWORD" "localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s" > /dev/null',
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+
 volumes:
   pgdata:
+  esdata:

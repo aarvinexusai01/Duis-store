@@ -10,7 +10,7 @@ import {
   TIMESTAMP_HEADER,
 } from "@/server/security/hmac"
 
-import { CACHE_TAG } from "./tags"
+import { CACHE_TAG, MAX_TAGS_PER_JOB } from "./tags"
 
 let suppressed = false
 
@@ -29,8 +29,14 @@ export async function requestRevalidation(
 ): Promise<void> {
   if (suppressed) return
   const unique = [...new Set(tags)].filter((tag) => CACHE_TAG.test(tag))
-  if (unique.length === 0) return
-  await enqueue(QUEUES.cacheRevalidate, { tags: unique }, { tx: options.tx })
+  // The replicas accept at most this many tags per request.
+  for (let i = 0; i < unique.length; i += MAX_TAGS_PER_JOB) {
+    await enqueue(
+      QUEUES.cacheRevalidate,
+      { tags: unique.slice(i, i + MAX_TAGS_PER_JOB) },
+      { tx: options.tx },
+    )
+  }
 }
 
 /**

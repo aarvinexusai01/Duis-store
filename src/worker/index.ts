@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises"
 
 import { getServerEnv } from "@/config/env"
+import { closeRedis } from "@/server/cache/redis"
 import { closeDb } from "@/server/db/client"
 import { createBoss } from "@/server/jobs/boss"
 import { stopSender } from "@/server/jobs/enqueue"
@@ -9,6 +10,8 @@ import { logger } from "@/server/observability/logger"
 
 import { registerHandlers } from "./handlers"
 import { flushWorkerSentry, initWorkerSentry } from "./sentry"
+import { startSearchIndexer } from "./search-indexer"
+import { startStockListener } from "./stock-listener"
 
 /**
  * Background worker: one process per container, same image as the web app.
@@ -33,6 +36,8 @@ async function main(): Promise<void> {
   await boss.start()
   await ensureQueues(boss, (message) => logger.warn(message))
   await registerHandlers(boss)
+  const stockListener = startStockListener()
+  const searchIndexer = startSearchIndexer()
 
   await touchHeartbeat()
   const heartbeat = setInterval(() => {
@@ -52,6 +57,9 @@ async function main(): Promise<void> {
     try {
       // Let in-flight jobs finish; anything unfinished is retried later.
       await boss.stop({ graceful: true, timeout: SHUTDOWN_TIMEOUT_MS })
+      await stockListener?.stop()
+      await searchIndexer?.stop()
+      await closeRedis()
       await stopSender()
       await closeDb()
       await flushWorkerSentry()

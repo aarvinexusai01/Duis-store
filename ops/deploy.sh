@@ -82,11 +82,14 @@ main() {
   # Postgres and Nginx alone, even if their images changed (restart them in a
   # quiet moment: runbook: deploy).
   write_nginx_state
-  local infra=(postgres nginx)
+  local infra=(postgres redis elasticsearch nginx)
   # The laptop stack's stand-ins for R2 and the SMTP provider.
   is_local && infra+=(s3 mailpit)
   APP_SHA=$sha "$COMPOSE" up -d --no-recreate "${infra[@]}"
   wait_healthy postgres 300
+  # The app runs without the cache (slower), so this doesn't stop a deploy.
+  wait_healthy redis 60 || log "warning: redis is not healthy; the app falls back to Postgres"
+  wait_healthy elasticsearch 180 || log "warning: elasticsearch is not healthy; search falls back to Postgres"
   local running_pg
   running_pg=$(docker inspect -f '{{.Config.Image}}' "$("$COMPOSE" ps -q postgres)")
   [ "$running_pg" = "duis-postgres:$PG_TAG" ] ||

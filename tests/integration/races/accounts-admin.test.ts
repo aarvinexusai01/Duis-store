@@ -166,8 +166,10 @@ describe("A3–A5: staff working on the same thing", () => {
       ])
       expect(count(outcomes, "ok")).toBeGreaterThanOrEqual(1)
       expect(
-        outcomes.every((o) => ["ok", "CONFLICT", "INVALID_STATE"].includes(o)),
-      ).toBe(true)
+        outcomes.filter(
+          (o) => !["ok", "CONFLICT", "INVALID_STATE"].includes(o),
+        ),
+      ).toEqual([])
       const published = await db().execute<{ n: number }>(sql`
         select count(*)::int as n from cms_revisions where entity_type = 'page' and entity_id = ${id} and workflow_status = 'published'`)
       expect(published.rows[0]!.n).toBe(1)

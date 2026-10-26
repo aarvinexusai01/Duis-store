@@ -4,7 +4,7 @@ import { Suspense } from "react"
 
 import { PageSkeleton } from "@/components/page-skeleton"
 import { SearchBox } from "@/components/layout/search-box"
-import { loadListing } from "@/features/catalog"
+import { searchCatalog } from "@/features/catalog/queries"
 import { ListingView } from "@/features/catalog/ui/listing-view"
 import { parseListingParams } from "@/lib/listing-params"
 
@@ -37,8 +37,8 @@ async function Results({
     )
   }
   const params = parseListingParams(raw)
-  // Not cached: every query would be its own cache entry.
-  const listing = await loadListing({ kind: "search", query }, params)
+  // Elasticsearch, or Postgres while it's unavailable (ADR-0033).
+  const listing = await searchCatalog(query, params)
   return (
     <ListingView
       title={`Results for “${query}”`}
