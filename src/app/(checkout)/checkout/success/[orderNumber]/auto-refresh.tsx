@@ -17,3 +17,15 @@ export function AutoRefresh() {
   }, [router])
   return null
 }
+
+/**
+ * Once, on arrival: the browser's memory of recent pages (staleTimes in
+ * next.config.ts) still holds the bag as it was before the order.
+ */
+export function RefreshOnce() {
+  const router = useRouter()
+  useEffect(() => {
+    router.refresh()
+  }, [router])
+  return null
+}

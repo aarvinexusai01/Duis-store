@@ -91,7 +91,7 @@ export default async function setup() {
   await boss.stop({ graceful: false })
 
   const redisUrl =
-    process.env.TEST_REDIS_URL ?? "redis://:redis_dev_only@localhost:6379/15"
+    process.env.TEST_REDIS_URL ?? "redis://:redis_dev_only@localhost:6380/15"
   const redis = createClient({
     url: redisUrl,
     socket: { connectTimeout: 3_000, reconnectStrategy: false },

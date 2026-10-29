@@ -32,7 +32,7 @@ const sharedEnv = {
   INTERNAL_REVALIDATE_URLS: `${baseURL},${secondReplicaURL}`,
   // Both replicas share one cache, as in production (ADR-0033).
   REDIS_URL:
-    process.env.E2E_REDIS_URL ?? "redis://:redis_dev_only@localhost:6379/0",
+    process.env.E2E_REDIS_URL ?? "redis://:redis_dev_only@localhost:6380/0",
   // Search on Elasticsearch; the E2E worker keeps the dev index current.
   ELASTICSEARCH_URL:
     process.env.E2E_ELASTICSEARCH_URL ?? "http://localhost:9200",

@@ -56,7 +56,8 @@ services:
       - --appendonly
       - "no"
     ports:
-      - "127.0.0.1:6379:6379"
+      # 6380 on the host: other projects on a laptop often hold 6379.
+      - "127.0.0.1:6380:6379"
     environment:
       # redis-cli reads the password from here (health check, debugging).
       REDISCLI_AUTH: ${REDIS_PASSWORD:-redis_dev_only}

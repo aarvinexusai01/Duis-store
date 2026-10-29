@@ -40,6 +40,13 @@ const nextConfig: NextConfig = {
     ? undefined
     : { default: path.resolve("dist/cache-handler.mjs") },
   partialPrefetching: true,
+  experimental: {
+    // Pages seen in the last 30 s are reused when navigating back to them in
+    // the app (owner decision 2026-10-29). Actions that change what a page
+    // shows (bag, wishlist, account) call refresh(), which clears it, and the
+    // order success page does too; checkout always re-quotes on the server.
+    staleTimes: { dynamic: 30 },
+  },
   // Crawlers that get metadata in <head> before the body streams. This is
   // Next.js's default list plus Googlebot: by default Next streams metadata to
   // Googlebot, which leaves rel=canonical in <body>, where Google ignores it

@@ -14,7 +14,7 @@ import { formatPaise } from "@/lib/money"
 import { cn } from "@/lib/utils"
 import { isDomainError } from "@/server/errors"
 
-import { AutoRefresh } from "./auto-refresh"
+import { AutoRefresh, RefreshOnce } from "./auto-refresh"
 
 export const metadata: Metadata = { title: "Order placed" }
 
@@ -22,9 +22,12 @@ type Props = PageProps<"/checkout/success/[orderNumber]">
 
 export default function SuccessPage({ params }: Props) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <Success params={params} />
-    </Suspense>
+    <>
+      <RefreshOnce />
+      <Suspense fallback={<PageSkeleton />}>
+        <Success params={params} />
+      </Suspense>
+    </>
   )
 }
 
