@@ -68,7 +68,7 @@ x-backup-env: &backup-env
 services:
   nginx:
     <<: *hardening
-    image: nginxinc/nginx-unprivileged:1.30.5-alpine
+    image: nginxinc/nginx-unprivileged:1.31.7-alpine
     # The folder is mounted, not single files, so a git checkout's changes
     # are seen; state/nginx holds the certificate and the generated parts.
     command: ["nginx", "-c", "/etc/nginx/duis/nginx.conf", "-g", "daemon off;"]
