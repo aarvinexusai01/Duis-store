@@ -44,8 +44,14 @@ main() {
     hours=$(psql_super "select coalesce(floor(extract(epoch from now() - last_ok_at) / 3600), 999)
       from ops_checks where key = 'backup.pgbackrest'" 2>/dev/null || true)
     if [ "${hours:-999}" -ge 26 ]; then
-      log "no database backup in the last 26 hours: taking one now"
-      "$DUIS_ROOT/ops/backup-now.sh" diff
+      if [ -n "$("$COMPOSE" ps -q backup 2>/dev/null)" ]; then
+        log "no database backup in the last 26 hours: taking one now"
+        "$DUIS_ROOT/ops/backup-now.sh" diff
+      else
+        # A first deploy that stopped before starting the backup service:
+        # nothing to protect yet, and this deploy starts it.
+        log "no backup service yet (first deploy): skipping the pre-deploy backup"
+      fi
     fi
   fi
 
