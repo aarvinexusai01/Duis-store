@@ -59,7 +59,13 @@ main() {
   if git remote get-url origin >/dev/null 2>&1 && [ -z "${DUIS_NO_FETCH:-}" ]; then
     git fetch --tags --force origin
   fi
-  git checkout --quiet --detach "$ref"
+  # A branch name means the branch as just fetched: the server's own local
+  # branch never moves (found on the first server, where "main" kept
+  # deploying the commit it was cloned at).
+  local target=$ref
+  git rev-parse --quiet --verify "refs/remotes/origin/$ref^{commit}" >/dev/null &&
+    target="origin/$ref"
+  git checkout --quiet --detach "$target"
   local sha previous
   sha=$(git rev-parse --short=12 HEAD)
   previous=$(cat state/deployed_sha 2>/dev/null || true)
