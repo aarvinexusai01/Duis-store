@@ -33,15 +33,18 @@ main() {
   $nginx_only && return
 
   [ "$(id -u)" = 0 ] || die "run as root for the firewall part (or pass --nginx-only)"
-  # Docker publishes ports past ufw's INPUT rules, so 443 is allowed per
+  # Docker publishes ports past ufw's INPUT rules, so the port is allowed per
   # source range in the forward chain (see ops/bootstrap.sh, "ufw and Docker").
+  # Docker has already rewritten the destination to the container's port by
+  # then: the rule must name Nginx's 8443, not the public 443 (found on the
+  # first server, where Cloudflare's connections were dropped with DPT=8443).
   local rule
   while read -r rule; do
     ufw --force delete "$rule" >/dev/null
   done < <(ufw status numbered | grep 'cloudflare' | sed -E 's/^\[ *([0-9]+)\].*/\1/' | sort -rn)
   local range
   for range in $v4 $v6; do
-    ufw route allow proto tcp from "$range" to any port 443 comment cloudflare >/dev/null
+    ufw route allow proto tcp from "$range" to any port 8443 comment cloudflare >/dev/null
   done
   ufw reload >/dev/null
   log "firewall: port 443 open to $(wc -w <<<"$v4 $v6") Cloudflare ranges"
