@@ -67,6 +67,9 @@ replica_ready() {
 write_nginx_state() {
   local down=" ${1:-} " svc flags hsts
   mkdir -p "$STATE_DIR/nginx"
+  # Nginx reads these as uid 101 inside its container: the folders must be
+  # passable (the private key keeps its own 640, group 101).
+  chmod 755 "$STATE_DIR" "$STATE_DIR/nginx"
   {
     echo "# Written by ops/lib.sh (write_nginx_state). Do not edit."
     echo "upstream duis_web {"
