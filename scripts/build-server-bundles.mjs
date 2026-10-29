@@ -31,6 +31,7 @@ await build({
     "swap-photos": "src/db/seed/swap-photos.ts",
     "create-super-admin": "src/cli/create-super-admin.ts",
     "search-reindex": "src/cli/search-reindex.ts",
+    "shipping-check": "src/cli/shipping-check.ts",
     // Fixtures for the HTTP race suite; refuses to run without fake payments.
     "race-fixtures": "src/cli/race-fixtures.ts",
   },
