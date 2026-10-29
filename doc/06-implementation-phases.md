@@ -1190,7 +1190,38 @@ Plan as approved:
   - doc/10;
   - runbook [cache and search](runbooks/cache-and-search.md).
 
-**To do on the VPS, once the owner provides it** (with Phase 7b):
+**On the server (2026-10-29): done.** theduis.com runs as a test site (`APP_ENV=staging`) on a 4 vCPU / 8 GB Bluehost VPS. The owner chose to run every part on 8 GB for now, so all limits are trimmed in `.env.infra`. Checkout: `/opt/ecommerce/Duis-store`.
+- **Load check on the server,** through Nginx; Postgres transactions above the worker's background of ~14/s:
+
+  | Requests | Speed | Postgres per request |
+  |---|---|---|
+  | Products, signed out | 376/s, median 13 ms | 0.01 |
+  | Products, with a bag (app + Redis) | 56/s, median 127 ms | ~0 |
+  | Search, signed out | 333/s, median 14 ms | ~0 |
+  | Search, with a bag (app + Elasticsearch) | 45/s, median 169 ms | ~0 |
+
+  Spike: 300 simultaneous requests for a cold page; 1 reached the app. Memory under load was 2.6 GB of 7.8 GB, with swap untouched. Elasticsearch is the tightest, at ~945 MB of 1.17 GB.
+- **Drills:**
+  - **Redis stopped:** pages kept answering in ~0.1 s, and the app reconnected on its own.
+  - **Elasticsearch stopped:** of 40 searches at once, 15 were answered from Postgres and 25 were told "busy". The typo search worked again after the restart.
+  - **Both app copies stopped:** the cached product page was served (stale, 200) and the bag returned 502. Both copies recovered.
+- **Bugs found and fixed by the first real server** (all in `ops/`):
+  - our sshd settings lost to Bluehost's `50-cloud-init.conf` (now `01-duis.conf`, checked with `sshd -T`);
+  - `install-timers.sh` wasn't executable;
+  - `state/nginx` wasn't readable by the Nginx container;
+  - the pre-deploy backup was required before the backup service existed;
+  - the firewall allowed Cloudflare to port 443, but after Docker's address rewrite the traffic arrives at 8443 (Cloudflare got 522 errors);
+  - Nginx waited 60 s on a stopped replica (now 3 s);
+  - `deploy.sh main` deployed the server's stale local `main` instead of the fetched one.
+- **Still open for launch:**
+  - MSG91 (SMS) and Shiprocket accounts, then `APP_ENV=production`;
+  - live Razorpay keys;
+  - Sentry;
+  - `OPS_ALERT_EMAIL`;
+  - removing the demo catalogue;
+  - upgrading to 16 GB when traffic grows.
+
+**To do on the VPS, once the owner provides it** (with Phase 7b), as planned before the server existed:
 1. Fill `REDIS_PASSWORD` and `ELASTIC_PASSWORD` in `.env.infra` (random hex). `bootstrap.sh` sets `vm.max_map_count`.
 2. Deploy. `ops/deploy.sh` starts Redis and Elasticsearch, and the worker builds the search index on its first start.
 3. Run `ops/smoke-test.sh`. It includes the cache checks.
