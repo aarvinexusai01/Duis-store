@@ -91,7 +91,12 @@ if [ ! -f /home/deploy/.ssh/id_ed25519 ]; then
 fi
 
 log "SSH: keys only, no root login"
-cat >/etc/ssh/sshd_config.d/50-duis.conf <<'EOF'
+# sshd keeps the FIRST value it reads for each setting, and reads these
+# files in name order. Providers ship their own (Bluehost: 50-cloud-init.conf
+# with PasswordAuthentication yes, 51_permit_root_login.conf), so ours must
+# sort first to win.
+rm -f /etc/ssh/sshd_config.d/50-duis.conf
+cat >/etc/ssh/sshd_config.d/01-duis.conf <<'EOF'
 PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
@@ -102,6 +107,10 @@ LoginGraceTime 30
 X11Forwarding no
 EOF
 sshd -t
+# The settings sshd will really use, whatever other files say.
+effective=$(sshd -T 2>/dev/null)
+grep -qx "permitrootlogin no" <<<"$effective" || die "PermitRootLogin is not 'no' (another sshd config wins)"
+grep -qx "passwordauthentication no" <<<"$effective" || die "PasswordAuthentication is not 'no' (another sshd config wins)"
 # Ubuntu 24.04 starts sshd on demand; new connections read the new settings.
 systemctl try-reload-or-restart ssh
 
