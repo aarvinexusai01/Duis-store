@@ -50,16 +50,26 @@ export function MainNav({ items }: { items: ResolvedNavItem[] }) {
   )
 }
 
+// One column per group, up to four, so a hidden group leaves no gap; the
+// promo image adds 14rem. Whole class names, for Tailwind to find.
+const GROUPED_WIDTH = ["w-64", "w-[23rem]", "w-[34rem]", "w-[44rem]"]
+const GROUPED_WIDTH_PROMO = ["w-[30rem]", "w-[37rem]", "w-[48rem]", "w-[58rem]"]
+const GROUPED_COLUMNS = [
+  "grid-cols-1",
+  "grid-cols-2",
+  "grid-cols-3",
+  "grid-cols-4",
+]
+
 function MegaPanel({ item }: { item: ResolvedNavItem }) {
   const grouped = item.children.some((child) => child.children.length > 0)
+  const columns = Math.min(Math.max(item.children.length, 1), 4) - 1
   return (
     <div
       className={cn(
         "flex gap-6 p-5",
         grouped
-          ? item.promo
-            ? "w-[58rem]"
-            : "w-[44rem]"
+          ? (item.promo ? GROUPED_WIDTH_PROMO : GROUPED_WIDTH)[columns]
           : item.promo
             ? "w-[30rem]"
             : "w-64",
@@ -68,7 +78,9 @@ function MegaPanel({ item }: { item: ResolvedNavItem }) {
       <div className="min-w-0 flex-1">
         <div
           className={cn(
-            grouped ? "grid grid-cols-4 gap-x-6 gap-y-4" : "flex flex-col",
+            grouped
+              ? `grid ${GROUPED_COLUMNS[columns]} gap-x-6 gap-y-4`
+              : "flex flex-col",
           )}
         >
           {item.children.map((child) =>

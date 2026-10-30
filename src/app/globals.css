@@ -98,14 +98,14 @@
  * No visible scrollbars on the storefront (owner decision 2026-10-22):
  * pages, sliders, drawers, menus. Scrolling still works with wheel, touch,
  * trackpad and keyboard. The admin keeps them, where wide tables need the
- * cue (it marks itself with data-admin-shell).
+ * cue (AdminScrollbars sets data-admin on <html> while it is on screen).
  */
-html:not(:has([data-admin-shell])),
-html:not(:has([data-admin-shell])) * {
+html:not([data-admin]),
+html:not([data-admin]) * {
   scrollbar-width: none;
 }
-html:not(:has([data-admin-shell]))::-webkit-scrollbar,
-html:not(:has([data-admin-shell])) *::-webkit-scrollbar {
+html:not([data-admin])::-webkit-scrollbar,
+html:not([data-admin]) *::-webkit-scrollbar {
   display: none;
 }
 

@@ -129,3 +129,27 @@ test("product editor: saves twice in a row, and refuses a save from a stale tab"
   ).toBeVisible()
   await stale.close()
 })
+
+test("leaving the admin for the store hides the scrollbars again", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "admin flows are covered on desktop")
+  await page.goto("/")
+  const admin = await createStaff(page, "content_editor")
+  await signInAndSetUpTwoFactor(page, admin)
+  await page.goto("/admin")
+  const scrollbars = () =>
+    page.evaluate(
+      () => getComputedStyle(document.documentElement).scrollbarWidth,
+    )
+  await expect.poll(scrollbars).toBe("auto")
+  // A client-side navigation: the admin tree can stay in the document,
+  // hidden, so the store must not take it as "this is the admin".
+  await page.getByRole("link", { name: "View store" }).click()
+  await page.waitForURL((url) => url.pathname === "/")
+  await expect.poll(scrollbars).toBe("none")
+  await page.goBack()
+  await page.waitForURL(/\/admin/)
+  await expect.poll(scrollbars).toBe("auto")
+})
