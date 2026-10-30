@@ -39,6 +39,8 @@ describe("contentSecurityPolicy", () => {
     )
     expect(prod.get("frame-src")).toEqual(
       expect.arrayContaining([
+        // The CMS editors' preview frames.
+        "'self'",
         "https://*.razorpay.com",
         "https://www.youtube-nocookie.com",
       ]),

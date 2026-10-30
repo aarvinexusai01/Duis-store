@@ -62,7 +62,9 @@ export function contentSecurityPolicy(options: CspOptions): string {
       TURNSTILE,
       sentry,
     ],
-    "frame-src": [RAZORPAY, YOUTUBE, INSTAGRAM, TURNSTILE],
+    // 'self': the CMS editors show /preview/<token> in a frame (missing until
+    // the first real server, where every admin preview stayed blank).
+    "frame-src": ["'self'", RAZORPAY, YOUTUBE, INSTAGRAM, TURNSTILE],
     "media-src": ["'self'"],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
