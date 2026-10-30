@@ -3,7 +3,7 @@
 # ops/compose adds this file when .env.infra sets DUIS_STACK=local.
 services:
   s3:
-    image: versity/versitygw:v1.8.0
+    image: versity/versitygw:v1.10.0
     command:
       - --access
       - ${R2_ACCESS_KEY_ID}
