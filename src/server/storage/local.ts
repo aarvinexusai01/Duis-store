@@ -69,3 +69,24 @@ export function mediaPath(key: string, name: string): string {
   assertSafe(key, name)
   return path.join(mediaRoot(), key, name)
 }
+
+/** Where moved files are kept: not addressable as /media/{key} (Nginx refuses /media/.*). */
+export const MOVED_DIR = ".moved"
+
+/**
+ * Takes an asset's files out of public reach once they live elsewhere
+ * (Phase 10: ImageKit), keeping them on the volume (and in backups) in
+ * MOVED_DIR. Returns false when there was nothing to move.
+ */
+export async function hideMediaFiles(key: string): Promise<boolean> {
+  assertSafe(key)
+  const root = mediaRoot()
+  try {
+    await mkdir(path.join(root, MOVED_DIR), { recursive: true })
+    await rename(path.join(root, key), path.join(root, MOVED_DIR, key))
+    return true
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false
+    throw err
+  }
+}

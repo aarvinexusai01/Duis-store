@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm"
 
 import { getDb } from "@/server/db/client"
 import { imagekitEnabled, uploadToImageKit } from "@/server/storage/imagekit"
-import { readMediaFile } from "@/server/storage/local"
+import { hideMediaFiles, readMediaFile } from "@/server/storage/local"
 
 import { processImageForImageKit } from "./pipeline"
 
@@ -15,9 +15,14 @@ import { processImageForImageKit } from "./pipeline"
  * then switches to `ikp-`/`ikc-`, which moves it everywhere at once (pages
  * read the key at render time; the search index follows by trigger).
  *
- * Safe to run again: moved assets are skipped, and a key only changes if it
- * still holds the local value. Local files are left in place, so old order
- * lines and a rollback keep working.
+ * Order lines that saved the old key are pointed at the new one. The local
+ * files are then hidden (kept in the volume's .moved folder, out of public
+ * reach): otherwise /media/{hex}/orig.webp would still be the clean full-size
+ * original that the watermark exists to protect.
+ *
+ * Safe to run again: moved assets are skipped (their leftover local files and
+ * order lines are still tidied), and a key only changes if it still holds the
+ * local value.
  */
 export async function moveMediaToImageKit(options: {
   dryRun?: boolean
@@ -41,6 +46,7 @@ export async function moveMediaToImageKit(options: {
     order by m.created_at`)
   let moved = 0
   let failed = 0
+  if (!options.dryRun) await tidyMoved(log)
   for (const row of rows) {
     const purpose = row.product ? "product" : "content"
     const label = `${row.storage_key} (${purpose})`
@@ -55,9 +61,15 @@ export async function moveMediaToImageKit(options: {
       const processed = await processImageForImageKit(master, purpose)
       await uploadToImageKit(row.storage_key, processed.files)
       const newKey = `${row.product ? "ikp" : "ikc"}-${row.storage_key}`
-      await getDb().execute(sql`
-        update media_assets set storage_key = ${newKey}, updated_at = now()
-        where id = ${row.id} and storage_key = ${row.storage_key}`)
+      await getDb().transaction(async (tx) => {
+        await tx.execute(sql`
+          update media_assets set storage_key = ${newKey}, updated_at = now()
+          where id = ${row.id} and storage_key = ${row.storage_key}`)
+        await tx.execute(sql`
+          update order_items set image_key = ${newKey}
+          where image_key = ${row.storage_key}`)
+      })
+      await hideMediaFiles(row.storage_key)
       moved += 1
       log(`moved ${label} → ${newKey}`)
     } catch (err) {
@@ -66,4 +78,22 @@ export async function moveMediaToImageKit(options: {
     }
   }
   return { moved, failed, total: rows.length }
+}
+
+/**
+ * Assets already on ImageKit: hide any local files still public and repoint
+ * order lines (the first version of this move left both in place).
+ */
+async function tidyMoved(log: (line: string) => void): Promise<void> {
+  const { rows } = await getDb().execute<{ storage_key: string }>(sql`
+    select storage_key from media_assets where storage_key ~ '^ik[pc]-[a-f0-9]{32}$'`)
+  let hidden = 0
+  for (const { storage_key: key } of rows) {
+    const hex = key.slice(4)
+    await getDb().execute(sql`
+      update order_items set image_key = ${key} where image_key = ${hex}`)
+    if (await hideMediaFiles(hex)) hidden += 1
+  }
+  if (hidden > 0)
+    log(`hid ${hidden} local copies of images already on ImageKit`)
 }

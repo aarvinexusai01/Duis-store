@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import { moveMediaToImageKit, uploadImage } from "@/features/media"
 import { processImage } from "@/features/media/pipeline"
-import { storeMediaFiles } from "@/server/storage/local"
+import { readMediaFile, storeMediaFiles } from "@/server/storage/local"
 import { getDb } from "@/server/db/client"
 
 import { asSystem } from "../helpers/actors"
@@ -226,6 +226,16 @@ describe("moving existing images (10c)", () => {
         .toSorted()
     expect(folders(product.key)).toEqual(["clean.webp", "zoom.webp"])
     expect(folders(content.key)).toEqual(["clean.webp"])
+
+    // The clean local originals are no longer public, but kept on the volume.
+    expect(await readMediaFile(product.key, "orig.webp")).toBeNull()
+    const { existsSync } = await import("node:fs")
+    const path = await import("node:path")
+    expect(
+      existsSync(
+        path.join(process.env.MEDIA_ROOT!, ".moved", product.key, "orig.webp"),
+      ),
+    ).toBe(true)
 
     // Nothing left to move.
     received = []
