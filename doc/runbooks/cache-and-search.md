@@ -69,3 +69,26 @@ On a laptop: `npm run search:reindex`.
   empties it as a last resort: `ops/compose restart redis`.
 - **Empty the Nginx page cache:** `ops/compose exec nginx sh -c 'rm -rf
   /var/cache/nginx/pages/*'`. Nginx rebuilds it as pages are requested.
+
+## Images on ImageKit (Phase 10)
+
+Uploads go to ImageKit when both settings are present:
+`NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT` in `.env.infra` (built into the app, so
+deploy after changing it) and `IMAGEKIT_PRIVATE_KEY` in `.env.production`.
+
+**Moving existing images** (once, after switching on):
+
+```sh
+ops/compose run --rm --no-deps worker node dist/media-to-imagekit.mjs --dry-run
+ops/compose run --rm --no-deps worker node dist/media-to-imagekit.mjs
+ops/compose exec redis redis-cli FLUSHDB      # cached pages pick up the new links
+ops/compose restart web_a && sleep 20 && ops/compose restart web_b
+```
+
+It can be run again: images already moved are skipped. The local files stay
+on the media volume, so old order lines and a rollback keep working.
+
+**Images don't load:** the browser console shows the cause. A CSP error for
+`ik.imagekit.io` means the app was built without the endpoint: deploy again.
+A 404 from ImageKit means that image wasn't uploaded; run the move again and
+read its FAILED lines.
