@@ -9,6 +9,7 @@ import {
   getResolvedPage,
 } from "@/features/cms/queries"
 import { Blocks } from "@/features/cms/ui/blocks"
+import { SiteStructuredData } from "@/features/cms/ui/site-structured-data"
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection()
@@ -51,7 +52,15 @@ export default function HomePage() {
 async function HomeSections({ part }: { part: "first" | "rest" }) {
   await connection()
   const blocks = (await getResolvedPage("home"))?.blocks ?? []
-  if (part === "rest") return <Blocks blocks={blocks.slice(1)} startIndex={1} />
+  if (part === "rest") {
+    return (
+      <>
+        <Blocks blocks={blocks.slice(1)} startIndex={1} />
+        {/* Brand and return policy for search results (Phase 11). */}
+        <SiteStructuredData />
+      </>
+    )
+  }
   const first = blocks[0]
   const heroHasHeading =
     first?.type === "hero_banner" && Boolean(first.slides[0]?.heading)

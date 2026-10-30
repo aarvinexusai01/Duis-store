@@ -21,11 +21,14 @@ export function listingMetadata(input: {
   return {
     title:
       input.params.page > 1
-        ? `${input.title} — page ${input.params.page}`
+        ? // The short name, so "— page N" still fits in 60 characters.
+          `${input.title.split(" — ")[0]} — page ${input.params.page}`
         : input.title,
-    description:
+    // Later pages get their own description, so none repeats page 1's.
+    description: `${input.params.page > 1 ? `Page ${input.params.page}: ` : ""}${
       input.description ??
-      `Shop ${input.title} at ${SITE.name}. ${SITE.defaultDescription}`,
+      `Shop ${input.title} at ${SITE.name}. ${SITE.defaultDescription}`
+    }`,
     alternates: { canonical: `${input.basePath}${page}` },
     robots:
       variant || input.noindex ? { index: false, follow: true } : undefined,

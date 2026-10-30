@@ -38,6 +38,7 @@ import { TrackEvent } from "@/features/analytics/ui/track-event"
 import { ProductView } from "./_components/product-view"
 import { SizeGuide } from "./_components/size-guide"
 import { mediaSrc } from "@/lib/image-loader"
+import { fitDescription, fitTitle, rupees, storePromises } from "@/lib/seo"
 
 type Props = PageProps<"/products/[slug]">
 
@@ -51,11 +52,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await load(params)
   if (!product) return { title: "Product not found", robots: { index: false } }
   const image = product.media[0]
+  // Staff's SEO fields win; otherwise "{title} for {department} — Buy Online
+  // in India", and the product's own words plus price and promises (Phase 11).
+  const [tree, policy] = await Promise.all([getCatalogTree(), getStorePolicy()])
+  const category = tree.categories.find(
+    (c) => c.id === product.primaryCategoryId,
+  )
+  const department = tree.departments.find(
+    (d) => d.slug === category?.departmentSlug,
+  )
+  const audience = department ? ` for ${department.name}` : ""
+  const fromPaise = Math.min(...product.variants.map((v) => v.pricePaise))
+  const lead = product.descriptionText.split(/(?<=[.!?])\s/)[0] ?? ""
   return {
-    title: product.seoTitle ?? product.title,
+    title:
+      product.seoTitle ??
+      fitTitle(
+        `${product.title}${audience} — Buy Online in India`,
+        `${product.title}${audience}`,
+        product.title,
+      ),
     description:
       product.seoDescription ??
-      (product.descriptionText.slice(0, 160) || undefined),
+      fitDescription(
+        `${lead ? `${lead} ` : ""}${Number.isFinite(fromPaise) ? `${rupees(fromPaise)}. ` : ""}${storePromises(policy)}`,
+      ),
     alternates: { canonical: `/products/${product.slug}` },
     robots: product.noindex ? { index: false, follow: true } : undefined,
     openGraph: image
@@ -167,7 +188,12 @@ async function Product({ params }: Pick<Props, "params">) {
         <Related productId={product.id} />
       </Suspense>
       <Suspense fallback={null}>
-        <ProductStructuredData product={product} tree={tree} stock={stock} />
+        <ProductStructuredData
+          product={product}
+          tree={tree}
+          stock={stock}
+          freeShippingAbovePaise={policy.freeShippingThresholdPaise}
+        />
       </Suspense>
     </div>
   )
@@ -272,10 +298,12 @@ async function ProductStructuredData({
   product,
   tree,
   stock,
+  freeShippingAbovePaise,
 }: {
   product: ProductDetail
   tree: CatalogTree
   stock: Promise<Stock>
+  freeShippingAbovePaise: number
 }) {
   const [live, reviews] = await Promise.all([
     stock,
@@ -333,6 +361,25 @@ async function ProductStructuredData({
             priceCurrency: "INR",
             price: (variant.pricePaise / 100).toFixed(2),
             itemCondition: "https://schema.org/NewCondition",
+            // Only what's certain: free delivery in India at or above the
+            // threshold. Below it the charge is the courier's live rate for
+            // the PIN code, so none is claimed (Phase 11).
+            ...(variant.pricePaise >= freeShippingAbovePaise
+              ? {
+                  shippingDetails: {
+                    "@type": "OfferShippingDetails",
+                    shippingRate: {
+                      "@type": "MonetaryAmount",
+                      value: 0,
+                      currency: "INR",
+                    },
+                    shippingDestination: {
+                      "@type": "DefinedRegion",
+                      addressCountry: "IN",
+                    },
+                  },
+                }
+              : {}),
             ...(live
               ? {
                   availability:

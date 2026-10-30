@@ -3,6 +3,7 @@ import type { Route } from "next"
 import Link from "next/link"
 
 import { Breadcrumbs, type Crumb } from "@/components/breadcrumbs"
+import { JsonLd } from "@/components/json-ld"
 import { ProductGrid } from "@/components/product/product-card"
 import { formatPaise } from "@/lib/money"
 import {
@@ -10,11 +11,13 @@ import {
   EMPTY_PARAMS,
   hasFilters,
   listingUrl,
+  PAGE_SIZE,
   toggleFacet,
   type FacetKey,
   type ListingParams,
 } from "@/lib/listing-params"
 import { cn } from "@/lib/utils"
+import { absoluteUrl } from "@/server/site-url"
 
 import type { Listing } from "../storefront"
 import { MobileFilters, PriceFilter, SortSelect } from "./listing-controls"
@@ -102,7 +105,24 @@ export function ListingView(props: ListingViewProps) {
           {activeCount > 0 && <ActiveFilters props={props} href={href} />}
 
           {listing.items.length > 0 ? (
-            <ProductGrid products={listing.items} preloadFirst={4} />
+            <>
+              <ProductGrid products={listing.items} preloadFirst={4} />
+              {/* The products on this page, in order (Phase 11). */}
+              <JsonLd
+                data={{
+                  "@context": "https://schema.org",
+                  "@type": "ItemList",
+                  name: title,
+                  numberOfItems: listing.total,
+                  itemListElement: listing.items.map((item, index) => ({
+                    "@type": "ListItem",
+                    position: (listing.page - 1) * PAGE_SIZE + index + 1,
+                    url: absoluteUrl(`/products/${item.slug}`),
+                    name: item.title,
+                  })),
+                }}
+              />
+            </>
           ) : (
             <div className="border border-dashed p-10 text-center">
               <p className="font-semibold">

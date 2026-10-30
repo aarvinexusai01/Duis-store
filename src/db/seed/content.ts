@@ -224,7 +224,20 @@ export function footerNavigation(): NavigationData {
         id: "company",
         label: "Company",
         link: { type: "page", slug: "about" },
-        children: [page("about", "About Duis")],
+        // Every indexable page needs a link to it (Phase 11 crawl).
+        children: [
+          page("about", "About Duis"),
+          {
+            id: "journal",
+            label: "Journal",
+            link: { type: "url", href: "/journal" },
+          },
+          {
+            id: "shop-all",
+            label: "Shop all",
+            link: { type: "url", href: "/shop" },
+          },
+        ],
       },
       {
         id: "legal",

@@ -4,6 +4,7 @@ import {
   type NextRequest,
 } from "next/server"
 
+import { canonicalPagePath } from "@/lib/page-href"
 import { countHit, findRedirect } from "@/server/redirects/proxy-table"
 
 // Nginx sets X-Request-Id in production; accept only well-formed values so a
@@ -21,6 +22,16 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
 
   // Old addresses (ADR-0029): a real 301/302, keeping the query string.
   if (request.method === "GET" || request.method === "HEAD") {
+    // A CMS page reached by another path (/pages/x for a policy): a real
+    // 308 here, since the page itself streams and can't change its status.
+    const canonical = canonicalPagePath(request.nextUrl.pathname)
+    if (canonical) {
+      const destination = new URL(canonical, request.url)
+      destination.search = request.nextUrl.search
+      const response = NextResponse.redirect(destination, 308)
+      response.headers.set("x-request-id", requestId)
+      return response
+    }
     const target = await findRedirect(request.nextUrl.pathname)
     if (target) {
       const destination = new URL(target.to, request.url)

@@ -4,10 +4,51 @@ import { notFound, permanentRedirect } from "next/navigation"
 import { connection } from "next/server"
 
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { JsonLd } from "@/components/json-ld"
+import { richTextToPlainText } from "@/lib/rich-text"
+import { fitDescription } from "@/lib/seo"
 
 import { getResolvedPage } from "../queries"
-import { pageHref } from "../resolve"
+import { pageHref, type ResolvedBlock } from "../resolve"
 import { Blocks } from "./blocks"
+
+/** The page's own words, for a description when staff haven't written one. */
+function pageText(blocks: ResolvedBlock[]): string {
+  const parts: string[] = []
+  for (const block of blocks) {
+    if (
+      block.type === "rich_text" ||
+      block.type === "brand_story" ||
+      block.type === "image_with_text"
+    ) {
+      parts.push(richTextToPlainText(block.content))
+    } else if (block.type === "faq_list") {
+      parts.push(...block.items.map((item) => item.question))
+    }
+    if (parts.join(" ").length > 400) break
+  }
+  return parts.join(" ")
+}
+
+/** FAQPage markup from the page's question-and-answer blocks (Phase 11). */
+function faqStructuredData(blocks: ResolvedBlock[]) {
+  const items = blocks.flatMap((block) =>
+    block.type === "faq_list" ? block.items : [],
+  )
+  if (items.length === 0) return null
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: richTextToPlainText(item.answer),
+      },
+    })),
+  }
+}
 
 // Checked before any lookup so arbitrary paths never become cache entries.
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -33,6 +74,7 @@ export async function CmsPageView({
   if (!page || page.type === "home") notFound()
   const canonical = pageHref(page.slug)
   if (canonical !== path) permanentRedirect(canonical as Route)
+  const faq = faqStructuredData(page.blocks)
 
   return (
     <article>
@@ -52,6 +94,7 @@ export async function CmsPageView({
         )}
       </header>
       <Blocks blocks={page.blocks} />
+      {faq && <JsonLd data={faq} />}
       {children && (
         <div className="page-container max-w-3xl pb-16">{children}</div>
       )}
@@ -66,7 +109,8 @@ export async function cmsPageMetadata(slug: string): Promise<Metadata> {
   const seo = page.data.seo
   return {
     title: seo.title ?? page.title,
-    description: seo.description,
+    description:
+      seo.description ?? (fitDescription(pageText(page.blocks)) || undefined),
     alternates: { canonical: seo.canonical ?? pageHref(page.slug) },
     robots: seo.noindex ? { index: false, follow: true } : undefined,
   }

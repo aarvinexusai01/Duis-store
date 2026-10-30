@@ -28,6 +28,7 @@
     "db:seed": "npm run build:server && LOG_LEVEL=warn node --env-file-if-exists=.env dist/seed.mjs",
     "db:seed:photos": "npm run build:server && LOG_LEVEL=warn node --env-file-if-exists=.env dist/swap-photos.mjs",
     "db:reset": "docker compose -f compose.dev.yaml down -v && node -e \"require('node:fs').rmSync('storage/media',{recursive:true,force:true})\" && npm run db:up && npm run db:migrate",
+    "seo:crawl": "node scripts/seo-crawl.mjs",
     "search:reindex": "npm run build:server && node --env-file-if-exists=.env dist/search-reindex.mjs",
     "admin:create": "npm run build:server && node --env-file-if-exists=.env dist/create-super-admin.mjs",
     "test:race": "playwright test -c playwright.race.config.ts"

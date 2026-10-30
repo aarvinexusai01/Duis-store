@@ -38,6 +38,7 @@ export function ProductCard({
           {product.image && (
             <CardImage
               media={product.image}
+              alt={product.image.alt || product.title}
               sizes={sizes}
               preload={preload}
               className={cn(

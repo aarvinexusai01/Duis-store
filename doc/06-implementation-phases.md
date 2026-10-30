@@ -17,6 +17,7 @@ The phases follow technical dependencies while putting the storefront first. Eac
 | 8 | Hardening, verification & launch | M | All Definition-of-Done scenarios pass. Live credentials are activated. Go-live. |
 | 9 | Search engine & shared caching (before Phase 8's load test) | L | ✅ **Built and verified on a laptop 2026-10-26**; server checks wait for the VPS. Search runs on Elasticsearch. Repeat views of a product or search make almost no Postgres queries, on either app copy. |
 | 10 | Images on ImageKit, watermarked zoom (built; switched on when the private key is on the server) | M | Product and content images are stored and served by ImageKit; the full-size zoom photo carries the Duis emblem. |
+| 11 | Search visibility (SEO) and store essentials (proposed) | L | Technical SEO complete, Google Shopping feed, accounts connected, first content cluster live; data-led fixes once Search Console has data. |
 
 Sizes are relative (S < M < L < XL), not calendar estimates.
 
@@ -1315,4 +1316,97 @@ Plan as approved:
 - The zoom photo shows the emblem, and no clean image wider than 960 px is reachable.
 - Uploads still strip location and camera data.
 - All suites pass.
+
+---
+
+## Phase 11: Search visibility (SEO) and store essentials
+
+**Plan (written and approved 2026-10-30).**
+- **Owner decisions (2026-10-30):**
+  - indexing switches on when the real catalogue replaces the demo one;
+  - AI search and answer assistants are allowed, AI training crawlers stay blocked;
+  - 6 cornerstone articles plus category FAQs;
+  - free keyword research, with no paid tool.
+
+The owner asked for a full SEO list (technical, quick wins, on-page, content) plus research into what an e-commerce store should have.
+
+**Audit of theduis.com (2026-10-30):**
+- **Indexing:** the whole site is blocked (`Disallow: /`). This is deliberate while `APP_ENV=staging`, so the demo catalogue isn't indexed. No SEO work can take effect in Google until real products are in and indexing is switched on.
+- **Cloudflare's managed robots.txt** also blocks AI answer engines (ChatGPT, Perplexity, Google's agent) as well as AI training crawlers.
+- **Duplicate host:** `www.theduis.com` serves the whole site (200) instead of redirecting to `theduis.com`. http→https is fixed (Always Use HTTPS is on).
+- **Already good:**
+  - canonical tags on every page;
+  - search results are `noindex, follow`;
+  - one H1 per page;
+  - breadcrumbs, with `BreadcrumbList` markup, on every page;
+  - `ProductGroup` markup with variants, price, stock and SKU;
+  - a clean URL structure (`/shop/men/t-shirts/polo-t-shirts`, `/products/<slug>`, trailing slashes redirected);
+  - a sitemap of 105 URLs;
+  - 404s that are real 404s;
+  - a sticky "Add to bag" bar on mobile;
+  - COD, a size guide, reviews, exchanges, back-in-stock alerts and a wishlist.
+- **Gaps:**
+  - **Titles** are 10–22 characters ("T-Shirts | Duis") with no search terms.
+  - **Meta descriptions** are missing on About, FAQ, Size guide and the policies. Category and collection pages share one near-duplicate template.
+  - **Markup missing:** `Organization` and `WebSite` on the home page, `FAQPage` on the FAQ, `ItemList` on categories, delivery and return details on products, and ratings once reviews exist.
+  - **Card images** have empty alt text: right for screen readers, but nothing for Google Images.
+  - **No Google Merchant Center feed**, so no Google Shopping free listings.
+- **Speed on a simulated mid-range phone** (4× slower CPU, fast 4G):
+  - CLS is 0.000 everywhere;
+  - LCP is 1.93 s on a category page, 2.64 s on the home page and **3.99 s on a product page** (the first ImageKit photo);
+  - TTFB is 0.7–1.0 s.
+
+**Research (agency and vendor guides, so practitioner advice rather than Google policy).** The common ground:
+- product markup with price, stock, reviews, shipping and returns, tested in the Rich Results Test;
+- a Merchant Center feed for free listings;
+- category pages that aren't thin (an intro, FAQs, internal links), since many guides now rank category pages above product pages;
+- controlled filter URLs;
+- Core Web Vitals at the 75th percentile: LCP under 2.5 s, INP under 200 ms, CLS under 0.1;
+- for Indian D2C fashion: trust signals, visible COD, reviews, honest sizing and multiple photo angles. Over 80% of traffic is on mobile.
+
+**What can't be done yet:**
+- "Rewrite low-CTR titles", "update page-2 pages", "refresh declining pages", "fix cannibalisation" and "merge thin pages" all need Search Console data, which only exists 4–8 weeks after the site is indexed. They're scheduled for 11d.
+- "Low-KD keywords" needs a paid tool (Ahrefs or Semrush). Without one, keywords come from competitor sites and Google's suggestions and "People also ask", with no difficulty scores.
+
+**Slices, each with a review stop:**
+- **11a: Technical SEO.** Safe to do while staging; it takes effect once indexing is on.
+  - `www` → `theduis.com` 301.
+  - Title and description templates: 50–60 character titles with search terms ("Polo T-Shirts for Men: Buy Online in India | Duis"), unique descriptions per category and collection from their own copy, and descriptions for every info page.
+  - **Markup:**
+    - `Organization` (logo, contact, social links, site-wide return and shipping policy);
+    - `WebSite` with a search box;
+    - `FAQPage`;
+    - `ItemList` on categories and collections;
+    - `shippingDetails` and `hasMerchantReturnPolicy` on products;
+    - `aggregateRating` once a product has reviews;
+    - `dateModified` on journal posts.
+  - **Images:** product names as alt text on cards, and the image sitemap.
+  - **Speed:** preconnect to ImageKit, and give the product page's first photo priority (target LCP under 2.5 s).
+  - **Category pages:** an intro block (the existing category description, editable in admin) and FAQs.
+  - **Linking and crawl checks:** related categories and collections linked from product and category pages. A crawl script checks for 404s, redirect chains and orphan pages (in the sitemap but linked from nowhere). It runs in CI and after deploys.
+  - **Production robots.txt:** allow everything except bag, checkout, account, search and filtered URLs.
+  - **IndexNow** pings Bing and Yandex when products change.
+- **11b: Google Shopping feed.** `/feeds/google-merchant.xml`, built from the catalogue: one item per variant, with price, stock, sizes, colours, images and delivery and return settings. It's refreshed on change, ready to connect in Merchant Center.
+- **11c: Accounts and measurement.** The owner creates the accounts; Claude sets up the rest.
+  - **Search Console:** a domain property, verified through a Cloudflare DNS TXT record.
+  - **Bing Webmaster Tools:** imported from Search Console.
+  - **GA4:** the measurement ID goes into `GA4_MEASUREMENT_ID` (consent-aware tracking already exists).
+  - **Merchant Center** is linked to the feed.
+  - Sitemaps go to Google and Bing once indexing is on.
+- **11d: Content.** It needs the real catalogue and the owner's review of every article.
+  - Keyword and competitor research: Bewakoof, The Souled Store, Snitch, Powerlook, Rare Rabbit.
+  - Topic clusters in the Journal, linked to their categories:
+    - fit and fabric guides (oversized vs regular, GSM explained, sizing by body type);
+    - comparisons;
+    - "best … for men in India" lists featuring Duis products;
+    - "People also ask" answers as category FAQs.
+  - Author bios for E-E-A-T, and `dateModified`.
+- **11e: Data-led fixes** (from 4–8 weeks after indexing): low-CTR titles, page-2 pages, declining pages, cannibalisation and thin-page merges, from Search Console reports.
+
+**Exit criteria:**
+- 11a–11c are done and verified in the Rich Results Test and Merchant Center.
+- No crawl errors.
+- Mobile LCP is under 2.5 s on the main page types.
+- The first content cluster is published.
+- 11e is planned against real data.
 

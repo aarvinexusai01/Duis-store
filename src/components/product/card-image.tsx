@@ -15,9 +15,12 @@ export function CardImage({
   media,
   sizes,
   preload = false,
+  alt = "",
   className,
 }: {
   media: MediaRef
+  /** The product's name for its main photo (Google Images); "" for duplicates. */
+  alt?: string
   sizes: string
   preload?: boolean
   className?: string
@@ -32,7 +35,7 @@ export function CardImage({
       sizes={sizes}
       width={media.width}
       height={media.height}
-      alt=""
+      alt={alt}
       loading={preload ? "eager" : "lazy"}
       fetchPriority={preload ? "high" : undefined}
       decoding="async"

@@ -9,8 +9,9 @@ import { PageSkeleton } from "@/components/page-skeleton"
 import { getPublishedCollections } from "@/features/collections/queries"
 
 export const metadata: Metadata = {
-  title: "Collections",
-  description: "Every Duis drop and edit in one place.",
+  title: "Collections — Men's Streetwear Drops & Edits",
+  description:
+    "Every Duis drop and edit in one place: best sellers, new arrivals and seasonal edits of oversized tees, shirts, hoodies and denim for men.",
   alternates: { canonical: "/collections" },
 }
 

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Anton, Geist } from "next/font/google"
+import { preconnect } from "react-dom"
 
 import { Toaster } from "@/components/ui/sonner"
 import { SITE } from "@/config/site"
@@ -39,6 +40,10 @@ export const viewport: Viewport = {
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // Product photos come from ImageKit (Phase 10): open that connection while
+  // the page is still streaming, not when the first <img> is parsed.
+  const imagekit = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
+  if (imagekit) preconnect(new URL(imagekit).origin)
   return (
     <html lang="en-IN" className={cn(display.variable, body.variable)}>
       <body className="flex min-h-dvh flex-col bg-background font-sans text-foreground antialiased">

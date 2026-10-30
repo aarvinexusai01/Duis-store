@@ -8,7 +8,9 @@ import { getListing } from "@/features/catalog/queries"
 import { listingMetadata } from "@/features/catalog/ui/listing-metadata"
 import { ListingView } from "@/features/catalog/ui/listing-view"
 import { getCollectionBySlug } from "@/features/collections/queries"
-import { parseListingParams } from "@/lib/listing-params"
+import { getStorePolicy } from "@/features/settings"
+import { EMPTY_PARAMS, parseListingParams } from "@/lib/listing-params"
+import { fitDescription, fitTitle, rupees, storePromises } from "@/lib/seo"
 import { SLUG } from "@/lib/slug"
 
 type Props = PageProps<"/collections/[slug]">
@@ -26,9 +28,29 @@ async function load(props: Pick<Props, "params" | "searchParams">) {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { collection, params } = await load(props)
   if (!collection) return { title: "Not found", robots: { index: false } }
+  const [listing, policy] = await Promise.all([
+    getListing(
+      { kind: "collection", collectionId: collection.id },
+      EMPTY_PARAMS,
+    ),
+    getStorePolicy(),
+  ])
+  const range = listing.priceRange
+    ? ` ${listing.total} ${listing.total === 1 ? "style" : "styles"} from ${rupees(listing.priceRange.minPaise)}.`
+    : ""
   return listingMetadata({
-    title: collection.seoTitle ?? collection.title,
-    description: collection.seoDescription ?? collection.description,
+    title:
+      collection.seoTitle ??
+      fitTitle(
+        `${collection.title} — Men's Streetwear Online in India`,
+        `${collection.title} — Men's Streetwear`,
+        collection.title,
+      ),
+    description:
+      collection.seoDescription ??
+      fitDescription(
+        `${collection.description ? `${collection.description} ` : `Shop the Duis ${collection.title} edit.`}${range} ${storePromises(policy)}`,
+      ),
     basePath: `/collections/${collection.slug}`,
     params,
     noindex: collection.noindex,

@@ -22,6 +22,7 @@ import { uuidArray } from "@/server/db/sql"
 
 import type { Block } from "./blocks"
 import type { NavigationData, NavItem, PageData } from "./schemas"
+import { pageHref } from "@/lib/page-href"
 
 /**
  * Turns stored CMS content (ids and slugs) into what the storefront renders
@@ -29,26 +30,7 @@ import type { NavigationData, NavItem, PageData } from "./schemas"
  * archived product, a deleted image — is dropped rather than shown broken.
  */
 
-const FRIENDLY_PAGES: Record<string, string> = {
-  home: "/",
-  about: "/about",
-  contact: "/contact",
-  faq: "/faq",
-  "size-guide": "/size-guide",
-}
-const POLICY_PAGES = new Set([
-  "privacy-policy",
-  "terms-of-service",
-  "shipping-policy",
-  "exchange-policy",
-  "cancellation-policy",
-])
-
-export function pageHref(slug: string): string {
-  if (FRIENDLY_PAGES[slug]) return FRIENDLY_PAGES[slug]
-  if (POLICY_PAGES.has(slug)) return `/policies/${slug}`
-  return `/pages/${slug}`
-}
+export { pageHref }
 
 export type ResolvedNavItem = {
   id: string
