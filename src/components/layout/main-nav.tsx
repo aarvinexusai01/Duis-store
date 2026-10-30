@@ -15,8 +15,10 @@ import { MediaImage } from "@/components/media-image"
 import type { ResolvedNavItem } from "@/features/cms"
 import { cn } from "@/lib/utils"
 
+// The open-state hover and focus classes override the shared trigger's
+// light background, which hid the light label on the dark header.
 const topLevel =
-  "h-10 rounded-none bg-transparent px-3 text-sm font-semibold tracking-wide text-paper uppercase hover:bg-white/10 hover:text-paper focus:bg-white/10 focus:text-paper data-popup-open:bg-white/10 data-open:bg-white/10"
+  "h-10 rounded-none bg-transparent px-3 text-sm font-semibold tracking-wide text-paper uppercase hover:bg-white/10 hover:text-paper focus:bg-white/10 focus:text-paper data-popup-open:bg-white/10 data-open:bg-white/10 data-popup-open:hover:bg-white/10 data-open:hover:bg-white/10 data-open:focus:bg-white/10"
 
 /** Desktop mega menu built from the published `header` navigation. */
 export function MainNav({ items }: { items: ResolvedNavItem[] }) {
