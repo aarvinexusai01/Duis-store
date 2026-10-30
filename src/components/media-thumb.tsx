@@ -1,3 +1,5 @@
+import { mediaSrc } from "@/lib/image-loader"
+
 /** A small square product photo from a stored media key (no next/image overhead). */
 export function MediaThumb({
   mediaKey,
@@ -14,7 +16,7 @@ export function MediaThumb({
       {mediaKey && (
         // eslint-disable-next-line @next/next/no-img-element -- fixed stored rendition
         <img
-          src={`/media/${mediaKey}/320.webp`}
+          src={mediaSrc(mediaKey, 320)}
           alt=""
           loading="lazy"
           className="absolute inset-0 size-full object-cover"

@@ -21,8 +21,9 @@ import {
   updateMediaAction,
 } from "@/features/media/admin-actions"
 import { cn } from "@/lib/utils"
+import { mediaSrc } from "@/lib/image-loader"
 
-const thumb = (key: string) => `/media/${key}/320.webp`
+const thumb = (key: string) => mediaSrc(key, 320)
 const kb = (bytes: number) =>
   bytes > 1024 * 1024
     ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
@@ -196,7 +197,7 @@ function MediaDetail({
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- stored rendition */}
               <img
-                src={`/media/${item.key}/640.webp`}
+                src={mediaSrc(item.key, 640)}
                 alt={item.alt}
                 className="block h-auto w-full"
               />

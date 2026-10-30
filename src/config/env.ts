@@ -117,6 +117,13 @@ export const serverEnvSchema = z
       .int()
       .min(1)
       .default(15 * 1024 * 1024),
+    // Images on ImageKit (Phase 10). Uploads go there when both are set;
+    // the endpoint is also built into the browser bundle.
+    NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT: httpUrl.optional(),
+    IMAGEKIT_PRIVATE_KEY: z.string().min(10).optional(),
+    IMAGEKIT_UPLOAD_URL: httpUrl.default(
+      "https://upload.imagekit.io/api/v1/files/upload",
+    ),
 
     // Server health alerts (doc/07 §7): who gets them. Unset: shown on the
     // System page only.

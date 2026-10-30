@@ -10,6 +10,7 @@ import {
   updateCollectionAction,
 } from "@/features/collections/admin-actions"
 import { slugify } from "@/lib/slug"
+import { mediaSrc } from "@/lib/image-loader"
 
 const input = "h-9 w-full rounded-sm border border-input bg-card px-2 text-sm"
 
@@ -44,7 +45,7 @@ function ImagePicker({
       {value && (
         // eslint-disable-next-line @next/next/no-img-element -- stored rendition
         <img
-          src={`/media/${value.key}/640.webp`}
+          src={mediaSrc(value.key, 640)}
           alt=""
           className="h-28 w-full rounded-sm bg-secondary object-cover"
         />

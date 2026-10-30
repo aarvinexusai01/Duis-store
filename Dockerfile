@@ -23,10 +23,13 @@ ARG APP_SHA=dev
 # Browser error reporting is baked in at build time (the DSN is public);
 # empty leaves Sentry out of the browser entirely.
 ARG NEXT_PUBLIC_SENTRY_DSN=""
+# Image CDN (Phase 10, public); empty keeps images on the media volume.
+ARG NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT=""
 ARG APP_ENV=production
 # Version-skew protection while old and new replicas overlap.
 ENV NEXT_DEPLOYMENT_ID=${APP_SHA} \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
+    NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT=${NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT} \
     NEXT_PUBLIC_APP_ENV=${APP_ENV} \
     NEXT_PUBLIC_APP_SHA=${APP_SHA}
 COPY --from=deps /app/node_modules ./node_modules

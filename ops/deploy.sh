@@ -82,6 +82,7 @@ main() {
       --build-arg "APP_SHA=$sha" \
       --build-arg "APP_ENV=$(env_get APP_ENV .env.infra)" \
       --build-arg "NEXT_PUBLIC_SENTRY_DSN=$(env_get NEXT_PUBLIC_SENTRY_DSN .env.infra)" \
+      --build-arg "NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT=$(env_get NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT .env.infra)" \
       --secret id=next_server_actions_key,env=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
       --tag "duis-web:$sha" .
   fi

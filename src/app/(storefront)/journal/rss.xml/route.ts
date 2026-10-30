@@ -3,6 +3,7 @@ import { connection } from "next/server"
 import { SITE } from "@/config/site"
 import { getJournalFeed } from "@/features/cms/queries"
 import { absoluteUrl } from "@/server/site-url"
+import { mediaSrc } from "@/lib/image-loader"
 
 const xml = (text: string) =>
   text
@@ -30,7 +31,7 @@ export async function GET() {
         post.author ? `<dc:creator>${xml(post.author.name)}</dc:creator>` : "",
         post.category ? `<category>${xml(post.category.name)}</category>` : "",
         post.cover
-          ? `<enclosure url="${xml(absoluteUrl(`/media/${post.cover.key}/1280.webp`))}" type="image/webp" length="0"/>`
+          ? `<enclosure url="${xml(absoluteUrl(mediaSrc(post.cover.key, 1280)))}" type="image/webp" length="0"/>`
           : "",
         "</item>",
       ].join("")

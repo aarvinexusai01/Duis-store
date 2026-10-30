@@ -31,6 +31,9 @@ x-app-env: &app-env
   INTERNAL_REVALIDATE_URLS: http://web_a:3000,http://web_b:3000
   REDIS_URL: redis://:${REDIS_PASSWORD:?set in .env.infra}@redis:6379/0
   ELASTICSEARCH_URL: http://elasticsearch:9200
+  # Built into the web bundle too (Dockerfile); also needed at runtime by the
+  # uploader and the worker (Phase 10).
+  NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT: ${NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT:-}
   ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:?set in .env.infra}
 
 x-app: &app

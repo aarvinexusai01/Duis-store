@@ -5,7 +5,8 @@ import { DomainError } from "@/server/errors"
 import { errorResponse } from "@/server/http"
 
 /**
- * Staff image upload (multipart field `file`, optional `altText`). Nginx also
+ * Staff image upload (multipart field `file`, optional `altText`, and
+ * `purpose=product` from the product editor). Nginx also
  * caps the body size (doc/07); the check here protects development.
  */
 export async function POST(request: Request) {
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
       bytes: new Uint8Array(await file.arrayBuffer()),
       filename: file.name,
       altText: typeof altText === "string" ? altText : "",
+      purpose: form.get("purpose") === "product" ? "product" : "content",
     })
     return Response.json(uploaded, { status: uploaded.reused ? 200 : 201 })
   } catch (error) {

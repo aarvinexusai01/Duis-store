@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import type { AdminProduct } from "@/features/catalog"
 import { setProductMediaAction } from "@/features/catalog/admin-actions"
+import { mediaSrc } from "@/lib/image-loader"
 
 type Item = AdminProduct["media"][number]
 
@@ -40,6 +41,8 @@ export function MediaManager({
     for (const file of Array.from(files)) {
       const body = new FormData()
       body.set("file", file)
+      // Product photos get the watermarked zoom copy (Phase 10).
+      body.set("purpose", "product")
       const response = await fetch("/api/media/upload", {
         method: "POST",
         body,
@@ -97,7 +100,7 @@ export function MediaManager({
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- stored rendition */}
             <img
-              src={`/media/${item.key}/320.webp`}
+              src={mediaSrc(item.key, 320)}
               alt=""
               className="h-28 w-22 shrink-0 bg-secondary object-cover"
             />

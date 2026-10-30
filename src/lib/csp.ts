@@ -22,6 +22,8 @@ export type CspOptions = {
   dev: boolean
   /** Browser error reports go to the DSN's host. */
   sentryDsn?: string
+  /** Images from ImageKit (Phase 10); its host is allowed for images. */
+  imagekitEndpoint?: string
   /** Who may frame the page: nobody, or our own origin (CMS previews). */
   frameAncestors: "'none'" | "'self'"
 }
@@ -37,6 +39,7 @@ function origin(url: string | undefined): string | null {
 
 export function contentSecurityPolicy(options: CspOptions): string {
   const sentry = origin(options.sentryDsn)
+  const imagekit = origin(options.imagekitEndpoint)
   const directives: Record<string, (string | null | false)[]> = {
     "default-src": ["'self'"],
     "script-src": [
@@ -50,7 +53,16 @@ export function contentSecurityPolicy(options: CspOptions): string {
       INSTAGRAM,
     ],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "data:", "blob:", RAZORPAY, GTAG, ...GA, META_BEACON],
+    "img-src": [
+      "'self'",
+      "data:",
+      "blob:",
+      imagekit,
+      RAZORPAY,
+      GTAG,
+      ...GA,
+      META_BEACON,
+    ],
     "font-src": ["'self'", "data:"],
     "connect-src": [
       "'self'",

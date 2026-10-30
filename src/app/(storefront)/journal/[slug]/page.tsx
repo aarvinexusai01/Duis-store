@@ -13,6 +13,7 @@ import { getJournalPost } from "@/features/cms/queries"
 import { PostBody } from "@/features/cms/ui/journal/post-body"
 import { journalDate, PostCard } from "@/features/cms/ui/journal/post-card"
 import { absoluteUrl } from "@/server/site-url"
+import { mediaSrc } from "@/lib/image-loader"
 
 type Props = PageProps<"/journal/[slug]">
 
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!found) return { title: "Story not found", robots: { index: false } }
   const { post } = found
   const image = post.ogImage
-    ? absoluteUrl(`/media/${post.ogImage.key}/1280.webp`)
+    ? absoluteUrl(mediaSrc(post.ogImage.key, 1280))
     : undefined
   return {
     title: post.seo.title ?? post.title,
@@ -69,7 +70,7 @@ async function Post({ params }: Pick<Props, "params">) {
           mainEntityOfPage: url,
           url,
           ...(post.cover
-            ? { image: absoluteUrl(`/media/${post.cover.key}/1280.webp`) }
+            ? { image: absoluteUrl(mediaSrc(post.cover.key, 1280)) }
             : {}),
           ...(post.author
             ? {

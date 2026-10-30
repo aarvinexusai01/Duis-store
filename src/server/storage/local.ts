@@ -69,7 +69,3 @@ export function mediaPath(key: string, name: string): string {
   assertSafe(key, name)
   return path.join(mediaRoot(), key, name)
 }
-
-export function mediaUrl(key: string, name = "orig.webp"): string {
-  return `/media/${key}/${name}`
-}

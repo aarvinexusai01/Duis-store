@@ -12,3 +12,4 @@ export {
   type UploadedMedia,
 } from "./service"
 export { readCustomerPhoto, uploadCustomerPhoto } from "./customer-photos"
+export { moveMediaToImageKit } from "./move-to-imagekit"

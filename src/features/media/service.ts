@@ -14,9 +14,40 @@ import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
-import { mediaUrl, storeMediaFiles } from "@/server/storage/local"
+import { mediaSrc } from "@/lib/image-loader"
+import { imagekitEnabled, uploadToImageKit } from "@/server/storage/imagekit"
+import { storeMediaFiles } from "@/server/storage/local"
 
-import { processImage } from "./pipeline"
+import {
+  processImage,
+  processImageForImageKit,
+  type ImagePurpose,
+  type ProcessedImage,
+} from "./pipeline"
+
+/**
+ * Stores a new upload: on ImageKit when configured (Phase 10; the key's
+ * prefix says which copies exist), otherwise on the local media volume.
+ */
+async function storeUpload(
+  input: Buffer,
+  hex: string,
+  purpose: ImagePurpose,
+): Promise<{ storageKey: string; processed: ProcessedImage; bytes: number }> {
+  if (imagekitEnabled()) {
+    const processed = await processImageForImageKit(input, purpose)
+    await uploadToImageKit(hex, processed.files)
+    return {
+      storageKey: `${purpose === "product" ? "ikp" : "ikc"}-${hex}`,
+      processed,
+      bytes: processed.files[0]!.data.byteLength,
+    }
+  }
+  const processed = await processImage(input)
+  await storeMediaFiles(hex, processed.files)
+  const master = processed.files.find((file) => file.name === "orig.webp")!
+  return { storageKey: hex, processed, bytes: master.data.byteLength }
+}
 
 export type UploadedMedia = {
   id: string
@@ -38,10 +69,12 @@ export const uploadImage = defineOperation({
     ),
     filename: z.string().max(255).optional(),
     altText: z.string().trim().max(300).default(""),
+    // Product photos get a watermarked zoom copy and a capped clean one.
+    purpose: z.enum(["product", "content"]).default("content"),
   }),
   async handler(
     { actor, log },
-    { bytes, filename, altText },
+    { bytes, filename, altText, purpose },
   ): Promise<UploadedMedia> {
     const maxBytes = getServerEnv().MEDIA_MAX_UPLOAD_BYTES
     if (bytes.byteLength === 0)
@@ -56,27 +89,37 @@ export const uploadImage = defineOperation({
     const input = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
     const sha256 = createHash("sha256").update(input).digest("hex")
 
-    // Identical bytes: reuse (and restore) the existing asset.
-    const [existing] = await getDb()
-      .update(mediaAssets)
-      .set({ deletedAt: null })
+    const hex = sha256.slice(0, 32)
+
+    // Identical bytes: reuse (and restore) the existing asset. A clean
+    // full-size content image re-uploaded as a product photo is stored again
+    // with the product copies, so a product never shows a clean full-size one.
+    const [found] = await getDb()
+      .select()
+      .from(mediaAssets)
       .where(eq(mediaAssets.sha256, sha256))
-      .returning()
-    if (existing) {
+    const upgrade =
+      found?.storageKey.startsWith("ikc-") && purpose === "product"
+    if (found && !upgrade) {
+      await getDb()
+        .update(mediaAssets)
+        .set({ deletedAt: null })
+        .where(eq(mediaAssets.id, found.id))
       return {
-        id: existing.id,
-        storageKey: existing.storageKey,
-        url: mediaUrl(existing.storageKey),
-        width: existing.width,
-        height: existing.height,
+        id: found.id,
+        storageKey: found.storageKey,
+        url: mediaSrc(found.storageKey, 640),
+        width: found.width,
+        height: found.height,
         reused: true,
       }
     }
 
-    const processed = await processImage(input)
-    const storageKey = sha256.slice(0, 32)
-    await storeMediaFiles(storageKey, processed.files)
-    const master = processed.files.find((file) => file.name === "orig.webp")!
+    const {
+      storageKey,
+      processed,
+      bytes: storedBytes,
+    } = await storeUpload(input, hex, purpose)
 
     return withTransaction(async (tx) => {
       const [row] = await tx
@@ -86,7 +129,7 @@ export const uploadImage = defineOperation({
           sha256,
           originalFilename: filename?.slice(0, 255) ?? null,
           mime: "image/webp",
-          bytes: master.data.byteLength,
+          bytes: storedBytes,
           width: processed.width,
           height: processed.height,
           renditions: [...MEDIA_WIDTHS],
@@ -95,7 +138,8 @@ export const uploadImage = defineOperation({
         })
         .onConflictDoUpdate({
           target: mediaAssets.sha256,
-          set: { deletedAt: null },
+          // An upgraded content image keeps its id; usages pick up the new key.
+          set: { deletedAt: null, storageKey, updatedAt: new Date() },
         })
         .returning()
       await writeAudit(tx, actor, {
@@ -108,11 +152,18 @@ export const uploadImage = defineOperation({
           sourceFormat: processed.sourceFormat,
         },
       })
+      if (upgrade) {
+        // Pages showing the old key rebuild with the new one.
+        await requestRevalidation(
+          [cacheTags.media(row!.id), cacheTags.productsList],
+          { tx },
+        )
+      }
       log.info({ mediaId: row!.id, storageKey }, "image uploaded")
       return {
         id: row!.id,
         storageKey,
-        url: mediaUrl(storageKey),
+        url: mediaSrc(storageKey, 640),
         width: processed.width,
         height: processed.height,
         reused: false,

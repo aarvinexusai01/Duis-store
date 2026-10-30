@@ -16,6 +16,7 @@ The phases follow technical dependencies while putting the storefront first. Eac
 | 7 | Production deployment & operations | M | **M5:** stack running on the VPS behind Cloudflare, with backups, monitoring and rollback |
 | 8 | Hardening, verification & launch | M | All Definition-of-Done scenarios pass. Live credentials are activated. Go-live. |
 | 9 | Search engine & shared caching (before Phase 8's load test) | L | ✅ **Built and verified on a laptop 2026-10-26**; server checks wait for the VPS. Search runs on Elasticsearch. Repeat views of a product or search make almost no Postgres queries, on either app copy. |
+| 10 | Images on ImageKit, watermarked zoom (built; switched on when the private key is on the server) | M | Product and content images are stored and served by ImageKit; the full-size zoom photo carries the Duis emblem. |
 
 Sizes are relative (S < M < L < XL), not calendar estimates.
 
@@ -1249,3 +1250,69 @@ Plan as approved:
 **Not in this phase:** bags, checkout, accounts, orders and admin stay live on Postgres, as they must. Sessions, rate limits and the job queue stay in Postgres. Cloudflare doesn't cache pages.
 
 **Exit criteria:** all four slices reviewed. The query-count test and the load check show product, listing and search views served without Postgres. The failure drills pass. All existing suites still pass. Met on a laptop on 2026-10-26; repeated on the VPS as listed above.
+
+---
+
+## Phase 10: Images on ImageKit, watermarked zoom
+
+**Plan (written and approved 2026-10-30, before building).**
+
+**Built 2026-10-30.** Owner's endpoint: `https://ik.imagekit.io/DUIS`.
+- **Change from the plan:** the clean copy is capped at 960 px for **product photos only**, meaning uploads from the product editor and images used by a product. Banners and journal images stay clean at full size, which a homepage banner needs. A content image later uploaded as a product photo is reprocessed with the product copies and keeps its id.
+- **How images are told apart:** by the storage key itself. `ikp-{hex}` is an ImageKit product photo, `ikc-{hex}` an ImageKit content image, and a plain hex key is local. No schema or query changes were needed, and every link goes through `mediaSrc()` in `src/lib/image-loader.ts`.
+- **The watermark:** baked into the zoom copy at upload. The emblem is 14% of the width, at 55% opacity, bottom-right. Visually checked on a demo photo.
+- **Moving existing images:** `dist/media-to-imagekit.mjs [--dry-run]`. It's safe to run again, and the local files are kept.
+- **Tests:**
+  - 4 unit tests for the links;
+  - 6 integration tests against a stand-in for ImageKit: sizes, the watermark corner, stripped EXIF, key prefixes, the upgrade, retrying and failing, and the move;
+  - the CSP test.
+- **To switch it on:**
+  1. The owner adds `IMAGEKIT_PRIVATE_KEY` to `.env.production`. The endpoint is already in `.env.infra`.
+  2. Deploy.
+  3. Run the move: a dry run first, then for real.
+  4. Empty the Redis cache and restart the web copies.
+  5. Check the images on theduis.com.
+
+- **Owner decisions (2026-10-30):**
+  - ImageKit stores and serves every public image.
+  - Only the big zoom photos carry a watermark: the Duis emblem, small and semi-transparent, bottom-right.
+  - Saving images is discouraged.
+
+**What can't be done, said plainly:** any image a browser displays can be saved (long-press, right-click, a screenshot). A shop can't watermark only the images people *download*. So the watermark is on the copy most worth stealing (the full-size zoom), and the clean images are capped at a size that's no use for printing or a marketplace listing.
+
+**Design:**
+- **Two stored versions per upload.**
+  - **Sanitising:** every upload still goes through sharp on our server first: re-encoded, with location and camera data stripped (doc/08), as today.
+  - **Clean:** capped at **960 px** wide. Used for listings, product pages, the bag and CMS images.
+  - **Zoom:** full size, up to 1,920 px, with the emblem **baked in** at upload. ImageKit can also add watermarks on the fly through the image's URL. But anyone can remove that part of the URL and get the clean original, so it protects nothing. Baked in, no clean full-size copy exists anywhere public.
+- **Delivery:** ImageKit's CDN resizes each image to the width the page asks for. It also chooses WebP or AVIF for each browser. Our server no longer serves or resizes images.
+  - **Config:** `IMAGEKIT_URL_ENDPOINT` (public, built into the app), plus `IMAGEKIT_PUBLIC_KEY` and `IMAGEKIT_PRIVATE_KEY` (server only, in `.env.production`).
+- **Without ImageKit configured** (development, tests), the local media volume works exactly as today.
+- **Discouraging saving:** product and zoom images get right-click and long-press saving turned off, plus no dragging. This is a nudge, not protection, and it's described that way.
+- **Other changes:**
+  - The CSP allows `https://ik.imagekit.io`.
+  - Emails use the ImageKit URLs.
+  - Private files (shipping labels) stay on the server.
+
+**Slices, each with a review stop:**
+- **10a: ImageKit storage and delivery.**
+  - An `imagekit` storage adapter beside `local` (ADR-006 planned for this).
+  - The `next/image` loader, the CSP, and the env settings.
+  - Integration tests against a fake ImageKit; one live upload check on the server.
+- **10b: The watermarked zoom.**
+  - Emblem compositing in the upload pipeline (from `public/brand/emblem-512.png`).
+  - The gallery's zoom dialog uses the watermarked version.
+  - Saving discouraged on product and zoom images.
+  - Tests check that the zoom version differs from the clean one in the corner, and that no clean version wider than 960 px is stored.
+- **10c: Moving existing images.**
+  - A script uploads every existing image (the demo catalogue and CMS images) in both versions, then switches the records.
+  - The local copies are kept until the owner confirms. Verified on the server.
+
+**Needed from the owner:** an ImageKit account (the free plan has 20 GB of bandwidth a month to start). From Developer options: the **URL endpoint** (for example `https://ik.imagekit.io/yourid`), the **public key** and the **private key**. The private key goes into `.env.production` on the server, typed in by the owner, never through chat.
+
+**Exit criteria:**
+- New and existing images load from ImageKit on theduis.com.
+- The zoom photo shows the emblem, and no clean image wider than 960 px is reachable.
+- Uploads still strip location and camera data.
+- All suites pass.
+

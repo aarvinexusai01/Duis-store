@@ -12,6 +12,7 @@ import { resolvePageBlocks } from "../resolve"
 import type { PreviewPage } from "../workflow"
 import { Blocks } from "./blocks"
 import { PostBody } from "./journal/post-body"
+import { mediaSrc } from "@/lib/image-loader"
 
 /**
  * Renders a revision exactly as the live site would: the same resolver and
@@ -84,7 +85,7 @@ export async function PreviewPageView({ preview }: { preview: PreviewPage }) {
           <div className="page-container mt-8 max-w-5xl">
             {/* eslint-disable-next-line @next/next/no-img-element -- preview only */}
             <img
-              src={`/media/${image.key}/1280.webp`}
+              src={mediaSrc(image.key, 1280)}
               alt=""
               className="aspect-[16/9] w-full object-cover"
             />

@@ -2,6 +2,7 @@ import { connection } from "next/server"
 
 import { loadMediaRefs } from "@/features/catalog"
 import { getPublishedSiteSettings } from "@/features/cms/queries"
+import { mediaSrc } from "@/lib/image-loader"
 
 /**
  * The browser-tab icon (doc/06 Phase 6b): the favicon from site settings,
@@ -16,7 +17,7 @@ export async function GET() {
     return new Response(null, {
       status: 307,
       headers: {
-        location: `/media/${media.key}/320.webp`,
+        location: mediaSrc(media.key, 320),
         "cache-control": "public, max-age=300",
       },
     })

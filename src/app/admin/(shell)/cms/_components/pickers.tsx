@@ -20,8 +20,9 @@ import type { MediaListItem } from "@/features/media"
 import { cn } from "@/lib/utils"
 
 import { useLabels } from "./labels"
+import { mediaSrc } from "@/lib/image-loader"
 
-const thumb = (key: string) => `/media/${key}/320.webp`
+const thumb = (key: string) => mediaSrc(key, 320)
 
 /** One image: shows the choice, opens the library to change it. */
 export function MediaField({

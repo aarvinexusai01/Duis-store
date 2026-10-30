@@ -37,6 +37,7 @@ import { TrackEvent } from "@/features/analytics/ui/track-event"
 
 import { ProductView } from "./_components/product-view"
 import { SizeGuide } from "./_components/size-guide"
+import { mediaSrc } from "@/lib/image-loader"
 
 type Props = PageProps<"/products/[slug]">
 
@@ -61,7 +62,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? {
           images: [
             {
-              url: `/media/${image.key}/1280.webp`,
+              url: mediaSrc(image.key, 1280),
               width: 1280,
               alt: image.alt,
             },
@@ -310,7 +311,7 @@ async function ProductStructuredData({
         countryOfOrigin: product.countryOfOrigin,
         image: product.media
           .slice(0, 6)
-          .map((m) => absoluteUrl(`/media/${m.key}/1280.webp`)),
+          .map((m) => absoluteUrl(mediaSrc(m.key, 1280))),
         variesBy: product.axes.map((axis) =>
           axis.code === "color"
             ? "https://schema.org/color"

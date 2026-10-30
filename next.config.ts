@@ -6,6 +6,7 @@ import { contentSecurityPolicy } from "./src/lib/csp"
 
 const dev = process.env.NODE_ENV === "development"
 const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN
+const imagekitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
 
 // Baseline headers for every response. Nginx adds HSTS in production. The
 // CSP allow-lists sources without nonces, so cached page shells keep working
@@ -13,7 +14,12 @@ const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
-    value: contentSecurityPolicy({ dev, sentryDsn, frameAncestors: "'none'" }),
+    value: contentSecurityPolicy({
+      dev,
+      sentryDsn,
+      imagekitEndpoint,
+      frameAncestors: "'none'",
+    }),
   },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -80,6 +86,7 @@ const nextConfig: NextConfig = {
             value: contentSecurityPolicy({
               dev,
               sentryDsn,
+              imagekitEndpoint,
               frameAncestors: "'self'",
             }),
           },

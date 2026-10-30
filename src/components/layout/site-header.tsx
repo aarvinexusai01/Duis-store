@@ -24,6 +24,7 @@ import { MainNav } from "./main-nav"
 import { MobileNav } from "./mobile-nav"
 import { MobileSearch } from "./mobile-search"
 import { SearchBox } from "./search-box"
+import { mediaSrc } from "@/lib/image-loader"
 
 const iconLink = cn(
   buttonVariants({ variant: "ghost", size: "icon-lg" }),
@@ -116,7 +117,7 @@ async function BrandMark({ draft }: { draft?: ChromeDraft }) {
     <Link href="/" className="mr-auto block h-9 lg:mr-0">
       {/* eslint-disable-next-line @next/next/no-img-element -- small stored rendition */}
       <img
-        src={`/media/${logo.key}/320.webp`}
+        src={mediaSrc(logo.key, 320)}
         alt={`${settings?.brandName ?? "Duis"} home`}
         className="h-9 w-auto object-contain"
       />
