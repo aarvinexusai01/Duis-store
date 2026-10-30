@@ -6,5 +6,5 @@ export const SITE = {
   name: "Duis",
   defaultTitle: "Duis — Men's Streetwear",
   defaultDescription:
-    "Oversized tees, graphic tees, shirts, hoodies and denim for men. Shipping across India and worldwide.",
+    "Oversized tees, graphic tees, shirts, hoodies and sweatshirts for men. Shipping across India and worldwide.",
 } as const

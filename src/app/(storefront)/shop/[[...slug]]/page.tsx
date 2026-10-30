@@ -101,13 +101,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const audience = location.kind === "all" ? null : location.department.name
   const title =
     location.kind === "all"
-      ? fitTitle(
-          "Shop All Streetwear — Tees, Shirts, Hoodies & Denim",
-          "Shop all",
-        )
+      ? fitTitle("Shop All Streetwear — Tees, Shirts & Hoodies", "Shop all")
       : location.kind === "department"
         ? fitTitle(
-            `${view.title}'s Clothing — Tees, Shirts, Hoodies & Denim`,
+            `${view.title}'s Clothing — Tees, Shirts & Hoodies`,
             `${view.title}'s Clothing`,
           )
         : fitTitle(
