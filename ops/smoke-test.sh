@@ -82,9 +82,20 @@ main() {
     sed -E 's#<loc>https?://[^/]+(/[^<]+)</loc>#\1#' || true)
   if [ -n "$product" ]; then
     check "product page $product" 200 "$(status "$BASE$product")"
-    local image
-    image=$(body "$BASE$product" | grep -oE '/media/[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+\.webp' | head -n 1 || true)
-    [ -n "$image" ] && check "image from the media volume" 200 "$(status "$BASE$image")"
+    # Product images: on ImageKit (Phase 10) or the local media volume.
+    local page image
+    page=$(body "$BASE$product")
+    image=$(grep -oE 'https://ik\.imagekit\.io/[A-Za-z0-9_-]+/duis/[a-f0-9]{32}/clean\.webp\?tr=w-[0-9]+' <<<"$page" | head -n 1 || true)
+    if [ -n "$image" ]; then
+      check "product image from ImageKit" 200 "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$image" 2>/dev/null || echo 000)"
+      local hex
+      hex=$(sed -E 's#.*/duis/([a-f0-9]{32})/.*#\1#' <<<"$image")
+      check "no clean original on the server" 404 "$(status "$BASE/media/$hex/orig.webp")"
+    else
+      image=$(grep -oE '/media/[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+\.webp' <<<"$page" | head -n 1 || true)
+      [ -n "$image" ] && check "image from the media volume" 200 "$(status "$BASE$image")"
+    fi
+    check "moved originals are never served" 404 "$(status "$BASE/media/.moved/x/orig.webp")"
     # The 10-second page cache: stored for signed-out visitors with no bag,
     # skipped for anyone with one.
     cache_status "$BASE$product" >/dev/null

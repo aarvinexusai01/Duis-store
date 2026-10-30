@@ -1,5 +1,5 @@
 import type { MediaRef } from "@/features/catalog"
-import { MEDIA_PREFIX } from "@/lib/image-loader"
+import { mediaSrc } from "@/lib/image-loader"
 import { cn } from "@/lib/utils"
 
 // Cards never render wider than ~300 CSS px (≈900 device px at 3x), so the
@@ -22,12 +22,13 @@ export function CardImage({
   preload?: boolean
   className?: string
 }) {
-  const base = `${MEDIA_PREFIX}${media.key}`
   return (
     // eslint-disable-next-line @next/next/no-img-element -- renditions are pre-generated; see the doc comment
     <img
-      src={`${base}/640.webp`}
-      srcSet={CARD_WIDTHS.map((w) => `${base}/${w}.webp ${w}w`).join(", ")}
+      src={mediaSrc(media.key, 640)}
+      srcSet={CARD_WIDTHS.map((w) => `${mediaSrc(media.key, w)} ${w}w`).join(
+        ", ",
+      )}
       sizes={sizes}
       width={media.width}
       height={media.height}
