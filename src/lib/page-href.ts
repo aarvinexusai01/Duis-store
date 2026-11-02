@@ -13,6 +13,7 @@ const FRIENDLY_PAGES: Record<string, string> = {
 }
 const POLICY_PAGES = new Set([
   "privacy-policy",
+  "privacy-notice",
   "terms-of-service",
   "shipping-policy",
   "exchange-policy",

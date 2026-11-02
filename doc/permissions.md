@@ -83,6 +83,7 @@ Ownership is enforced inside each operation (by the actor's user id), and integr
 | `orders.listMine`, `orders.getMine`, `orders.cancel` | Signed in | Own orders; cancellation only before dispatch |
 | `orders.getMyInvoice` | Signed in | Own orders; the courier's invoice for the order's own parcel |
 | `customers.setDefaultAddress` | Signed in | Own addresses |
+| `privacy.acceptAccountNotice` | Signed in | Own account |
 | `wallet.getSummary` | Signed in | Own wallet |
 | `discounts.create` | `discount: create` | Super Admin, Store Admin |
 | `wallet.grantGoodwill` | `customer: credit` | Super Admin, Store Admin (promotional credit that expires) |

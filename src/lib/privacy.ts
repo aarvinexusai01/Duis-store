@@ -26,7 +26,10 @@ export const NOTICE_LANGUAGES = ["en", "hi"] as const
 export type NoticeLanguage = (typeof NOTICE_LANGUAGES)[number]
 
 /** Where each box links for the full notice, rights and complaints. */
-export const PRIVACY_NOTICE_PATH = "/policies/privacy-policy"
+export const PRIVACY_NOTICE_PATH: Record<NoticeLanguage, string> = {
+  en: "/policies/privacy-notice",
+  hi: "/policies/privacy-notice/hi",
+}
 
 export const CONSENT_TEXT: Record<
   ConsentPurpose,

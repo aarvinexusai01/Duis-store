@@ -1427,7 +1427,11 @@ The owner asked for a full SEO list (technical, quick wins, on-page, content) pl
   - Email sign-in to an existing account collects nothing new, so it has no box.
   - Choosing a default address is its own operation, with no box.
   - WhatsApp updates and WhatsApp marketing are recorded as their own purposes; they stay optional.
-  - The boxes link to the Privacy Policy until 12b adds the standalone notice.
+
+**12b built 2026-11-02:** the standalone Privacy Notice in English and Hindi (`/policies/privacy-notice`, `/policies/privacy-notice/hi`), in code so it stays tied to `NOTICE_VERSION`, and linked from every box and the footer. `requireUser` sends anyone without this version's account consent to `/privacy-consent` once, which also catches email sign-ins.
+- **Open for the owner and a lawyer:**
+  - fixed retention periods: the shop runs none beyond the 72-month tax rule, so the notice promises none;
+  - the Board's official complaint address, and the grievance period under the Rules: not confirmed from an official source, so not printed.
 
 **The law, as checked on 2026-11-02:**
 - **Dates:** the DPDP Rules, 2025 were notified on 13 November 2025. Notice (Rule 3), consent, children's data (Rule 10), security, retention and Data Principal rights apply from about **13 May 2027**. Building now gives time to test before then.

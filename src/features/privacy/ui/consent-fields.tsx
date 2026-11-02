@@ -109,7 +109,7 @@ export function ConsentFields({
       >
         {ui.rights}{" "}
         <Link
-          href={PRIVACY_NOTICE_PATH as Route}
+          href={PRIVACY_NOTICE_PATH[language] as Route}
           target="_blank"
           className="underline underline-offset-2"
         >

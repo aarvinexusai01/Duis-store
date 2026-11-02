@@ -108,7 +108,10 @@ export const setMarketingConsent = defineOperation({
   async handler({ actor, log }, { marketingEmail, marketingWhatsapp }) {
     const userId = ownerId(actor)
     await withTransaction(async (tx) => {
-      const before = await tx.execute<{ email: boolean; whatsapp: boolean }>(sql`
+      const before = await tx.execute<{
+        email: boolean
+        whatsapp: boolean
+      }>(sql`
         select marketing_email_consent_at is not null as email,
                marketing_whatsapp_consent_at is not null as whatsapp
         from customer_profiles where user_id = ${userId} for update`)

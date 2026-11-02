@@ -244,6 +244,11 @@ export function footerNavigation(): NavigationData {
         label: "Legal",
         link: { type: "page", slug: "terms-of-service" },
         children: [
+          {
+            id: "privacy-notice",
+            label: "Privacy Notice",
+            link: { type: "url", href: "/policies/privacy-notice" },
+          },
           page("privacy-policy", "Privacy policy"),
           page("terms-of-service", "Terms of service"),
           page("cancellation-policy", "Cancellations"),
