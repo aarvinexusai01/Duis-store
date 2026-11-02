@@ -237,7 +237,7 @@ services:
   # evicts only those, never the invalidation list.
   redis:
     <<: *hardening
-    image: redis:8.10.2-alpine
+    image: redis:8.10.3-alpine
     user: redis
     # The password goes into a config file in memory, not the process list.
     entrypoint: ["sh", "-c"]

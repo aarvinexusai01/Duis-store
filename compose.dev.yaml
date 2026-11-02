@@ -42,7 +42,7 @@ services:
   redis:
     # Shared cache (ADR-0033). Same settings as production; nothing is saved
     # to disk. Database 0 is the dev server's, 15 the integration tests'.
-    image: redis:8.10.2-alpine
+    image: redis:8.10.3-alpine
     command:
       - redis-server
       - --requirepass
