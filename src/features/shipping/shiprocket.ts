@@ -8,6 +8,7 @@ import { logger } from "@/server/observability/logger"
 
 import type { Consignee, ShipmentRequest, ShippingProvider } from "./provider"
 import {
+  awbFailureReason,
   parseShiprocketTime,
   parseShiprocketTracking,
 } from "./shiprocket-format"
@@ -299,7 +300,13 @@ export const shiprocketProvider: ShippingProvider = {
     })
     const data = result.response?.data
     if (result.awb_assign_status !== 1 || !data?.awb_code) {
-      throw new Error("Shiprocket did not assign an AWB")
+      // Shown to staff on the order, so they know what to fix.
+      const reason = awbFailureReason(result)
+      throw new Error(
+        reason
+          ? `Shiprocket did not assign an AWB: ${reason}`
+          : "Shiprocket did not assign an AWB",
+      )
     }
     return {
       awb: data.awb_code,
