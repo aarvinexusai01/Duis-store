@@ -56,6 +56,7 @@ export async function buyer(
     update users set phone_number = ${`+919${String(Math.random()).slice(2, 11)}`}, phone_number_verified = true
     where id = ${actor.userId}`)
   const { id } = await saveAddress(actor, {
+    consent: true,
     fullName: "Test Buyer",
     phone: "9876543210",
     line1: "1 Hazratganj",
@@ -90,6 +91,7 @@ export async function paidOrder(
   } as const
   const view = await getCheckoutQuote(customer, choices)
   const result = await placeOrder(customer, {
+    consent: true,
     ...choices,
     quoteHash: view.hash,
     idempotencyKey: randomUUID(),

@@ -57,6 +57,7 @@ describe("the payment provider is down", () => {
 
     gatewayDown.value = true
     const failure = await placeOrder(customer!, {
+      consent: true,
       ...choices,
       quoteHash: view.hash,
       idempotencyKey: randomUUID(),

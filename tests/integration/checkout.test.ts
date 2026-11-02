@@ -76,6 +76,7 @@ async function customer(
       where id = ${actor.userId}`)
   }
   const { id } = await saveAddress(actor, {
+    consent: true,
     fullName: "Test Buyer",
     phone: "9876543210",
     line1: "1 Hazratganj",
@@ -114,6 +115,7 @@ async function place(
   } as const
   const view = await getCheckoutQuote(buyer, choices)
   const result = await placeOrder(buyer, {
+    consent: true,
     ...choices,
     quoteHash: view.hash,
     idempotencyKey: randomUUID(),
@@ -214,6 +216,7 @@ describe("prepaid checkout", () => {
     expect(
       await code(
         placeOrder(buyer, {
+          consent: true,
           ...choices,
           quoteHash: "0".repeat(32),
           idempotencyKey: randomUUID(),
@@ -223,11 +226,13 @@ describe("prepaid checkout", () => {
     const view = await getCheckoutQuote(buyer, choices)
     const key = randomUUID()
     const first = await placeOrder(buyer, {
+      consent: true,
       ...choices,
       quoteHash: view.hash,
       idempotencyKey: key,
     })
     const again = await placeOrder(buyer, {
+      consent: true,
       ...choices,
       quoteHash: view.hash,
       idempotencyKey: key,
@@ -281,6 +286,7 @@ describe("concurrency", () => {
       buyers.map((b, i) =>
         code(
           placeOrder(b, {
+            consent: true,
             addressId: b.addressId,
             paymentMode: "prepaid",
             useWallet: false,
@@ -611,6 +617,7 @@ describe("international checkout", () => {
   async function abroad(countryCode: string) {
     const buyer = await customer()
     const { id } = await saveAddress(buyer, {
+      consent: true,
       fullName: "Sam Smith",
       phone: "+44 7700 900123",
       line1: "1 High Street",

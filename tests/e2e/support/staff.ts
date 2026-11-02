@@ -1,3 +1,7 @@
+import {
+  ACCOUNT_CONSENT_COOKIE,
+  NOTICE_VERSION,
+} from "../../../src/lib/privacy"
 import { expect, type Page } from "@playwright/test"
 import pg from "pg"
 
@@ -16,6 +20,17 @@ export async function createStaff(
 ) {
   const email = `e2e-${role}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@duis.test`
   const password = "E2e-Staff-Passw0rd!"
+  // Stands in for the sign-up form's ticked boxes.
+  await page.context().addCookies([
+    {
+      name: ACCOUNT_CONSENT_COOKIE,
+      value: `${NOTICE_VERSION}.en`,
+      url:
+        page.url() === "about:blank"
+          ? "http://localhost:3100"
+          : new URL(page.url()).origin,
+    },
+  ])
   const signUp = await page.request.post("/api/auth/sign-up/email", {
     data: { email, password, name: `E2E ${role}` },
     headers: {

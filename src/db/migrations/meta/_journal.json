@@ -141,6 +141,13 @@
       "when": 1793609321475,
       "tag": "0019_shipment_invoice",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793617254378,
+      "tag": "0020_data_consents",
+      "breakpoints": true
     }
   ]
 }

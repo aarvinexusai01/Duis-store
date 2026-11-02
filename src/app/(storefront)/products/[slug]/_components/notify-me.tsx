@@ -3,6 +3,7 @@
 import { useActionState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { ConsentFields } from "@/features/privacy"
 import {
   subscribeStockAlertAction,
   type StockAlertState,
@@ -45,6 +46,7 @@ export function NotifyMe({ variantId }: { variantId: string }) {
           {pending ? "…" : "Notify me"}
         </Button>
       </div>
+      <ConsentFields purposes={["stock_alert"]} />
       {state.status === "error" && (
         <p role="alert" className="text-sm text-destructive">
           {state.message}

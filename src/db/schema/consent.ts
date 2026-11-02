@@ -79,3 +79,41 @@ export const contactMessages = pgTable(
     ),
   ],
 )
+
+/**
+ * DPDP consents (doc/06 Phase 12): one row per tick or withdrawal, with the
+ * notice version shown, so the shop can prove the notice and the consent
+ * (Act s.6(10)). Append-only like the cookie answers. Guests are identified
+ * by a keyed hash of their email or phone, never the address itself.
+ */
+export const dataConsents = pgTable(
+  "data_consents",
+  {
+    id: primaryId(),
+    userId: uuid().references(() => users.id, { onDelete: "set null" }),
+    subjectHash: text(),
+    purpose: text().notNull(),
+    granted: boolean().notNull(),
+    noticeVersion: text().notNull(),
+    language: text().notNull().default("en"),
+    // The form or page the tick came from.
+    source: text().notNull(),
+    referenceType: text(),
+    referenceId: text(),
+    userAgent: text(),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [
+    index("data_consents_user_idx").on(t.userId, t.purpose, t.createdAt),
+    index("data_consents_subject_idx").on(t.subjectHash),
+    check(
+      "data_consents_who_check",
+      sql`${t.userId} is not null or ${t.subjectHash} is not null`,
+    ),
+    check(
+      "data_consents_purpose_check",
+      sql`${t.purpose} in ('account', 'age', 'order', 'address', 'contact', 'stock_alert', 'review', 'exchange', 'marketing', 'marketing_whatsapp', 'whatsapp_updates')`,
+    ),
+    check("data_consents_language_check", sql`${t.language} in ('en', 'hi')`),
+  ],
+)

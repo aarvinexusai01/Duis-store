@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache"
 
+import type { NoticeLanguage } from "@/lib/privacy"
 import { getActor } from "@/server/auth/session"
 import { toActionError, type ActionError } from "@/server/action"
 
@@ -9,6 +10,7 @@ import type { AddressInput } from "./schemas"
 import {
   deleteAddress,
   saveAddress,
+  setDefaultAddress,
   setDeletionRequest,
   setMarketingConsent,
   setWhatsAppUpdates,
@@ -46,8 +48,12 @@ export async function setDeletionRequestAction(requested: boolean) {
   return run(async () => setDeletionRequest(await getActor(), { requested }))
 }
 
+export async function setDefaultAddressAction(id: string) {
+  return run(async () => setDefaultAddress(await getActor(), { id }))
+}
+
 export async function saveAddressAction(
-  input: AddressInput,
+  input: AddressInput & { consent: true; consentLanguage: NoticeLanguage },
 ): Promise<{ ok: true; id: string } | ({ ok: false } & ActionError)> {
   try {
     const { id } = await saveAddress(await getActor(), input)

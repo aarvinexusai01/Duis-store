@@ -1410,3 +1410,94 @@ The owner asked for a full SEO list (technical, quick wins, on-page, content) pl
 - The first content cluster is published.
 - 11e is planned against real data.
 
+
+---
+
+## Phase 12: Data protection (DPDP Act, 2023)
+
+**Plan (written and approved 2026-11-02).**
+- **Owner decisions (2026-11-02):**
+  - build all three slices;
+  - **18+ only**: an "I am 18 or older" declaration, and under-18s ask a parent to order, so no parental-consent flow;
+  - notices in **English and Hindi**.
+
+**12a built 2026-11-02:** unticked, server-enforced boxes on sign-up, phone and Google sign-in, checkout, addresses, the contact form, back-in-stock alerts, the newsletter, reviews, exchanges and customer photos; an append-only `data_consents` record; English and Hindi notices (`src/lib/privacy.ts`).
+- **Changes from the plan:**
+  - Better Auth's sign-up paths are gated by a 30-minute cookie set when the boxes are ticked, because Google's callback can't carry a form field.
+  - Email sign-in to an existing account collects nothing new, so it has no box.
+  - Choosing a default address is its own operation, with no box.
+  - WhatsApp updates and WhatsApp marketing are recorded as their own purposes; they stay optional.
+  - The boxes link to the Privacy Policy until 12b adds the standalone notice.
+
+**The law, as checked on 2026-11-02:**
+- **Dates:** the DPDP Rules, 2025 were notified on 13 November 2025. Notice (Rule 3), consent, children's data (Rule 10), security, retention and Data Principal rights apply from about **13 May 2027**. Building now gives time to test before then.
+- **Notice (Act s.5, Rule 3):** it must:
+  - stand on its own, in plain language;
+  - give an **itemised** list of the data and **what each item is for**;
+  - link to where the person can withdraw consent (as easily as they gave it), use their rights, and complain to the Data Protection Board;
+  - be readable in English or an Eighth Schedule language (s.5(3)).
+- **Consent (s.6):** must be free, specific, informed, unconditional and unambiguous, by a **clear affirmative action**. So:
+  - no pre-ticked boxes, and no "by continuing you agree";
+  - limited to the data the purpose needs, with no bundling (marketing can never be a condition of buying);
+  - **the shop must be able to prove** the notice was given and the consent recorded (s.6(10));
+  - withdrawal at any time, after which processing stops.
+- **Children (s.9):** under 18 needs verifiable parental consent, with no tracking or targeted advertising.
+- **Legitimate use (s.7(a)):** data a customer gives for an order (address, phone) may be used for that order without separate consent. The owner chose a **mandatory checkbox wherever data is collected** anyway, which is stricter and allowed, as long as each box covers only what that form needs.
+
+**Design:**
+- **One consent record per tick, with proof.**
+  - **Table:** a `data_consents` table: who (user, or email/phone for guests), **purpose**, **notice version**, the form it came from, time, browser.
+  - **Withdrawal:** withdrawing is recorded too, never deleted.
+  - **Retention:** kept for as long as the law needs the proof.
+- **Server-enforced checkboxes.** Every operation that takes personal data requires `consent: true` and records it, so a form posted without the tick is refused, not just blocked in the browser.
+  - Boxes start **unticked**. Each sits beside a two-line itemised notice ("We use your name, phone and address to deliver this order and contact you about it") and a link to the full Privacy Notice.
+- **Where the boxes go:**
+
+  | Form | Checkbox (mandatory unless marked optional) |
+  |---|---|
+  | Create account, phone OTP sign-in, Google sign-in | account notice + **"I am 18 or older"** |
+  | Checkout and the address book | delivery data for this order |
+  | Contact form | use my details to answer this message |
+  | Back-in-stock alert | email or text me when it's back |
+  | Review and photos | publish my review, first name and photos |
+  | Exchange request and photos | process this exchange |
+  | Newsletter and marketing | **optional** and separate, as today |
+  | Cookie banner | as today (already recorded) |
+
+- **A standalone "Privacy Notice" page** (`/policies/privacy-notice`), separate from the long Privacy Policy, as Rule 3 asks.
+  - **Content:** a table per purpose of what is collected and why, how long it's kept, the rights, how to withdraw, the Grievance Officer, and how to complain to the Data Protection Board.
+  - **Languages:** English, plus Hindi if the owner chooses.
+- **"Privacy & data" in My account** (the rights in s.11–14):
+  - see each consent given, and **withdraw** with one click;
+  - **download my data** (s.11);
+  - correct details (the existing profile and addresses);
+  - **delete my account** (s.12): personal data is anonymised, while order and tax records are kept as the GST law requires (72 months, doc/08);
+  - **nominate someone** (s.14);
+  - a link to raise a grievance.
+- **Admin:**
+  - a "Data requests" list (erasure, grievances) with their due dates;
+  - consent records shown on the customer page.
+- **Existing customers (s.5(2)):** shown the notice once at their next sign-in, and asked to tick.
+
+**Slices, each with a review stop:**
+- **12a:**
+  - the consent table and recording;
+  - the checkbox component and server enforcement;
+  - the boxes on every form above;
+  - the 18+ declaration;
+  - tests that each form is refused without its tick.
+- **12b:**
+  - the standalone Privacy Notice page (and the Hindi version);
+  - links from every box;
+  - existing customers asked once.
+- **12c:**
+  - My account → Privacy & data: consents and withdrawal, download, delete account, nominee;
+  - the admin data-request list.
+
+**Needs from the owner:** approval; the decisions asked alongside this plan; and a lawyer's review of the notice wording before launch.
+
+**Exit criteria:**
+- **Consent:** no personal data is accepted without its tick (checked server-side), and every tick and withdrawal is recorded with its notice version.
+- **Notice:** the notice page meets Rule 3's list.
+- **Rights:** a customer can see, withdraw, download and delete.
+- **Tests:** all suites pass.

@@ -8,7 +8,7 @@ import {
   type Page,
 } from "@playwright/test"
 
-import { answeredConsent } from "../e2e/support/consent"
+import { answeredConsent, tickConsent } from "../e2e/support/consent"
 
 /** The checkout of the production stack under test (ops/local/init.sh). */
 const STACK = process.env.DUIS_STACK_DIR
@@ -112,6 +112,7 @@ export async function readyToPay(
     await expect(page.getByRole("button", { name: "Remove" })).toBeVisible()
   }
   if (extras.useWallet) await turnOnWallet(page)
+  await tickConsent(page, "order")
   await expect(
     page.getByRole("button", { name: /Place order & pay/ }),
   ).toBeEnabled()

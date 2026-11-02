@@ -230,7 +230,11 @@ describe("A6–A7: links and alerts used twice", () => {
       )
       for (const email of emails) {
         expect(
-          await subscribeStockAlert(anonymousActor(), { variantId, email }),
+          await subscribeStockAlert(anonymousActor(), {
+            consent: true,
+            variantId,
+            email,
+          }),
         ).toEqual({ status: "subscribed" })
       }
       await race([

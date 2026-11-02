@@ -11,6 +11,7 @@ import { QUEUES } from "@/server/jobs/queues"
 import { queueEmail } from "@/server/notifications/email"
 import { queueWhatsApp } from "@/server/notifications/whatsapp"
 import { defineOperation } from "@/server/operation"
+import { consentFields, recordConsents } from "@/server/privacy"
 
 /**
  * Back-in-stock alerts (doc/06 Phase 5 §6): "Notify me" on a sold-out size.
@@ -35,6 +36,7 @@ export const subscribeStockAlert = defineOperation({
   input: z.object({
     variantId: z.uuid(),
     email: z.email("Enter a valid email.").trim().toLowerCase().max(200),
+    ...consentFields,
   }),
   async handler(
     { actor },
@@ -57,10 +59,20 @@ export const subscribeStockAlert = defineOperation({
           ).rows[0]?.on,
         )
       : false
-    await db.execute(sql`
-      insert into stock_alerts (variant_id, user_id, email, whatsapp)
-      values (${input.variantId}, ${userId}, ${input.email}, ${whatsapp})
-      on conflict (variant_id, email) where notified_at is null do nothing`)
+    await withTransaction(async (tx) => {
+      await tx.execute(sql`
+        insert into stock_alerts (variant_id, user_id, email, whatsapp)
+        values (${input.variantId}, ${userId}, ${input.email}, ${whatsapp})
+        on conflict (variant_id, email) where notified_at is null do nothing`)
+      await recordConsents(tx, {
+        userId,
+        subject: input.email,
+        purposes: ["stock_alert"],
+        source: "stock_alert",
+        language: input.consentLanguage,
+        reference: { type: "variant", id: input.variantId },
+      })
+    })
     return { status: "subscribed" }
   },
 })

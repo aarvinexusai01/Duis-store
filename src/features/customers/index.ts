@@ -4,6 +4,7 @@ export {
   getAccountOverview,
   listAddresses,
   saveAddress,
+  setDefaultAddress,
   setDeletionRequest,
   setMarketingConsent,
   setWhatsAppUpdates,

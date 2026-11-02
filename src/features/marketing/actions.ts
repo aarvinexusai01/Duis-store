@@ -1,5 +1,6 @@
 "use server"
 
+import { consentFromForm } from "@/lib/privacy"
 import { getActor } from "@/server/auth/session"
 import { toActionError } from "@/server/action"
 
@@ -19,6 +20,7 @@ export async function subscribeToNewsletter(
     await subscribeNewsletter(await getActor(), {
       email: String(form.get("email") ?? ""),
       source: form.get("source") === "home" ? "home" : "footer",
+      ...consentFromForm(form),
     })
     return {
       status: "done",

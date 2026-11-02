@@ -8,6 +8,7 @@ import { getDb } from "@/server/db/client"
 import { queueEmail } from "@/server/notifications/email"
 import { sendOtpSms } from "@/server/notifications/sms"
 
+import { accountConsent } from "./consent"
 import { buildAuthOptions } from "./options"
 import { guardOtpRequest } from "./otp-guard"
 
@@ -45,6 +46,7 @@ function createAuth() {
       sendPhoneOtp: ({ phoneNumber, code }) => sendOtpSms(phoneNumber, code),
       guardOtpRequest,
       turnstileSecretKey: env.TURNSTILE_SECRET_KEY,
+      ...accountConsent,
     }),
   )
 }

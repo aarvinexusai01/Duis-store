@@ -4,6 +4,7 @@ import { useActionState, useEffect, useId } from "react"
 
 import { useTurnstile } from "@/components/turnstile"
 import { Button } from "@/components/ui/button"
+import { ConsentFields } from "@/features/privacy"
 import { cn } from "@/lib/utils"
 
 import { sendContactMessageAction, type ContactFormState } from "../actions"
@@ -169,9 +170,7 @@ export function ContactForm({
           {state.message}
         </p>
       )}
-      <p className="text-xs text-muted-foreground">
-        We use these details only to reply to you.
-      </p>
+      <ConsentFields purposes={["contact"]} />
       <Button
         type="submit"
         disabled={pending || !turnstile.ready}

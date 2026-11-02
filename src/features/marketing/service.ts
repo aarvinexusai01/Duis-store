@@ -8,6 +8,7 @@ import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
 import { queueEmail } from "@/server/notifications/email"
 import { defineOperation } from "@/server/operation"
+import { consentFields, recordConsents } from "@/server/privacy"
 import { hashToken, newToken, TOKEN_PATTERN } from "@/server/security/tokens"
 
 // One confirmation email per address per 10 minutes, so the form cannot be
@@ -18,6 +19,7 @@ const CONFIRM_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const subscribeNewsletterSchema = z.object({
   email: z.email("Enter a valid email address.").max(254).toLowerCase(),
   source: z.enum(["footer", "home", "account"]).default("footer"),
+  ...consentFields,
 })
 
 /**
@@ -30,8 +32,15 @@ export const subscribeNewsletter = defineOperation({
   name: "marketing.subscribeNewsletter",
   access: "public",
   input: subscribeNewsletterSchema,
-  async handler({ log }, { email, source }) {
+  async handler({ actor, log }, { email, source, consentLanguage }) {
     await withTransaction(async (tx) => {
+      await recordConsents(tx, {
+        userId: actor.kind === "user" ? actor.userId : null,
+        subject: email,
+        purposes: ["marketing"],
+        source: "newsletter",
+        language: consentLanguage,
+      })
       const [existing] = await tx
         .select()
         .from(newsletterSubscribers)

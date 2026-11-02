@@ -23,6 +23,7 @@ import { getDb } from "@/server/db/client"
 import { withTransaction, type Transaction } from "@/server/db/transaction"
 import { DomainError, isUniqueViolation } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
+import { consentFields, recordConsents } from "@/server/privacy"
 
 import {
   lockExchange,
@@ -295,6 +296,7 @@ export const requestExchange = defineOperation({
     ]),
     note: z.string().trim().max(500).optional(),
     photoIds: z.array(z.uuid()).max(3).default([]),
+    ...consentFields,
   }),
   async handler({ actor }, input) {
     const user = userOf(actor)
@@ -358,6 +360,13 @@ export const requestExchange = defineOperation({
           await tx.execute(sql`
             insert into exchange_request_photos (exchange_id, photo_id) values (${id}, ${photoId})`)
         }
+        await recordConsents(tx, {
+          userId: user.userId,
+          purposes: ["exchange"],
+          source: "exchange_request",
+          language: input.consentLanguage,
+          reference: { type: "exchange", id },
+        })
         const row = await lockExchange(tx, { id })
         await notifyCustomer(
           tx,

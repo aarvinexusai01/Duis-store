@@ -12,6 +12,7 @@ import { withTransaction, type Transaction } from "@/server/db/transaction"
 import { DomainError, isUniqueViolation } from "@/server/errors"
 import { queueEmail } from "@/server/notifications/email"
 import { defineOperation } from "@/server/operation"
+import { consentFields, recordConsents } from "@/server/privacy"
 
 /**
  * Verified-buyer reviews (doc/06 Phase 5 §5): one per delivered order line,
@@ -49,6 +50,7 @@ export const submitReview = defineOperation({
       .max(2000),
     fit: z.enum(["runs_small", "true_to_size", "runs_large"]).optional(),
     photoIds: z.array(z.uuid()).max(3).default([]),
+    ...consentFields,
   }),
   async handler({ actor }, input) {
     const user = userOf(actor)
@@ -92,6 +94,13 @@ export const submitReview = defineOperation({
           await tx.execute(sql`
             insert into review_photos (review_id, photo_id) values (${id}, ${photoId})`)
         }
+        await recordConsents(tx, {
+          userId: user.userId,
+          purposes: ["review"],
+          source: "review",
+          language: input.consentLanguage,
+          reference: { type: "review", id },
+        })
         return { id }
       })
     } catch (error) {

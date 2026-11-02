@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test"
 import pg from "pg"
 
 import { createStaff, signInAndSetUpTwoFactor } from "./support/staff"
+import { tickConsent } from "./support/consent"
 
 async function query(text: string, values: unknown[] = []) {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
@@ -145,6 +146,7 @@ test("support answers a contact message from the inbox", async ({
   await form
     .getByRole("textbox", { name: "Message" })
     .fill("Can I change the delivery address on my order?")
+  await tickConsent(page, "contact")
   await form.getByRole("button", { name: "Send message" }).click()
   await expect(page.getByText("Thanks, we've got it")).toBeVisible()
 

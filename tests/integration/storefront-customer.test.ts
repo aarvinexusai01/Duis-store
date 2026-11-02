@@ -277,14 +277,23 @@ describe("addresses", () => {
   it("validates by country and stores a normalised phone", async () => {
     const customer = await createUserActor("customer")
     expect(
-      await code(saveAddress(customer, { ...india, postalCode: "56001" })),
-    ).toBe("VALIDATION_FAILED")
-    expect(
-      await code(saveAddress(customer, { ...india, stateCode: undefined })),
+      await code(
+        saveAddress(customer, { consent: true, ...india, postalCode: "56001" }),
+      ),
     ).toBe("VALIDATION_FAILED")
     expect(
       await code(
         saveAddress(customer, {
+          consent: true,
+          ...india,
+          stateCode: undefined,
+        }),
+      ),
+    ).toBe("VALIDATION_FAILED")
+    expect(
+      await code(
+        saveAddress(customer, {
+          consent: true,
           ...india,
           countryCode: "GB",
           stateCode: undefined,
@@ -294,8 +303,9 @@ describe("addresses", () => {
       ),
     ).toBe("VALIDATION_FAILED")
 
-    await saveAddress(customer, india)
+    await saveAddress(customer, { ...india, consent: true })
     await saveAddress(customer, {
+      consent: true,
       ...india,
       countryCode: "GB",
       stateCode: undefined,
@@ -313,17 +323,21 @@ describe("addresses", () => {
   it("moves the default flag, promotes on delete and scopes to the owner", async () => {
     const customer = await createUserActor("customer")
     const other = await createUserActor("customer")
-    const first = await saveAddress(customer, india)
-    const second = await saveAddress(customer, { ...india, isDefault: true })
+    const first = await saveAddress(customer, { ...india, consent: true })
+    const second = await saveAddress(customer, {
+      consent: true,
+      ...india,
+      isDefault: true,
+    })
     let saved = await listAddresses(customer, {})
     expect(saved.find((a) => a.isDefault)!.id).toBe(second.id)
 
     expect(await code(deleteAddress(other, { id: second.id }))).toBe(
       "NOT_FOUND",
     )
-    expect(await code(saveAddress(other, { ...india, id: first.id }))).toBe(
-      "NOT_FOUND",
-    )
+    expect(
+      await code(saveAddress(other, { consent: true, ...india, id: first.id })),
+    ).toBe("NOT_FOUND")
 
     await deleteAddress(customer, { id: second.id })
     saved = await listAddresses(customer, {})
@@ -369,8 +383,13 @@ describe("marketing consent", () => {
 describe("newsletter double opt-in", () => {
   it("confirms only through the emailed token and never re-sends within 10 minutes", async () => {
     const email = `${unique("fan")}@duis.test`
-    await subscribeNewsletter(anonymous, { email, source: "footer" })
     await subscribeNewsletter(anonymous, {
+      consent: true,
+      email,
+      source: "footer",
+    })
+    await subscribeNewsletter(anonymous, {
+      consent: true,
       email: email.toUpperCase(),
       source: "footer",
     })

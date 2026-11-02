@@ -5,10 +5,16 @@ import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { ConsentFields } from "@/features/privacy"
 import { COUNTRY_CODES, countryName } from "@/lib/countries"
 import { INDIAN_STATES, suggestStateForPincode } from "@/lib/india"
+import type { NoticeLanguage } from "@/lib/privacy"
 
-import { deleteAddressAction, saveAddressAction } from "../actions"
+import {
+  deleteAddressAction,
+  saveAddressAction,
+  setDefaultAddressAction,
+} from "../actions"
 import type { Address } from "../service"
 
 const countries = COUNTRY_CODES.map((code) => ({
@@ -32,10 +38,7 @@ export function AddressBook({ addresses }: { addresses: Address[] }) {
     })
   const makeDefault = (address: Address) =>
     startTransition(async () => {
-      const result = await saveAddressAction({
-        ...toInput(address),
-        isDefault: true,
-      })
+      const result = await setDefaultAddressAction(address.id)
       if (!result.ok) toast.error(result.message)
     })
 
@@ -123,24 +126,6 @@ export function AddressBook({ addresses }: { addresses: Address[] }) {
   )
 }
 
-function toInput(address: Address) {
-  return {
-    id: address.id,
-    fullName: address.fullName,
-    phone: address.phone,
-    line1: address.line1,
-    line2: address.line2 ?? undefined,
-    landmark: address.landmark ?? undefined,
-    city: address.city,
-    region: address.region ?? undefined,
-    stateCode: address.stateCode ?? undefined,
-    postalCode: address.postalCode,
-    countryCode: address.countryCode,
-    type: address.type as "home" | "work" | "other",
-    isDefault: address.isDefault,
-  }
-}
-
 export function AddressForm({
   address,
   onDone,
@@ -156,12 +141,17 @@ export function AddressForm({
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({})
   const [message, setMessage] = useState("")
   const [pending, startTransition] = useTransition()
+  const [consent, setConsent] = useState<NoticeLanguage | null>(null)
   const india = country === "IN"
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const text = (name: string) => String(form.get(name) ?? "")
+    if (!consent) {
+      setMessage("Please tick the box to save this address.")
+      return
+    }
     startTransition(async () => {
       const result = await saveAddressAction({
         id: address?.id,
@@ -177,6 +167,8 @@ export function AddressForm({
         countryCode: country,
         type: text("type") as "home" | "work" | "other",
         isDefault: form.get("isDefault") === "on",
+        consent: true,
+        consentLanguage: consent,
       })
       if (result.ok) {
         toast.success("Address saved")
@@ -343,6 +335,11 @@ export function AddressForm({
           {message}
         </p>
       )}
+      <ConsentFields
+        purposes={["address"]}
+        onChange={(ticked, language) => setConsent(ticked ? language : null)}
+        className="sm:col-span-2"
+      />
       <div className="flex gap-3 sm:col-span-2">
         <Button
           type="submit"

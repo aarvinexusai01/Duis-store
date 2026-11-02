@@ -54,7 +54,10 @@ describe("contact form", () => {
 
   it("saves the message and emails the team with reply-to the customer", async () => {
     const email = `asha-${Date.now()}@duis.test`
-    const { id } = await sendContactMessage(anonymousActor(), message(email))
+    const { id } = await sendContactMessage(anonymousActor(), {
+      ...message(email),
+      consent: true,
+    })
     const job = await db().execute<{
       to: string
       reply_to: string
@@ -84,6 +87,7 @@ describe("contact form", () => {
     expect(
       await code(
         sendContactMessage(anonymousActor(), {
+          consent: true,
           ...message("x@duis.test"),
           message: "hi",
         }),
@@ -91,16 +95,27 @@ describe("contact form", () => {
     ).toBe("VALIDATION_FAILED")
     const email = `busy-${Date.now()}@duis.test`
     for (let i = 0; i < 5; i += 1) {
-      await sendContactMessage(anonymousActor(), message(email))
+      await sendContactMessage(anonymousActor(), {
+        ...message(email),
+        consent: true,
+      })
     }
     expect(
-      await code(sendContactMessage(anonymousActor(), message(email))),
+      await code(
+        sendContactMessage(anonymousActor(), {
+          ...message(email),
+          consent: true,
+        }),
+      ),
     ).toBe("RATE_LIMITED")
   })
 
   it("lets support staff work the inbox, audited", async () => {
     const email = `inbox-${Date.now()}@duis.test`
-    const { id } = await sendContactMessage(anonymousActor(), message(email))
+    const { id } = await sendContactMessage(anonymousActor(), {
+      ...message(email),
+      consent: true,
+    })
     const agent = await createUserActor("support_agent")
     const open = await adminListMessages(agent, { status: "new", q: email })
     expect(open.rows.map((m) => m.id)).toEqual([id])

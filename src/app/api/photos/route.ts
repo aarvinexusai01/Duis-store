@@ -1,4 +1,5 @@
 import { uploadCustomerPhoto } from "@/features/media"
+import { consentFromForm } from "@/lib/privacy"
 import { getActor } from "@/server/auth/session"
 import { DomainError } from "@/server/errors"
 import { errorResponse } from "@/server/http"
@@ -10,12 +11,15 @@ export async function POST(request: Request) {
     if (Number(request.headers.get("content-length") ?? 0) > 9 * 1024 * 1024) {
       throw new DomainError("PAYLOAD_TOO_LARGE", "Photos must be under 8 MB.")
     }
-    const file = (await request.formData()).get("file")
+    const form = await request.formData()
+    const file = form.get("file")
     if (!(file instanceof File)) {
       throw new DomainError("VALIDATION_FAILED", "Attach a photo.")
     }
     const photo = await uploadCustomerPhoto(actor, {
       bytes: new Uint8Array(await file.arrayBuffer()),
+      purpose: form.get("purpose") === "exchange" ? "exchange" : "review",
+      ...consentFromForm(form),
     })
     return Response.json(photo, { status: 201 })
   } catch (error) {

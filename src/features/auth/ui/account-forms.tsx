@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 
+import { AccountConsentFields } from "@/features/privacy"
 import { authClient } from "@/lib/auth-client"
 import { completeSignInUrl } from "@/lib/safe-redirect"
 
@@ -25,11 +26,16 @@ export function RegisterForm({
   const [error, setError] = useState("")
   const [pending, setPending] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
+  const [consented, setConsented] = useState(false)
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const email = String(form.get("email"))
+    if (!consented) {
+      setError("Please tick both boxes to continue.")
+      return
+    }
     setError("")
     setPending(true)
     const { error } = await authClient.signUp.email(
@@ -85,17 +91,14 @@ export function RegisterForm({
         required
         hint="At least 10 characters."
       />
+      <AccountConsentFields onChange={setConsented} />
       <FormMessage tone="error">{error}</FormMessage>
       {captcha.element}
       <SubmitButton pending={pending}>Create account</SubmitButton>
       <p className="text-xs text-muted-foreground">
-        By creating an account you agree to our{" "}
+        By creating an account you accept our{" "}
         <Link href="/policies/terms-of-service" className="underline">
-          terms
-        </Link>{" "}
-        and{" "}
-        <Link href="/policies/privacy-policy" className="underline">
-          privacy policy
+          Terms &amp; Conditions
         </Link>
         .
       </p>

@@ -10,6 +10,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AccountConsentFields } from "@/features/privacy"
 import { authClient } from "@/lib/auth-client"
 import { completeSignInUrl } from "@/lib/safe-redirect"
 
@@ -33,15 +34,24 @@ export function LoginForm({
   turnstileSiteKey?: string | null
 }) {
   const done = () => window.location.assign(completeSignInUrl(next))
+  // A mobile number or Google profile creates an account if there's none
+  // yet, so both wait for the DPDP boxes (doc/06 Phase 12).
+  const [consented, setConsented] = useState(false)
+  const [googleError, setGoogleError] = useState("")
   return (
     <div className="flex flex-col gap-6">
+      <AccountConsentFields onChange={setConsented} />
       <Tabs defaultValue="phone">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="phone">Mobile number</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
         </TabsList>
         <TabsContent value="phone" className="pt-4">
-          <PhoneLogin onDone={done} turnstileSiteKey={turnstileSiteKey} />
+          <PhoneLogin
+            onDone={done}
+            turnstileSiteKey={turnstileSiteKey}
+            consented={consented}
+          />
         </TabsContent>
         <TabsContent value="email" className="pt-4">
           <EmailLogin onDone={done} />
@@ -57,15 +67,21 @@ export function LoginForm({
           <Button
             variant="outline"
             className="h-12 rounded-none border-ink font-semibold"
-            onClick={() =>
-              authClient.signIn.social({
+            onClick={() => {
+              if (!consented) {
+                setGoogleError("Please tick both boxes above to continue.")
+                return
+              }
+              setGoogleError("")
+              void authClient.signIn.social({
                 provider: "google",
                 callbackURL: completeSignInUrl(next),
               })
-            }
+            }}
           >
             Continue with Google
           </Button>
+          <FormMessage tone="error">{googleError}</FormMessage>
         </>
       )}
     </div>
@@ -75,9 +91,11 @@ export function LoginForm({
 function PhoneLogin({
   onDone,
   turnstileSiteKey,
+  consented,
 }: {
   onDone: () => void
   turnstileSiteKey: string | null
+  consented: boolean
 }) {
   const captcha = useTurnstile(turnstileSiteKey)
   const [digits, setDigits] = useState("")
@@ -91,6 +109,10 @@ function PhoneLogin({
     setError("")
     if (!/^[6-9]\d{9}$/.test(digits)) {
       setError("Enter a 10-digit Indian mobile number.")
+      return
+    }
+    if (!consented) {
+      setError("Please tick both boxes above to continue.")
       return
     }
     setPending(true)

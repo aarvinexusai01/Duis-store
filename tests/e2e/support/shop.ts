@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test"
 import pg from "pg"
+import { tickAccountConsent, tickConsent } from "./consent"
 
 /** Shared customer steps for end-to-end tests. */
 
@@ -27,6 +28,7 @@ export async function inStockSlug(variants = 1): Promise<string | undefined> {
 export async function signInWithOtp(page: Page, next: string) {
   const digits = `9${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`
   await page.goto(`/login?next=${encodeURIComponent(next)}`)
+  await tickAccountConsent(page)
   await page.getByRole("textbox", { name: "Mobile number" }).fill(digits)
   await page.getByRole("button", { name: "Send code" }).click()
   await expect(page.getByText(`+91${digits}`)).toBeVisible()
@@ -78,6 +80,7 @@ export async function placePrepaidOrder(
     page.getByRole("heading", { level: 1, name: "Checkout" }),
   ).toBeVisible()
   await fillFirstAddress(page)
+  await tickConsent(page, "order")
   const place = page.getByRole("button", { name: /Place order & pay/ })
   await expect(place).toBeEnabled()
   await place.click()
@@ -98,5 +101,6 @@ export async function fillFirstAddress(page: Page) {
   await page.getByLabel("PIN code").fill("226001")
   await page.getByLabel("City").fill("Lucknow")
   await page.getByLabel("State").selectOption("IN-UP")
+  await tickConsent(page, "address")
   await page.getByRole("button", { name: "Save address" }).click()
 }

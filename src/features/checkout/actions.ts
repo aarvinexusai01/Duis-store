@@ -8,6 +8,7 @@ import {
   parseConsent,
 } from "@/features/analytics"
 import type { MarketingContext } from "@/db/schema"
+import type { NoticeLanguage } from "@/lib/privacy"
 import { getActor } from "@/server/auth/session"
 import { toActionError, type ActionError } from "@/server/action"
 
@@ -62,7 +63,12 @@ export async function quoteAction(
 }
 
 export async function placeOrderAction(
-  input: CheckoutChoices & { quoteHash: string; idempotencyKey: string },
+  input: CheckoutChoices & {
+    quoteHash: string
+    idempotencyKey: string
+    consent: true
+    consentLanguage: NoticeLanguage
+  },
 ): Promise<Result<{ result: PlaceResult }>> {
   try {
     return {

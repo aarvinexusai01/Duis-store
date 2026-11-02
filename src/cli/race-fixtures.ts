@@ -51,6 +51,7 @@ async function customers(count: number, creditPaise: number) {
       ip: null,
     }
     await saveAddress(customer, {
+      consent: true,
       fullName: `Race Buyer ${i + 1}`,
       phone: "9876543210",
       line1: "12 Hazratganj",

@@ -9,6 +9,7 @@ import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
 import { queueEmail } from "@/server/notifications/email"
 import { defineOperation } from "@/server/operation"
+import { recordConsents } from "@/server/privacy"
 
 /**
  * Abandoned-bag reminders (doc/06 Phase 5 §7, doc/10 P15): for signed-in
@@ -112,9 +113,17 @@ export const unsubscribeMarketing = defineOperation({
     const given = Buffer.from(token)
     if (given.length !== expected.length || !timingSafeEqual(given, expected))
       return { done: false }
-    await getDb().execute(sql`
-      update customer_profiles set marketing_email_consent_at = null, updated_at = now()
-      where user_id = ${userId}`)
+    await withTransaction(async (tx) => {
+      await tx.execute(sql`
+        update customer_profiles set marketing_email_consent_at = null, updated_at = now()
+        where user_id = ${userId}`)
+      await recordConsents(tx, {
+        userId,
+        purposes: ["marketing"],
+        granted: false,
+        source: "unsubscribe_link",
+      })
+    })
     return { done: true }
   },
 })

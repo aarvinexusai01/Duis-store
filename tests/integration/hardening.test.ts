@@ -55,6 +55,7 @@ async function placeFor(customer: Buyer): Promise<PlaceResult> {
   }
   const view = await getCheckoutQuote(customer, choices)
   return placeOrder(customer, {
+    consent: true,
     ...choices,
     quoteHash: view.hash,
     idempotencyKey: randomUUID(),

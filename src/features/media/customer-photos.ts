@@ -7,6 +7,7 @@ import { rolesAllow } from "@/server/auth/permissions"
 import { getDb } from "@/server/db/client"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
+import { consentFields, recordConsents } from "@/server/privacy"
 import { readPrivateFile, writePrivateFile } from "@/server/storage/private"
 
 /**
@@ -28,8 +29,11 @@ export const uploadCustomerPhoto = defineOperation({
       (value) => value instanceof Uint8Array,
       "Expected file bytes.",
     ),
+    // DPDP: the review or exchange box is ticked before any photo is taken.
+    purpose: z.enum(["review", "exchange"]),
+    ...consentFields,
   }),
-  async handler({ actor }, { bytes }) {
+  async handler({ actor }, { bytes, purpose, consentLanguage }) {
     if (actor.kind !== "user")
       throw new DomainError("UNAUTHENTICATED", "Please sign in to continue.")
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) {
@@ -79,6 +83,13 @@ export const uploadCustomerPhoto = defineOperation({
       values (${actor.userId}, '', ${output.info.width}, ${output.info.height})
       returning id`)
     const id = created.rows[0]!.id
+    await recordConsents(getDb(), {
+      userId: actor.userId,
+      purposes: [purpose],
+      source: "photo_upload",
+      language: consentLanguage,
+      reference: { type: "customer_photo", id },
+    })
     const key = await writePrivateFile("photos", `${id}.webp`, output.data)
     await getDb().execute(
       sql`update customer_photos set file_key = ${key} where id = ${id}`,

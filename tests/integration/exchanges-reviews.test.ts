@@ -157,6 +157,7 @@ describe("an exchange end to end", () => {
     const blackM = await stock(variants.black_m!)
 
     const { exchangeNumber } = await requestExchange(customer, {
+      consent: true,
       orderNumber: number,
       orderItemId: itemId,
       variantId: variants.black_l!,
@@ -167,6 +168,7 @@ describe("an exchange end to end", () => {
     expect(
       await code(
         requestExchange(customer, {
+          consent: true,
           orderNumber: number,
           orderItemId: itemId,
           variantId: variants.black_l!,
@@ -221,6 +223,7 @@ describe("an exchange end to end", () => {
     const customer = await buyer()
     const number = await deliveredOrder(customer)
     const { exchangeNumber } = await requestExchange(customer, {
+      consent: true,
       orderNumber: number,
       orderItemId: await orderItemId(number),
       variantId: variants.white_s!,
@@ -242,6 +245,7 @@ describe("an exchange end to end", () => {
     const number = await deliveredOrder(customer)
     const whiteL = await stock(variants.white_l!)
     const { exchangeNumber } = await requestExchange(customer, {
+      consent: true,
       orderNumber: number,
       orderItemId: await orderItemId(number),
       variantId: variants.white_l!,
@@ -293,6 +297,7 @@ describe("an exchange end to end", () => {
     const number = await deliveredOrder(customer)
     const itemId = await orderItemId(number)
     const first = await requestExchange(customer, {
+      consent: true,
       orderNumber: number,
       orderItemId: itemId,
       variantId: variants.black_l!,
@@ -303,6 +308,7 @@ describe("an exchange end to end", () => {
     expect((await exchange(first.exchangeNumber)).status).toBe("cancelled")
 
     const second = await requestExchange(customer, {
+      consent: true,
       orderNumber: number,
       orderItemId: itemId,
       variantId: variants.white_l!,
@@ -332,6 +338,7 @@ describe("reviews", () => {
     expect(
       await code(
         submitReview(customer, {
+          consent: true,
           orderItemId: await orderItemId(undelivered),
           rating: 5,
           body: "Lovely heavy cotton, true to size.",
@@ -342,6 +349,7 @@ describe("reviews", () => {
     const number = await deliveredOrder(customer)
     const itemId = await orderItemId(number)
     const { id } = await submitReview(customer, {
+      consent: true,
       orderItemId: itemId,
       rating: 4,
       body: "Lovely heavy cotton, true to size.",
@@ -350,6 +358,7 @@ describe("reviews", () => {
     expect(
       await code(
         submitReview(customer, {
+          consent: true,
           orderItemId: itemId,
           rating: 5,
           body: "Again, again!",
@@ -412,6 +421,8 @@ describe("tracking links and photos", () => {
   it("keeps customer photos private to their owner and the staff handling them", async () => {
     const owner = await buyer()
     const photo = await uploadCustomerPhoto(owner, {
+      consent: true,
+      purpose: "review",
       bytes: await makeUniqueImage(),
     })
     expect(await readCustomerPhoto(owner, photo.id)).not.toBeNull()

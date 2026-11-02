@@ -24,6 +24,7 @@ import type { Actor, UserActor } from "@/server/auth/actor"
 import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
 import { DomainError, isUniqueViolation } from "@/server/errors"
+import { consentFields, recordConsents } from "@/server/privacy"
 import {
   hitLimit,
   LIMITS,
@@ -212,6 +213,8 @@ export const placeOrder = defineOperation({
     idempotencyKey: z.uuid(),
     // Only with marketing consent (ADR-0027); read by the action.
     marketingContext: marketingContextSchema.nullable().default(null),
+    // DPDP: the order's data notice, ticked (doc/06 Phase 12).
+    ...consentFields,
   }),
   async handler({ actor, log }, input): Promise<PlaceResult> {
     const user = userOf(actor)
@@ -287,6 +290,13 @@ export const placeOrder = defineOperation({
             ${input.marketingContext ? JSON.stringify(input.marketingContext) : null}::jsonb)
           returning id`)
         const id = inserted.rows[0]!.id
+        await recordConsents(tx, {
+          userId: user.userId,
+          purposes: ["order"],
+          source: "checkout",
+          language: input.consentLanguage,
+          reference: { type: "order", id },
+        })
         for (const line of q.lines) {
           await tx.execute(sql`
             insert into order_items (order_id, position, variant_id, product_id, sku, title, variant_label, image_key,
