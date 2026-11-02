@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache"
 
+import { consentFromForm } from "@/lib/privacy"
 import { getActor } from "@/server/auth/session"
 import { toActionError, type ActionError } from "@/server/action"
 import { createRateLimiter } from "@/server/security/rate-limit"
@@ -51,6 +52,7 @@ export async function sendContactMessageAction(
       orderNumber: String(form.get("orderNumber") ?? ""),
       topic: String(form.get("topic") ?? "") as "other",
       message: String(form.get("message") ?? ""),
+      ...consentFromForm(form),
     })
     return { status: "sent" }
   } catch (error) {

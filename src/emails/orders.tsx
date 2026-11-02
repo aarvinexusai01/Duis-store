@@ -183,6 +183,7 @@ type ShippedProps = {
   awb: string
   /** Partial COD: cash to pay the courier. */
   codDue?: string
+  invoiceAttached?: boolean
 }
 
 export function OrderShippedEmail(props: ShippedProps) {
@@ -199,6 +200,9 @@ export function OrderShippedEmail(props: ShippedProps) {
           on delivery.
         </EmailText>
       )}
+      {props.invoiceAttached && (
+        <EmailText>Your invoice is attached to this email.</EmailText>
+      )}
       <EmailButton href={props.url}>Track your order</EmailButton>
     </EmailLayout>
   )
@@ -210,6 +214,9 @@ export function orderShippedText(props: ShippedProps): string {
     `Your order ${props.orderNumber} is on its way with ${props.courier}. Tracking number: ${props.awb}.`,
     ...(props.codDue
       ? [`Please keep ${props.codDue} ready to pay the courier on delivery.`]
+      : []),
+    ...(props.invoiceAttached
+      ? ["Your invoice is attached to this email."]
       : []),
     `Track your order: ${props.url}`,
   ].join("\n\n")

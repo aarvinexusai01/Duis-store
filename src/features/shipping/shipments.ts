@@ -133,6 +133,7 @@ type ShipmentRow = {
   height_cm: number
   customs: ShipmentCustoms | null
   label_file_key: string | null
+  invoice_file_key: string | null
   last_event_at: Date | null
 }
 
@@ -354,6 +355,13 @@ export async function advanceShipment(
         sql`update shipments set label_file_key = ${key}, updated_at = now() where id = ${shipmentId}`,
       )
       await saveSteps(shipmentId, { labelStored: true })
+    }
+    if (carriesSale(row) && !row.invoice_file_key) {
+      // Best effort: never holds up the parcel. Staff and the customer
+      // fetch it again when they open it.
+      await ensureShipmentInvoice(shipmentId).catch((error: unknown) =>
+        logger.warn({ err: error, shipmentId }, "invoice not fetched"),
+      )
     }
     const pickup = await provider.requestPickup(providerShipmentId)
     await withTransaction(async (tx) => {
@@ -696,6 +704,47 @@ export async function readShipmentLabel(
   if (!row?.label_file_key) return null
   const data = await readPrivateFile(row.label_file_key)
   return data ? { data, awb: row.awb } : null
+}
+
+/** An order's own parcel: exchange parcels carry no new sale to invoice. */
+const carriesSale = (row: Pick<ShipmentRow, "direction" | "exchange_id">) =>
+  row.direction === "forward" && row.exchange_id === null
+
+/**
+ * The courier's invoice for an order's parcel (doc/01 D10): the stored copy,
+ * or fetched from the courier now and stored. Null when there is none to
+ * have (an exchange parcel, or not booked with the courier yet); throws when
+ * the courier can't make one.
+ */
+export async function ensureShipmentInvoice(
+  shipmentId: string,
+): Promise<Buffer | null> {
+  const found = await getDb().execute<ShipmentRow>(
+    sql`select * from shipments where id = ${shipmentId}`,
+  )
+  const row = found.rows[0]
+  if (!row || !carriesSale(row)) return null
+  if (row.invoice_file_key) {
+    const stored = await readPrivateFile(row.invoice_file_key)
+    if (stored) return stored
+  }
+  const provider = getShippingProvider()
+  if (
+    !row.provider_order_id ||
+    row.status === "cancelled" ||
+    provider.name !== row.provider
+  ) {
+    return null
+  }
+  const pdf = await provider.invoice({
+    providerOrderId: row.provider_order_id,
+    request: await buildRequest(row),
+  })
+  const key = await writePrivateFile("invoices", `${shipmentId}.pdf`, pdf)
+  await getDb().execute(
+    sql`update shipments set invoice_file_key = ${key}, updated_at = now() where id = ${shipmentId}`,
+  )
+  return pdf
 }
 
 /**

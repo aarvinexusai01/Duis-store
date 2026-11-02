@@ -12,6 +12,7 @@ export {
   cancelShipmentAtCourier,
   createShipmentRecord,
   customsFor,
+  ensureShipmentInvoice,
   ingestTrackingEvent,
   onShipmentStatusChanged,
   processTrackingWebhook,

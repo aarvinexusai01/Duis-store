@@ -22,6 +22,7 @@ import {
   expirePendingOrders,
   processWebhookEvent,
   recordWebhook,
+  staffCancelOrder,
 } from "@/features/orders"
 import {
   hmacHex,
@@ -36,6 +37,7 @@ import {
 import type { UserActor } from "@/server/auth/actor"
 import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
+import { brokenInvariants } from "@/server/db/invariants"
 import { isDomainError } from "@/server/errors"
 
 import { asSystem, createUserActor, unique } from "../helpers/actors"
@@ -75,6 +77,7 @@ async function customer(
       where id = ${actor.userId}`)
   }
   const { id } = await saveAddress(actor, {
+    consent: true,
     fullName: "Test Buyer",
     phone: "9876543210",
     line1: "1 Hazratganj",
@@ -113,6 +116,7 @@ async function place(
   } as const
   const view = await getCheckoutQuote(buyer, choices)
   const result = await placeOrder(buyer, {
+    consent: true,
     ...choices,
     quoteHash: view.hash,
     idempotencyKey: randomUUID(),
@@ -213,6 +217,7 @@ describe("prepaid checkout", () => {
     expect(
       await code(
         placeOrder(buyer, {
+          consent: true,
           ...choices,
           quoteHash: "0".repeat(32),
           idempotencyKey: randomUUID(),
@@ -222,11 +227,13 @@ describe("prepaid checkout", () => {
     const view = await getCheckoutQuote(buyer, choices)
     const key = randomUUID()
     const first = await placeOrder(buyer, {
+      consent: true,
       ...choices,
       quoteHash: view.hash,
       idempotencyKey: key,
     })
     const again = await placeOrder(buyer, {
+      consent: true,
       ...choices,
       quoteHash: view.hash,
       idempotencyKey: key,
@@ -280,6 +287,7 @@ describe("concurrency", () => {
       buyers.map((b, i) =>
         code(
           placeOrder(b, {
+            consent: true,
             addressId: b.addressId,
             paymentMode: "prepaid",
             useWallet: false,
@@ -482,6 +490,57 @@ describe("partial COD", () => {
     )
   })
 
+  it("keeps the advance when the customer cancels, and refunds it when the shop does", async () => {
+    const buyer = await customer({ phoneVerified: true })
+    await addCartItem(buyer, { variantId: blackM, quantity: 1 })
+    const { result } = await place(buyer, { paymentMode: "partial_cod" })
+    await pay(buyer, result)
+    const order = await orderRow(result.orderNumber)
+    expect(
+      await cancelOrder(buyer, { orderNumber: result.orderNumber }),
+    ).toEqual({ refundPaise: 0, walletPaise: 0, keptPaise: 10_000 })
+    expect(await orderRow(result.orderNumber)).toMatchObject({
+      status: "cancelled",
+      payment_status: "partially_paid",
+    })
+    const refunds = await db().execute(
+      sql`select 1 from refunds where order_id = ${order.id}`,
+    )
+    expect(refunds.rows).toHaveLength(0)
+    const email = await db().execute<{ reason: string }>(sql`
+      select data->'props'->>'reason' as reason from pgboss.job
+      where name = 'notify.email' and data->>'template' = 'order-cancelled'
+        and data->'props'->>'orderNumber' = ${result.orderNumber}`)
+    expect(email.rows[0]?.reason).toContain("₹100 cash-on-delivery advance")
+    const moneyRule = "no money kept on a cancelled or expired order"
+    const kept = async () =>
+      (await brokenInvariants()).filter((name) => name.startsWith(moneyRule))
+    expect(await kept()).toEqual([])
+    // The same money kept on a staff cancellation is a real problem, so the
+    // safety check must still catch it.
+    await db().execute(
+      sql`update orders set cancel_reason = 'staff: test' where id = ${order.id}`,
+    )
+    expect(await kept()).toHaveLength(1)
+    await db().execute(
+      sql`update orders set cancel_reason = 'customer' where id = ${order.id}`,
+    )
+
+    const other = await customer({ phoneVerified: true })
+    await addCartItem(other, { variantId: blackM, quantity: 1 })
+    const second = await place(other, { paymentMode: "partial_cod" })
+    await pay(other, second.result)
+    const staff = await createUserActor("support_agent")
+    await staffCancelOrder(staff, {
+      orderNumber: second.result.orderNumber,
+      reason: "out of stock",
+    })
+    const refunded = await db().execute<{ amount_paise: number }>(sql`
+      select r.amount_paise from refunds r join orders o on o.id = r.order_id
+      where o.order_number = ${second.result.orderNumber}`)
+    expect(refunded.rows).toEqual([{ amount_paise: 10_000 }])
+  })
+
   it("is refused without a verified phone", async () => {
     const buyer = await customer()
     await addCartItem(buyer, { variantId: blackM, quantity: 1 })
@@ -520,6 +579,7 @@ describe("cancellation", () => {
     expect(cancelled).toEqual({
       refundPaise: order.online_amount_paise,
       walletPaise: 5_000,
+      keptPaise: 0,
     })
     expect(await stock(blackM)).toEqual(before)
     expect(await spendableBalance(db(), buyer.userId)).toBe(5_000)
@@ -571,6 +631,7 @@ describe("international checkout", () => {
   async function abroad(countryCode: string) {
     const buyer = await customer()
     const { id } = await saveAddress(buyer, {
+      consent: true,
       fullName: "Sam Smith",
       phone: "+44 7700 900123",
       line1: "1 High Street",

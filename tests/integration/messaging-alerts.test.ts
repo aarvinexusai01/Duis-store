@@ -117,6 +117,7 @@ describe("back-in-stock alerts", () => {
     const sizeId = product.variantId
     expect(
       await subscribeStockAlert(anonymousActor(), {
+        consent: true,
         variantId: sizeId,
         email: "waiting@duis.test",
       }),
@@ -124,6 +125,7 @@ describe("back-in-stock alerts", () => {
     // The same address again: still one alert, and the same answer.
     expect(
       await subscribeStockAlert(anonymousActor(), {
+        consent: true,
         variantId: sizeId,
         email: "WAITING@duis.test",
       }),
@@ -143,6 +145,7 @@ describe("back-in-stock alerts", () => {
     expect(await sendBackInStock(sizeId)).toBe(0)
     expect(
       await subscribeStockAlert(anonymousActor(), {
+        consent: true,
         variantId: sizeId,
         email: "late@duis.test",
       }),

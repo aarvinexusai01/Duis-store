@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  awbFailureReason,
   parseShiprocketTime,
   parseShiprocketTracking,
   parseShiprocketWebhook,
@@ -73,5 +74,24 @@ describe("parseShiprocketTracking", () => {
       "PICKED UP",
       "DELIVERED",
     ])
+  })
+})
+
+describe("awbFailureReason", () => {
+  it("reads Shiprocket's reason from either place", () => {
+    expect(
+      awbFailureReason({
+        awb_assign_status: 0,
+        response: { data: { awb_assign_error: " Insufficient balance " } },
+      }),
+    ).toBe("Insufficient balance")
+    expect(awbFailureReason({ message: "Wallet balance is low" })).toBe(
+      "Wallet balance is low",
+    )
+  })
+
+  it("is null when there is no reason", () => {
+    expect(awbFailureReason({ awb_assign_status: 0 })).toBeNull()
+    expect(awbFailureReason(null)).toBeNull()
   })
 })

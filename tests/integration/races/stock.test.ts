@@ -234,6 +234,7 @@ describe("S7: two exchanges for the last replacement size", () => {
       for (const customer of customers) {
         const order = await deliveredOrder(customer, bought)
         const { exchangeNumber } = await requestExchange(customer, {
+          consent: true,
           orderNumber: order.number,
           orderItemId: order.itemId,
           variantId: wanted,

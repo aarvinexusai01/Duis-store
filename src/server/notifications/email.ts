@@ -22,6 +22,8 @@ type QueueEmailInput = {
   reference?: { type: string; id: string }
   // Replaces the settings' reply-to (e.g. the customer, on contact messages).
   replyTo?: string
+  // Private-storage files, read when the email is sent.
+  attachments?: { key: string; filename: string }[]
 }
 
 /**
@@ -65,6 +67,9 @@ export async function queueEmail(
         to: input.to,
         props: input.props,
         ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+        ...(input.attachments?.length
+          ? { attachments: input.attachments }
+          : {}),
       },
       { tx },
     )

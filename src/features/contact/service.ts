@@ -6,6 +6,7 @@ import { withTransaction } from "@/server/db/transaction"
 import { DomainError } from "@/server/errors"
 import { queueEmail } from "@/server/notifications/email"
 import { defineOperation } from "@/server/operation"
+import { consentFields, recordConsents } from "@/server/privacy"
 
 import { CONTACT_TOPICS, contactMessageSchema } from "./schemas"
 
@@ -25,7 +26,7 @@ export function adminMessageUrl(id: string): string {
 export const sendContactMessage = defineOperation({
   name: "contact.send",
   access: "public",
-  input: contactMessageSchema,
+  input: contactMessageSchema.extend(consentFields),
   async handler({ actor, log }, input): Promise<{ id: string }> {
     return withTransaction(async (tx) => {
       const recent = await tx.execute<{ n: number }>(sql`
@@ -43,6 +44,14 @@ export const sendContactMessage = defineOperation({
                 ${input.topic}, ${input.message}, ${actor.kind === "user" ? actor.userId : null})
         returning id`)
       const id = inserted.rows[0]!.id
+      await recordConsents(tx, {
+        userId: actor.kind === "user" ? actor.userId : null,
+        subject: input.email,
+        purposes: ["contact"],
+        source: "contact_form",
+        language: input.consentLanguage,
+        reference: { type: "contact_message", id },
+      })
       const settings = await tx.execute<{ to: string | null }>(sql`
         select coalesce(support_email, email_reply_to) as to from store_settings where id = 1`)
       const to = settings.rows[0]?.to

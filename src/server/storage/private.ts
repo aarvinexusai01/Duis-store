@@ -6,11 +6,11 @@ import path from "node:path"
 import { getServerEnv } from "@/config/env"
 
 /**
- * Files that are never served publicly (shipping labels hold customer
- * addresses). Layout: STORAGE_PRIVATE_ROOT/{area}/{name}. Staff download them
- * through a route that checks permissions.
+ * Files that are never served publicly (shipping labels and invoices hold
+ * customer addresses). Layout: STORAGE_PRIVATE_ROOT/{area}/{name}. They are
+ * downloaded through routes that check permissions.
  */
-const AREAS = ["labels", "photos"] as const
+const AREAS = ["labels", "invoices", "photos"] as const
 export type PrivateArea = (typeof AREAS)[number]
 const NAME = /^[a-z0-9-]{1,80}\.(pdf|webp)$/
 

@@ -129,6 +129,7 @@ export async function prepareOrder(
     customer,
     place: () =>
       placeOrder(customer, {
+        consent: true,
         ...choices,
         quoteHash: view.hash,
         idempotencyKey: randomUUID(),

@@ -6,6 +6,7 @@ import {
   inStockSlug,
   signInWithOtp,
 } from "./support/shop"
+import { tickConsent } from "./support/consent"
 
 test("checkout: address → pay (simulated) → confirmed → cancel", async ({
   page,
@@ -30,6 +31,7 @@ test("checkout: address → pay (simulated) → confirmed → cancel", async ({
 
   // Below ₹999 the courier rate is shown; GST is included.
   await expect(page.getByText("Prices include GST")).toBeVisible()
+  await tickConsent(page, "order")
   const place = page.getByRole("button", { name: /Place order & pay/ })
   await expect(place).toBeEnabled()
   await place.click()

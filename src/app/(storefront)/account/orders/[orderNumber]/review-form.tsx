@@ -5,7 +5,9 @@ import { toast } from "sonner"
 
 import { PhotoPicker } from "@/components/customer/photo-picker"
 import { Button } from "@/components/ui/button"
+import { ConsentFields } from "@/features/privacy"
 import { submitReviewAction } from "@/features/reviews/actions"
+import type { NoticeLanguage } from "@/lib/privacy"
 
 /** A verified buyer's review: stars, fit, words and up to three photos. */
 export function ReviewForm({ orderItemId }: { orderItemId: string }) {
@@ -13,10 +15,12 @@ export function ReviewForm({ orderItemId }: { orderItemId: string }) {
   const [photoIds, setPhotoIds] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({})
   const [pending, startTransition] = useTransition()
+  const [consent, setConsent] = useState<NoticeLanguage | null>(null)
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (rating === 0) return void toast.error("Choose a star rating.")
+    if (!consent) return void toast.error("Please tick the box to continue.")
     const form = new FormData(event.currentTarget)
     const fit = String(form.get("fit") ?? "")
     startTransition(async () => {
@@ -27,6 +31,8 @@ export function ReviewForm({ orderItemId }: { orderItemId: string }) {
         body: String(form.get("body") ?? ""),
         fit: (fit || undefined) as never,
         photoIds,
+        consent: true,
+        consentLanguage: consent,
       })
       if (result.ok) toast.success("Thanks for your review!")
       else {
@@ -99,7 +105,14 @@ export function ReviewForm({ orderItemId }: { orderItemId: string }) {
           <span className="text-destructive">{errors.body[0]}</span>
         )}
       </label>
-      <PhotoPicker onChange={setPhotoIds} />
+      <ConsentFields
+        purposes={["review"]}
+        onChange={(ticked, language) => setConsent(ticked ? language : null)}
+      />
+      <PhotoPicker
+        onChange={setPhotoIds}
+        consent={consent ? { purpose: "review", language: consent } : null}
+      />
       <Button
         type="submit"
         disabled={pending}

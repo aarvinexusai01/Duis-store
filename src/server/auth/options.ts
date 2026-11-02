@@ -27,6 +27,16 @@ export type AuthDependencies = {
   ): Promise<string | null>
   /** Cloudflare Turnstile, when its keys are set. */
   turnstileSecretKey?: string
+  /**
+   * DPDP (doc/06 Phase 12): the sign-up boxes were ticked (a cookie set by
+   * the form), and recording that consent once the account is known.
+   */
+  hasAccountConsent(headers: Headers): boolean
+  recordAccountConsent(
+    userId: string,
+    headers: Headers,
+    source: string,
+  ): Promise<void>
 }
 
 export type AuthEmail = { to: string; name: string; url: string }
@@ -36,6 +46,16 @@ export type AuthEmail = { to: string; name: string; url: string }
 export const INDIAN_MOBILE = /^\+91[6-9]\d{9}$/
 
 const DAY = 60 * 60 * 24
+
+// Where a browser hands over personal data to sign up or sign in: each needs
+// the account and age boxes ticked first (DPDP Act s.6).
+const CONSENT_PATHS = new Set([
+  "/sign-up/email",
+  "/phone-number/send-otp",
+  "/sign-in/social",
+])
+// Where a session starts for someone who may not have consented yet.
+const SIGN_IN_PATHS = new Set(["/phone-number/verify", "/callback/:id"])
 
 export function buildAuthOptions(deps: AuthDependencies) {
   return {
@@ -117,8 +137,31 @@ export function buildAuthOptions(deps: AuthDependencies) {
       },
     },
 
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user, ctx) => {
+            const headers = ctx?.request?.headers ?? ctx?.headers
+            if (headers)
+              await deps.recordAccountConsent(user.id, headers, "sign_up")
+          },
+        },
+      },
+    },
+
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        // Server-side calls (staff invitations) carry no browser request.
+        if (
+          CONSENT_PATHS.has(ctx.path) &&
+          ctx.request &&
+          !deps.hasAccountConsent(ctx.request.headers)
+        ) {
+          throw new APIError("BAD_REQUEST", {
+            message:
+              "Please tick the boxes to agree to the Privacy Notice and confirm you are 18 or older.",
+          })
+        }
         if (ctx.path !== "/phone-number/send-otp") return
         const phone = (ctx.body as { phoneNumber?: unknown } | undefined)
           ?.phoneNumber
@@ -127,6 +170,16 @@ export function buildAuthOptions(deps: AuthDependencies) {
         const refused = await deps.guardOtpRequest(phone, ip)
         if (refused)
           throw new APIError("TOO_MANY_REQUESTS", { message: refused })
+      }),
+      after: createAuthMiddleware(async (ctx) => {
+        if (!SIGN_IN_PATHS.has(ctx.path) || !ctx.request) return
+        const userId = ctx.context.newSession?.user.id
+        if (userId)
+          await deps.recordAccountConsent(
+            userId,
+            ctx.request.headers,
+            "sign_in",
+          )
       }),
     },
 

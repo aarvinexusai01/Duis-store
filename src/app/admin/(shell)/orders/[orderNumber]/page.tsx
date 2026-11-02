@@ -305,6 +305,7 @@ async function Order({
                           shipmentId={parcel.id}
                           status={parcel.status}
                           hasLabel={parcel.hasLabel}
+                          invoice={parcel.invoice}
                           canSimulate={order.can.simulate}
                         />
                       )}

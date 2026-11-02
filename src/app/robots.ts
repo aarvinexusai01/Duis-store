@@ -13,6 +13,7 @@ const PRIVATE = [
   "/search",
   "/login",
   "/register",
+  "/privacy-consent",
   "/auth/",
   "/api/",
   "/admin",

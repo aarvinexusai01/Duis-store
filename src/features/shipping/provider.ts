@@ -93,6 +93,11 @@ export interface ShippingProvider {
     options?: { isReturn?: boolean },
   ): Promise<{ awb: string; courierName: string }>
   label(request: LabelRequest): Promise<Buffer>
+  /** The courier's invoice PDF for a booked order (doc/01 D10: Duis issues none itself). */
+  invoice(request: {
+    providerOrderId: string
+    request: ShipmentRequest
+  }): Promise<Buffer>
   requestPickup(
     providerShipmentId: string,
   ): Promise<{ scheduledAt: Date | null }>

@@ -87,3 +87,17 @@ export function parseShiprocketTracking(payload: unknown): TrackingEvent[] {
   }
   return events.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime())
 }
+
+/**
+ * Why an AWB wasn't assigned, in Shiprocket's words (e.g. an empty wallet),
+ * from the `courier/assign/awb` reply: `response.data.awb_assign_error`, or
+ * a top-level `message`.
+ */
+export function awbFailureReason(reply: unknown): string | null {
+  if (typeof reply !== "object" || reply === null) return null
+  const { response, message } = reply as {
+    response?: { data?: { awb_assign_error?: unknown } }
+    message?: unknown
+  }
+  return text(response?.data?.awb_assign_error) ?? text(message)
+}

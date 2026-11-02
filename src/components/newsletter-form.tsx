@@ -1,9 +1,9 @@
 "use client"
 
-import Link from "next/link"
 import { useActionState, useId } from "react"
 
 import { Button } from "@/components/ui/button"
+import { ConsentFields } from "@/features/privacy"
 import { cn } from "@/lib/utils"
 
 import {
@@ -69,21 +69,11 @@ export function NewsletterForm({
       >
         {state.status === "idle" ? null : state.message}
       </p>
-      <p
-        className={cn(
-          "text-xs",
-          tone === "dark" ? "text-chrome-muted" : "text-muted-foreground",
-        )}
-      >
-        Drops, restocks and offers. Unsubscribe any time. See our{" "}
-        <Link
-          href="/policies/privacy-policy"
-          className="underline underline-offset-2"
-        >
-          privacy policy
-        </Link>
-        .
-      </p>
+      <ConsentFields
+        purposes={["marketing"]}
+        tone={tone}
+        className={tone === "dark" ? "text-paper" : undefined}
+      />
     </form>
   )
 }

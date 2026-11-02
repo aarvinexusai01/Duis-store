@@ -7,6 +7,8 @@ import { PhotoPicker } from "@/components/customer/photo-picker"
 import { usePayment } from "@/components/payment/use-payment"
 import { Button } from "@/components/ui/button"
 import type { ExchangeableItem } from "@/features/exchanges"
+import { ConsentFields } from "@/features/privacy"
+import type { NoticeLanguage } from "@/lib/privacy"
 import {
   cancelExchangeAction,
   requestExchangeAction,
@@ -39,6 +41,7 @@ export function ExchangeForm({
   const [quantity, setQuantity] = useState(1)
   const [photoIds, setPhotoIds] = useState<string[]>([])
   const [pending, startTransition] = useTransition()
+  const [consent, setConsent] = useState<NoticeLanguage | null>(null)
   const sameAllowed = reason === "damaged" || reason === "wrong_item"
   const options = item.options.filter(
     (o) => sameAllowed || o.label !== item.variantLabel,
@@ -49,6 +52,7 @@ export function ExchangeForm({
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!option) return void toast.error("Choose the size or colour you want.")
+    if (!consent) return void toast.error("Please tick the box to continue.")
     const note = String(new FormData(event.currentTarget).get("note") ?? "")
     startTransition(async () => {
       const result = await requestExchangeAction({
@@ -59,6 +63,8 @@ export function ExchangeForm({
         reason,
         note: note || undefined,
         photoIds,
+        consent: true,
+        consentLanguage: consent,
       })
       if (result.ok)
         toast.success(`Exchange ${result.exchangeNumber} requested`)
@@ -158,9 +164,16 @@ export function ExchangeForm({
           className="border border-input bg-card p-3 text-sm"
         />
       </label>
+      <ConsentFields
+        purposes={["exchange"]}
+        onChange={(ticked, language) => setConsent(ticked ? language : null)}
+      />
       <div className="flex flex-col gap-1 text-sm">
         Photos (optional, helpful if it arrived damaged)
-        <PhotoPicker onChange={setPhotoIds} />
+        <PhotoPicker
+          onChange={setPhotoIds}
+          consent={consent ? { purpose: "exchange", language: consent } : null}
+        />
       </div>
       <Button
         type="submit"

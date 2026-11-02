@@ -1,5 +1,6 @@
 "use server"
 
+import { consentFromForm } from "@/lib/privacy"
 import { getActor } from "@/server/auth/session"
 import { toActionError } from "@/server/action"
 import { createRateLimiter } from "@/server/security/rate-limit"
@@ -29,6 +30,7 @@ export async function subscribeStockAlertAction(
     const result = await subscribeStockAlert(actor, {
       variantId: String(form.get("variantId") ?? ""),
       email: String(form.get("email") ?? ""),
+      ...consentFromForm(form),
     })
     return result.status === "in_stock"
       ? {

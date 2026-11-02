@@ -600,13 +600,17 @@ export async function reconcilePendingPayments(
  * restock, return the wallet part to the wallet, refund what was paid online
  * to its source, and give the coupon use back. The caller checks who may
  * cancel and that no parcel is with the courier.
+ *
+ * A customer who cancels a cash-on-delivery order forfeits its advance, as
+ * the Cancellation Policy and checkout say (owner decision 2026-11-02); only
+ * money paid beyond it comes back. Staff cancelling refunds it in full.
  */
 export async function cancelConfirmedOrder(
   tx: Transaction,
   order: OrderRow,
   actor: Actor,
   options: { by: "customer" | "staff"; reason?: string },
-): Promise<{ refundPaise: number; walletPaise: number }> {
+): Promise<{ refundPaise: number; walletPaise: number; keptPaise: number }> {
   const live = await tx.execute<{ n: number }>(sql`
     select count(*)::int as n from shipments where order_id = ${order.id} and status <> 'cancelled'`)
   const fulfillment = await tx.execute<{ fulfillment_status: string }>(
@@ -625,13 +629,25 @@ export async function cancelConfirmedOrder(
     )
   }
   await restockCommitted(tx, order.id, "cancel_restock")
+  const advance =
+    options.by === "customer" && order.payment_mode === "partial_cod"
+      ? order.total_paise - order.cod_due_paise
+      : 0
+  // Kept from the wallet part first (it can't be split), then from online.
+  let toKeep = advance
+  let kept = 0
   // The original debit, or the one taken again for a late payment.
   let walletBack = 0
-  for (const key of [walletKey(order.id), `${walletKey(order.id)}:late`]) {
-    walletBack += await reverseDebit(tx, {
-      debitIdempotencyKey: key,
-      reason: "cancellation_refund",
-    })
+  if (advance > 0 && order.wallet_applied_paise > 0) {
+    kept += order.wallet_applied_paise
+    toKeep -= order.wallet_applied_paise
+  } else {
+    for (const key of [walletKey(order.id), `${walletKey(order.id)}:late`]) {
+      walletBack += await reverseDebit(tx, {
+        debitIdempotencyKey: key,
+        reason: "cancellation_refund",
+      })
+    }
   }
   await reverseCouponRedemption(tx, order.id)
   const captured = await tx.execute<{
@@ -644,7 +660,14 @@ export async function cancelConfirmedOrder(
     from payments p where p.order_id = ${order.id} and p.status in ('captured', 'partially_refunded')`)
   let onlineRefund = 0
   for (const payment of captured.rows) {
-    const amount = payment.amount_paise - payment.refunded_paise
+    const keepHere = Math.min(
+      Math.max(toKeep, 0),
+      payment.amount_paise - payment.refunded_paise,
+    )
+    toKeep -= keepHere
+    kept += keepHere
+    const amount = payment.amount_paise - payment.refunded_paise - keepHere
+    if (amount <= 0) continue
     const id = await requestRefund(tx, {
       paymentId: payment.id,
       orderId: order.id,
@@ -661,7 +684,7 @@ export async function cancelConfirmedOrder(
   await tx.execute(sql`
     update orders set status = 'cancelled', cancelled_at = now(),
       cancel_reason = ${reason},
-      payment_status = case when ${onlineRefund} = 0 and payment_status <> 'unpaid' then 'refunded'::order_payment_status else payment_status end,
+      payment_status = case when ${onlineRefund} = 0 and ${kept} = 0 and payment_status <> 'unpaid' then 'refunded'::order_payment_status else payment_status end,
       updated_at = now()
     where id = ${order.id}`)
   await recordChange(tx, order.id, {
@@ -675,11 +698,13 @@ export async function cancelConfirmedOrder(
     tx,
     order,
     options.by === "customer"
-      ? "you cancelled it."
+      ? kept > 0
+        ? `you cancelled it. As our Cancellation Policy says, the ${formatPaise(kept)} cash-on-delivery advance isn't refunded.`
+        : "you cancelled it."
       : "we had to cancel it. We're sorry for the trouble.",
     onlineRefund + walletBack,
   )
-  return { refundPaise: onlineRefund, walletPaise: walletBack }
+  return { refundPaise: onlineRefund, walletPaise: walletBack, keptPaise: kept }
 }
 
 /** Customer cancellation before dispatch (doc/03 §5). */

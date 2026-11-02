@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import type { Address } from "@/features/customers"
 import { AddressForm } from "@/features/customers/ui/address-book"
+import { ConsentFields } from "@/features/privacy"
+import type { NoticeLanguage } from "@/lib/privacy"
 import { countryName } from "@/lib/countries"
 import { INDIAN_STATES } from "@/lib/india"
 import { formatPaise } from "@/lib/money"
@@ -53,6 +55,11 @@ export function CheckoutForm({
   const [error, setError] = useState("")
   const [pending, startTransition] = useTransition()
   const [placing, setPlacing] = useState(false)
+  // DPDP: the order's data notice, ticked (doc/06 Phase 12).
+  const [orderConsent, setOrderConsent] = useState<{
+    ticked: boolean
+    language: NoticeLanguage
+  }>({ ticked: false, language: "en" })
   // One key per attempt: a double click or retry can never create two orders.
   const attemptKey = useRef(crypto.randomUUID())
   const { pay, dialog } = usePayment()
@@ -80,6 +87,10 @@ export function CheckoutForm({
 
   const placeAndPay = async () => {
     if (!view || !choices) return
+    if (!orderConsent.ticked) {
+      setError("Please tick the box above to place your order.")
+      return
+    }
     setPlacing(true)
     setError("")
     try {
@@ -91,6 +102,8 @@ export function CheckoutForm({
         ...choices,
         quoteHash: view.hash,
         idempotencyKey: attemptKey.current,
+        consent: true,
+        consentLanguage: orderConsent.language,
       })
       if (!placed.ok) {
         if (placed.quote) setView(placed.quote)
@@ -247,7 +260,7 @@ export function CheckoutForm({
               title="Cash on delivery"
               body={
                 view.codAvailable
-                  ? "Pay a small advance online now and the rest in cash when it arrives. The advance is not refunded if the parcel is refused at delivery."
+                  ? "Pay a small advance online now and the rest in cash when it arrives. The advance is not refunded if you cancel the order or refuse the parcel at delivery."
                   : (view.codReason ?? "Not available for this order.")
               }
             />
@@ -435,6 +448,11 @@ export function CheckoutForm({
             Reply STOP any time.
           </label>
         )}
+        <ConsentFields
+          purposes={["order"]}
+          onChange={(ticked, language) => setOrderConsent({ ticked, language })}
+          className="mt-4"
+        />
         <Button
           onClick={placeAndPay}
           disabled={placing || pending || blocking.length > 0}

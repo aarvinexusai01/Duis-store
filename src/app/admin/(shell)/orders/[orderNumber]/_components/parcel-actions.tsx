@@ -6,22 +6,28 @@ import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
   cancelShipmentAction,
+  fetchShipmentInvoiceAction,
   retryShipmentAction,
   simulateTrackingAction,
 } from "@/features/orders/admin-actions"
 import { SHIPMENT_STATUS_LABEL } from "@/lib/order-status"
 import { cn } from "@/lib/utils"
 
-/** Label, retry and cancel for one parcel; scan simulation with the demo courier. */
+/**
+ * Label, invoice, retry and cancel for one parcel; scan simulation with the
+ * demo courier.
+ */
 export function ParcelActions({
   shipmentId,
   status,
   hasLabel,
+  invoice,
   canSimulate,
 }: {
   shipmentId: string
   status: string
   hasLabel: boolean
+  invoice: "stored" | "fetchable" | null
   canSimulate: boolean
 }) {
   const [pending, startTransition] = useTransition()
@@ -58,6 +64,32 @@ export function ParcelActions({
         >
           Label (PDF)
         </a>
+      )}
+      {invoice === "stored" && (
+        <a
+          href={`/admin/shipments/${shipmentId}/invoice`}
+          target="_blank"
+          rel="noreferrer"
+          className={cn(
+            buttonVariants({ size: "sm", variant: "outline" }),
+            "rounded-sm",
+          )}
+        >
+          Invoice (PDF)
+        </a>
+      )}
+      {invoice === "fetchable" && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-sm"
+          disabled={pending}
+          onClick={() =>
+            act(() => fetchShipmentInvoiceAction(shipmentId), "Invoice ready")
+          }
+        >
+          Fetch invoice
+        </Button>
       )}
       {status === "pending" && (
         <Button

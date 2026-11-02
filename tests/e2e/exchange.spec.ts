@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 import { placePrepaidOrder } from "./support/shop"
 import { createStaff, signInAndSetUpTwoFactor } from "./support/staff"
+import { tickConsent } from "./support/consent"
 
 async function deliver(admin: Page, orderNumber: string) {
   await admin.goto(`/admin/orders/${orderNumber}`)
@@ -66,6 +67,7 @@ test("delivered order: track, exchange, review; staff approve and publish", asyn
     .first()
   test.skip((await option.count()) === 0, "no other size in stock")
   await option.click()
+  await tickConsent(shopper, "exchange")
   await shopper.getByRole("button", { name: "Request exchange" }).click()
   await expect(shopper.getByText(/Exchange EX-\d+ requested/)).toBeVisible()
   const exchangeNumber = (await shopper
@@ -88,6 +90,7 @@ test("delivered order: track, exchange, review; staff approve and publish", asyn
   await shopper.waitForLoadState("networkidle")
   await shopper.getByRole("radio", { name: "5 stars" }).check({ force: true })
   await shopper.getByLabel("Your review").fill(reviewText)
+  await tickConsent(shopper, "review")
   await shopper.getByRole("button", { name: "Submit review" }).click()
   await expect(shopper.getByText("Thanks for your review!")).toBeVisible()
 

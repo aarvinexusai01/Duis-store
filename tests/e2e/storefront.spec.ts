@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, test, type Page } from "@playwright/test"
 import pg from "pg"
+import { tickAccountConsent, tickConsent } from "./support/consent"
 
 type Target = {
   slug: string
@@ -108,6 +109,7 @@ test("browse → filter → variant → bag → OTP sign-in keeps the bag", asyn
   // Sign in with a phone OTP (fake provider), landing back on the bag.
   const digits = `9${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`
   await page.goto("/login?next=/cart")
+  await tickAccountConsent(page)
   await page.getByRole("textbox", { name: "Mobile number" }).fill(digits)
   await page.getByRole("button", { name: "Send code" }).click()
   await expect(page.getByText(`+91${digits}`)).toBeVisible()
@@ -186,6 +188,7 @@ test("a sold-out size offers a back-in-stock alert", async ({ page }) => {
   await page
     .getByLabel("Tell me when this size is back")
     .fill("e2e-alert@duis.test")
+  await tickConsent(page, "stock_alert")
   await page.getByRole("button", { name: "Notify me" }).click()
   await expect(page.getByText(/We'll email you once/)).toBeVisible()
 })
@@ -203,6 +206,7 @@ test("the contact form saves a message for the team", async ({ page }) => {
   await form
     .getByRole("textbox", { name: "Message" })
     .fill("Does the oversized tee run large? I'm usually a medium.")
+  await tickConsent(page, "contact")
   await form.getByRole("button", { name: "Send message" }).click()
   await expect(page.getByText("Thanks, we've got it")).toBeVisible()
 })

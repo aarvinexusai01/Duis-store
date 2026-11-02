@@ -41,7 +41,11 @@ export const INVARIANTS: Record<string, ReturnType<typeof sql>> = {
     select count(*)::int as n from payments p join orders o on o.id = p.order_id
     where p.status in ('captured', 'partially_refunded') and p.purpose <> 'exchange_difference'
       and o.status in ('cancelled', 'expired')
-      and coalesce((select sum(amount_paise) from refunds f where f.payment_id = p.id and f.status <> 'failed'), 0) < p.amount_paise`,
+      -- A customer who cancels a COD order forfeits its advance, and no more
+      -- (Cancellation Policy 4.2; cancelConfirmedOrder).
+      and p.amount_paise - coalesce((select sum(amount_paise) from refunds f where f.payment_id = p.id and f.status <> 'failed'), 0)
+        > case when o.payment_mode = 'partial_cod' and o.cancel_reason like 'customer%'
+            then o.total_paise - o.cod_due_paise else 0 end`,
   "no order is charged twice": sql`
     select count(*)::int as n from (
       select p.order_id from payments p

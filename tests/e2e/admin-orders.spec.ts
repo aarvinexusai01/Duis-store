@@ -46,6 +46,12 @@ test("admin books a parcel and follows it to delivery", async ({
   const label = page.getByRole("link", { name: "Label (PDF)" })
   const response = await page.request.get((await label.getAttribute("href"))!)
   expect(response.headers()["content-type"]).toBe("application/pdf")
+  // The courier's invoice, fetched at booking.
+  const invoice = page.getByRole("link", { name: "Invoice (PDF)" })
+  const invoiceResponse = await page.request.get(
+    (await invoice.getAttribute("href"))!,
+  )
+  expect(invoiceResponse.headers()["content-type"]).toBe("application/pdf")
 
   for (const next of ["Picked up", "In transit", "Out for delivery"]) {
     await page.getByRole("button", { name: "Next scan" }).click()
@@ -56,9 +62,21 @@ test("admin books a parcel and follows it to delivery", async ({
     page.locator("header, p").getByText("Delivered", { exact: true }).first(),
   ).toBeVisible()
 
-  // The customer sees the courier and tracking number.
+  // The customer sees the courier and tracking number, and the invoice.
   await customerPage.goto(`/account/orders/${orderNumber}`)
   await expect(customerPage.getByText(awb)).toBeVisible()
+  const download = customerPage.getByRole("link", {
+    name: "Download invoice (PDF)",
+  })
+  const customerInvoice = await customerPage.request.get(
+    (await download.getAttribute("href"))!,
+  )
+  expect(customerInvoice.headers()["content-type"]).toBe("application/pdf")
+  // Nobody else's session gets it.
+  const stranger = await page.request.get(
+    (await download.getAttribute("href"))!,
+  )
+  expect(stranger.status()).toBe(404)
   await shopper.close()
 })
 

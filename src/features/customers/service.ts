@@ -8,6 +8,7 @@ import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
+import { consentFields, recordConsents } from "@/server/privacy"
 
 import { addressInputSchema, consentSchema, profileSchema } from "./schemas"
 
@@ -106,15 +107,42 @@ export const setMarketingConsent = defineOperation({
   input: consentSchema,
   async handler({ actor, log }, { marketingEmail, marketingWhatsapp }) {
     const userId = ownerId(actor)
-    await getDb().execute(sql`
-      insert into customer_profiles (user_id, marketing_email_consent_at, marketing_whatsapp_consent_at)
-      values (${userId}, case when ${marketingEmail} then now() end, case when ${marketingWhatsapp} then now() end)
-      on conflict (user_id) do update set
-        marketing_email_consent_at = case when ${marketingEmail}
-          then coalesce(customer_profiles.marketing_email_consent_at, now()) end,
-        marketing_whatsapp_consent_at = case when ${marketingWhatsapp}
-          then coalesce(customer_profiles.marketing_whatsapp_consent_at, now()) end,
-        updated_at = now()`)
+    await withTransaction(async (tx) => {
+      const before = await tx.execute<{
+        email: boolean
+        whatsapp: boolean
+      }>(sql`
+        select marketing_email_consent_at is not null as email,
+               marketing_whatsapp_consent_at is not null as whatsapp
+        from customer_profiles where user_id = ${userId} for update`)
+      await tx.execute(sql`
+        insert into customer_profiles (user_id, marketing_email_consent_at, marketing_whatsapp_consent_at)
+        values (${userId}, case when ${marketingEmail} then now() end, case when ${marketingWhatsapp} then now() end)
+        on conflict (user_id) do update set
+          marketing_email_consent_at = case when ${marketingEmail}
+            then coalesce(customer_profiles.marketing_email_consent_at, now()) end,
+          marketing_whatsapp_consent_at = case when ${marketingWhatsapp}
+            then coalesce(customer_profiles.marketing_whatsapp_consent_at, now()) end,
+          updated_at = now()`)
+      // Each change of mind is on the record (DPDP Act s.6(4), s.6(10)).
+      const was = before.rows[0] ?? { email: false, whatsapp: false }
+      if (was.email !== marketingEmail) {
+        await recordConsents(tx, {
+          userId,
+          purposes: ["marketing"],
+          granted: marketingEmail,
+          source: "account_settings",
+        })
+      }
+      if (was.whatsapp !== marketingWhatsapp) {
+        await recordConsents(tx, {
+          userId,
+          purposes: ["marketing_whatsapp"],
+          granted: marketingWhatsapp,
+          source: "account_settings",
+        })
+      }
+    })
     log.info({ marketingEmail, marketingWhatsapp }, "marketing consent updated")
   },
 })
@@ -156,8 +184,12 @@ export const listAddresses = defineOperation({
 export const saveAddress = defineOperation({
   name: "customers.saveAddress",
   access: "authenticated",
-  input: addressInputSchema,
-  async handler({ actor }, { id, isDefault, ...fields }) {
+  // DPDP: saving an address takes personal data, so its box must be ticked.
+  input: addressInputSchema.and(z.object(consentFields)),
+  async handler({ actor }, input) {
+    // `consent` was checked by the schema; the rest are the address's columns.
+    const { id, isDefault, consentLanguage, consent, ...fields } = input
+    void consent
     const userId = ownerId(actor)
     return withTransaction(async (tx) => {
       const existing = await tx
@@ -194,18 +226,56 @@ export const saveAddress = defineOperation({
         region: fields.region ?? null,
         stateCode: fields.stateCode ?? null,
       }
+      const consented = (addressId: string) =>
+        recordConsents(tx, {
+          userId,
+          purposes: ["address"],
+          source: "address_form",
+          language: consentLanguage,
+          reference: { type: "address", id: addressId },
+        })
       if (id) {
         await tx
           .update(addresses)
           .set({ ...values, ...(makeDefault ? { isDefault: true } : {}) })
           .where(and(eq(addresses.id, id), eq(addresses.userId, userId)))
+        await consented(id)
         return { id }
       }
       const [created] = await tx
         .insert(addresses)
         .values({ ...values, userId, isDefault: makeDefault })
         .returning({ id: addresses.id })
+      await consented(created!.id)
       return { id: created!.id }
+    })
+  },
+})
+
+/** Chooses the default among saved addresses; takes no new personal data. */
+export const setDefaultAddress = defineOperation({
+  name: "customers.setDefaultAddress",
+  access: "authenticated",
+  input: z.object({ id: z.uuid() }),
+  async handler({ actor }, { id }) {
+    const userId = ownerId(actor)
+    await withTransaction(async (tx) => {
+      const owned = await tx
+        .select({ id: addresses.id })
+        .from(addresses)
+        .where(eq(addresses.userId, userId))
+        .for("update")
+      if (!owned.some((address) => address.id === id)) {
+        throw new DomainError("NOT_FOUND", "Address not found.")
+      }
+      await tx
+        .update(addresses)
+        .set({ isDefault: false })
+        .where(and(eq(addresses.userId, userId), eq(addresses.isDefault, true)))
+      await tx
+        .update(addresses)
+        .set({ isDefault: true })
+        .where(eq(addresses.id, id))
     })
   },
 })
@@ -242,13 +312,26 @@ export const setWhatsAppUpdates = defineOperation({
   input: z.object({ enabled: z.boolean() }),
   async handler({ actor, log }, { enabled }) {
     const userId = ownerId(actor)
-    await getDb().execute(sql`
-      insert into customer_profiles (user_id, whatsapp_updates_consent_at)
-      values (${userId}, case when ${enabled} then now() end)
-      on conflict (user_id) do update set
-        whatsapp_updates_consent_at = case when ${enabled}
-          then coalesce(customer_profiles.whatsapp_updates_consent_at, now()) end,
-        updated_at = now()`)
+    await withTransaction(async (tx) => {
+      const before = await tx.execute<{ on: boolean }>(sql`
+        select whatsapp_updates_consent_at is not null as on
+        from customer_profiles where user_id = ${userId} for update`)
+      await tx.execute(sql`
+        insert into customer_profiles (user_id, whatsapp_updates_consent_at)
+        values (${userId}, case when ${enabled} then now() end)
+        on conflict (user_id) do update set
+          whatsapp_updates_consent_at = case when ${enabled}
+            then coalesce(customer_profiles.whatsapp_updates_consent_at, now()) end,
+          updated_at = now()`)
+      if ((before.rows[0]?.on ?? false) !== enabled) {
+        await recordConsents(tx, {
+          userId,
+          purposes: ["whatsapp_updates"],
+          granted: enabled,
+          source: "account_settings",
+        })
+      }
+    })
     log.info({ enabled }, "WhatsApp updates preference saved")
   },
 })

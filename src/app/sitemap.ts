@@ -29,6 +29,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
   return [
     ...pages.map((page) => entry(pageHref(page.slug), page.publishedAt)),
+    entry("/policies/privacy-notice"),
+    entry("/policies/privacy-notice/hi"),
     entry("/shop"),
     entry("/collections"),
     ...tree.departments.map((department) => entry(department.href)),

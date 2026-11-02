@@ -66,6 +66,7 @@ export const emailTemplates = {
       courier: z.string().max(100),
       awb: z.string().max(40),
       codDue: z.string().optional(),
+      invoiceAttached: z.boolean().optional(),
     }),
     subject: () => "Your Duis order has shipped",
   },

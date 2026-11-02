@@ -153,8 +153,12 @@ async function emailShipped(
   shipmentId: string,
 ) {
   if (!order.customer_email || order.customer_email.endsWith(".invalid")) return
-  const parcel = await tx.execute<{ awb: string; courier_name: string }>(
-    sql`select awb, courier_name from shipments where id = ${shipmentId}`,
+  const parcel = await tx.execute<{
+    awb: string
+    courier_name: string
+    invoice_file_key: string | null
+  }>(
+    sql`select awb, courier_name, invoice_file_key from shipments where id = ${shipmentId}`,
   )
   const row = parcel.rows[0]
   if (!row?.awb) return
@@ -174,7 +178,19 @@ async function emailShipped(
         ...(order.cod_due_paise > 0
           ? { codDue: formatPaise(order.cod_due_paise) }
           : {}),
+        ...(row.invoice_file_key ? { invoiceAttached: true } : {}),
       },
+      // The courier's invoice, when it was fetched at booking (doc/01 D10).
+      ...(row.invoice_file_key
+        ? {
+            attachments: [
+              {
+                key: row.invoice_file_key,
+                filename: `Invoice-${order.order_number}.pdf`,
+              },
+            ],
+          }
+        : {}),
     },
     { tx },
   )

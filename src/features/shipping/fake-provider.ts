@@ -13,7 +13,7 @@ const digits = (seed: string, length: number) =>
     .padStart(length, "0")
     .slice(-length)
 
-type FakeStep = "create" | "awb" | "label" | "pickup" | "cancel"
+type FakeStep = "create" | "awb" | "label" | "invoice" | "pickup" | "cancel"
 let failing: FakeStep | null = null
 
 /** Tests only: make one courier step fail until reset with null. */
@@ -118,6 +118,23 @@ export const fakeProvider: ShippingProvider = {
         text: `${item.units} x ${item.sku}`,
         size: 8,
       })),
+    ])
+  },
+  async invoice({ providerOrderId, request }) {
+    step("invoice")
+    return textPdf([
+      { text: "DEMO INVOICE - NOT A TAX INVOICE", size: 9, bold: true },
+      { text: `Order ${request.channelOrderId}`, size: 14, bold: true },
+      { text: `Courier order ${providerOrderId}` },
+      {
+        text: `Billed to: ${request.consignee.name}, ${request.consignee.city}`,
+      },
+      { text: " " },
+      ...request.items.map((item) => ({
+        text: `${item.units} x ${item.name} (HSN ${item.hsn}): ${formatPaise(item.unitPricePaise * item.units)}`,
+      })),
+      { text: " " },
+      { text: `Total ${formatPaise(request.subTotalPaise)}`, bold: true },
     ])
   },
   async requestPickup() {
