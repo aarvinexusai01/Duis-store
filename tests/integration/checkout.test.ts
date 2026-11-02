@@ -22,6 +22,7 @@ import {
   expirePendingOrders,
   processWebhookEvent,
   recordWebhook,
+  staffCancelOrder,
 } from "@/features/orders"
 import {
   hmacHex,
@@ -482,6 +483,44 @@ describe("partial COD", () => {
     )
   })
 
+  it("keeps the advance when the customer cancels, and refunds it when the shop does", async () => {
+    const buyer = await customer({ phoneVerified: true })
+    await addCartItem(buyer, { variantId: blackM, quantity: 1 })
+    const { result } = await place(buyer, { paymentMode: "partial_cod" })
+    await pay(buyer, result)
+    const order = await orderRow(result.orderNumber)
+    expect(
+      await cancelOrder(buyer, { orderNumber: result.orderNumber }),
+    ).toEqual({ refundPaise: 0, walletPaise: 0, keptPaise: 10_000 })
+    expect(await orderRow(result.orderNumber)).toMatchObject({
+      status: "cancelled",
+      payment_status: "partially_paid",
+    })
+    const refunds = await db().execute(
+      sql`select 1 from refunds where order_id = ${order.id}`,
+    )
+    expect(refunds.rows).toHaveLength(0)
+    const email = await db().execute<{ reason: string }>(sql`
+      select data->'props'->>'reason' as reason from pgboss.job
+      where name = 'notify.email' and data->>'template' = 'order-cancelled'
+        and data->'props'->>'orderNumber' = ${result.orderNumber}`)
+    expect(email.rows[0]?.reason).toContain("₹100 cash-on-delivery advance")
+
+    const other = await customer({ phoneVerified: true })
+    await addCartItem(other, { variantId: blackM, quantity: 1 })
+    const second = await place(other, { paymentMode: "partial_cod" })
+    await pay(other, second.result)
+    const staff = await createUserActor("support_agent")
+    await staffCancelOrder(staff, {
+      orderNumber: second.result.orderNumber,
+      reason: "out of stock",
+    })
+    const refunded = await db().execute<{ amount_paise: number }>(sql`
+      select r.amount_paise from refunds r join orders o on o.id = r.order_id
+      where o.order_number = ${second.result.orderNumber}`)
+    expect(refunded.rows).toEqual([{ amount_paise: 10_000 }])
+  })
+
   it("is refused without a verified phone", async () => {
     const buyer = await customer()
     await addCartItem(buyer, { variantId: blackM, quantity: 1 })
@@ -520,6 +559,7 @@ describe("cancellation", () => {
     expect(cancelled).toEqual({
       refundPaise: order.online_amount_paise,
       walletPaise: 5_000,
+      keptPaise: 0,
     })
     expect(await stock(blackM)).toEqual(before)
     expect(await spendableBalance(db(), buyer.userId)).toBe(5_000)

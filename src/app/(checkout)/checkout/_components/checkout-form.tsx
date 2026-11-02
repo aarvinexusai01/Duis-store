@@ -247,7 +247,7 @@ export function CheckoutForm({
               title="Cash on delivery"
               body={
                 view.codAvailable
-                  ? "Pay a small advance online now and the rest in cash when it arrives. The advance is not refunded if the parcel is refused at delivery."
+                  ? "Pay a small advance online now and the rest in cash when it arrives. The advance is not refunded if you cancel the order or refuse the parcel at delivery."
                   : (view.codReason ?? "Not available for this order.")
               }
             />

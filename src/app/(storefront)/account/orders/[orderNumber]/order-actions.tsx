@@ -14,10 +14,13 @@ export function OrderActions({
   orderNumber,
   canCancel,
   canPay,
+  advanceKept,
 }: {
   orderNumber: string
   canCancel: boolean
   canPay: boolean
+  /** Cash on delivery: the advance the customer gives up by cancelling. */
+  advanceKept: string | null
 }) {
   const router = useRouter()
   const { pay, dialog } = usePayment()
@@ -65,6 +68,12 @@ export function OrderActions({
       {canCancel &&
         (confirming ? (
           <>
+            {advanceKept && (
+              <p className="w-full text-sm text-muted-foreground">
+                The {advanceKept} cash-on-delivery advance isn&apos;t refunded
+                if you cancel (Cancellation Policy).
+              </p>
+            )}
             <Button
               variant="destructive"
               onClick={cancel}

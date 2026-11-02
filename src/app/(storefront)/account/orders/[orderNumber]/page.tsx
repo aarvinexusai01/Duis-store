@@ -74,6 +74,11 @@ async function Order({ params }: Pick<Props, "params">) {
           orderNumber={order.orderNumber}
           canCancel={order.canCancel}
           canPay={order.canPay}
+          advanceKept={
+            order.paymentMode === "partial_cod"
+              ? formatPaise(order.totalPaise - order.codDuePaise)
+              : null
+          }
         />
       </div>
 
