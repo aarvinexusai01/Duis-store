@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { connection } from "next/server"
 import { Suspense } from "react"
 
 import { PageSkeleton } from "@/components/page-skeleton"
@@ -27,6 +28,8 @@ export default function Page() {
 }
 
 async function Notice() {
+  // Settings come from the database, which only exists at request time.
+  await connection()
   return (
     <PrivacyNotice
       language="en"

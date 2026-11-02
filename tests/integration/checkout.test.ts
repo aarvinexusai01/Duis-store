@@ -37,6 +37,7 @@ import {
 import type { UserActor } from "@/server/auth/actor"
 import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
+import { brokenInvariants } from "@/server/db/invariants"
 import { isDomainError } from "@/server/errors"
 
 import { asSystem, createUserActor, unique } from "../helpers/actors"
@@ -511,6 +512,19 @@ describe("partial COD", () => {
       where name = 'notify.email' and data->>'template' = 'order-cancelled'
         and data->'props'->>'orderNumber' = ${result.orderNumber}`)
     expect(email.rows[0]?.reason).toContain("₹100 cash-on-delivery advance")
+    const moneyRule = "no money kept on a cancelled or expired order"
+    const kept = async () =>
+      (await brokenInvariants()).filter((name) => name.startsWith(moneyRule))
+    expect(await kept()).toEqual([])
+    // The same money kept on a staff cancellation is a real problem, so the
+    // safety check must still catch it.
+    await db().execute(
+      sql`update orders set cancel_reason = 'staff: test' where id = ${order.id}`,
+    )
+    expect(await kept()).toHaveLength(1)
+    await db().execute(
+      sql`update orders set cancel_reason = 'customer' where id = ${order.id}`,
+    )
 
     const other = await customer({ phoneVerified: true })
     await addCartItem(other, { variantId: blackM, quantity: 1 })
