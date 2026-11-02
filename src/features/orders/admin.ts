@@ -11,6 +11,7 @@ import {
   cancelShipmentAtCourier,
   createShipmentRecord,
   customsFor,
+  ensureShipmentInvoice,
   getShippingProvider,
   readShipmentLabel,
   scheduleShipmentRetry,
@@ -311,6 +312,8 @@ export type AdminOrderDetail = {
     weightGrams: number
     dimensions: string
     hasLabel: boolean
+    /** The courier's invoice: stored, or ready to fetch from the courier. */
+    invoice: "stored" | "fetchable" | null
     lastError: string | null
     attempts: number
     pickupScheduledAt: Date | null
@@ -420,6 +423,10 @@ export const adminGetOrder = defineOperation({
         breadth_cm: number
         height_cm: number
         label_file_key: string | null
+        invoice_file_key: string | null
+        direction: "forward" | "reverse" | "replacement"
+        exchange_id: string | null
+        provider_order_id: string | null
         last_error: string | null
         attempts: number
         pickup_scheduled_at: Date | null
@@ -608,6 +615,14 @@ export const adminGetOrder = defineOperation({
         weightGrams: s.weight_grams,
         dimensions: `${s.length_cm} × ${s.breadth_cm} × ${s.height_cm} cm`,
         hasLabel: Boolean(s.label_file_key),
+        invoice: s.invoice_file_key
+          ? "stored"
+          : s.direction === "forward" &&
+              !s.exchange_id &&
+              s.provider_order_id &&
+              s.status !== "cancelled"
+            ? "fetchable"
+            : null,
         lastError: s.last_error,
         attempts: s.attempts,
         pickupScheduledAt: s.pickup_scheduled_at
@@ -987,6 +1002,25 @@ export const simulateTracking = defineOperation({
   async handler({ actor }, { shipmentId, outcome }) {
     const status = await simulateTrackingEvent(shipmentId, outcome, actor)
     return { status }
+  },
+})
+
+/** The courier's invoice PDF, fetched from the courier if not stored yet. */
+export const getShipmentInvoice = defineOperation({
+  name: "orders.getShipmentInvoice",
+  access: { order: ["read"] },
+  input: shipmentInput,
+  async handler(_ctx, { shipmentId }) {
+    const data = await ensureShipmentInvoice(shipmentId).catch(
+      (error: unknown) => {
+        throw new DomainError(
+          "CONFLICT",
+          error instanceof Error ? error.message : "The courier failed.",
+        )
+      },
+    )
+    if (!data) throw new DomainError("NOT_FOUND", "No invoice for this parcel.")
+    return { data }
   },
 })
 

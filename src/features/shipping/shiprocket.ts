@@ -102,6 +102,20 @@ async function call<T>(
 
 const rupees = (paise: number) => Number((paise / 100).toFixed(2))
 
+/** A PDF Shiprocket links to (label, invoice), checked before it is stored. */
+async function downloadPdf(url: string, what: string): Promise<Buffer> {
+  const file = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) })
+  const data = Buffer.from(await file.arrayBuffer())
+  if (
+    !file.ok ||
+    data.length > 5_000_000 ||
+    !data.subarray(0, 5).equals(Buffer.from("%PDF-"))
+  ) {
+    throw new Error(`Shiprocket ${what} download failed`)
+  }
+  return data
+}
+
 type CourierOption = {
   courier_company_id: number
   courier_name: string
@@ -323,16 +337,24 @@ export const shiprocketProvider: ShippingProvider = {
     if (result.label_created !== 1 || !url?.startsWith("https://")) {
       throw new Error("Shiprocket did not create a label")
     }
-    const file = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) })
-    const data = Buffer.from(await file.arrayBuffer())
-    if (
-      !file.ok ||
-      data.length > 5_000_000 ||
-      !data.subarray(0, 5).equals(Buffer.from("%PDF-"))
-    ) {
-      throw new Error("Shiprocket label download failed")
+    return downloadPdf(url, "label")
+  },
+  // Checked against the live account (2026-11-02): works before an AWB, and
+  // uses the company and invoice settings in the Shiprocket panel.
+  async invoice({ providerOrderId }) {
+    const result = await call<{
+      is_invoice_created?: boolean
+      invoice_url?: string
+      not_created?: unknown[]
+      message?: string
+    }>("POST", "/orders/print/invoice", { ids: [providerOrderId] })
+    const url = result.invoice_url
+    if (!result.is_invoice_created || !url?.startsWith("https://")) {
+      throw new Error(
+        `Shiprocket did not create an invoice${result.message ? `: ${result.message}` : ""}`,
+      )
     }
-    return data
+    return downloadPdf(url, "invoice")
   },
   async requestPickup(providerShipmentId) {
     const result = await call<{

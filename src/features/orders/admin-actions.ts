@@ -9,6 +9,7 @@ import {
   addOrderNote,
   cancelShipment,
   createShipments,
+  getShipmentInvoice,
   refundOrder,
   retryShipment,
   simulateTracking,
@@ -70,6 +71,14 @@ export async function bulkShipAction(form: FormData): Promise<void> {
 
 export async function retryShipmentAction(shipmentId: string) {
   return run(async () => retryShipment(await getActor(), { shipmentId }))
+}
+
+/** Asks the courier for the invoice now, so the page can offer it. */
+export async function fetchShipmentInvoiceAction(shipmentId: string) {
+  return run(async () => {
+    await getShipmentInvoice(await getActor(), { shipmentId })
+    return {}
+  })
 }
 
 export async function cancelShipmentAction(shipmentId: string) {

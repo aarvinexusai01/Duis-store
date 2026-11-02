@@ -8,6 +8,8 @@ import {
   adminListOrders,
   cancelOrder,
   createShipments,
+  getMyOrderInvoice,
+  getShipmentInvoice,
   getShipmentLabel,
   importCodRemittances,
   refundOrder,
@@ -62,6 +64,7 @@ async function parcel(orderNumber: string) {
     awb: string | null
     provider_order_id: string | null
     label_file_key: string | null
+    invoice_file_key: string | null
     last_error: string | null
     cod_amount_paise: number
   }>(sql`
@@ -143,6 +146,67 @@ describe("parcels", () => {
     // The courier order and AWB from the first attempt are kept, not rebooked.
     expect(done.awb).toBe(half.awb)
     expect(done.provider_order_id).toBe(half.provider_order_id)
+  })
+
+  it("keeps the courier's invoice for staff, the shipped email and the customer only", async () => {
+    const customer = await buyer()
+    const number = await paidOrder(customer, variantId)
+    await ship(number)
+    const booked = await parcel(number)
+    expect(booked.invoice_file_key).toBe(`invoices/${booked.id}.pdf`)
+
+    const forStaff = await getShipmentInvoice(support, {
+      shipmentId: booked.id,
+    })
+    expect(forStaff.data.subarray(0, 5).toString()).toBe("%PDF-")
+    const forCustomer = await getMyOrderInvoice(customer, {
+      orderNumber: number,
+    })
+    expect(forCustomer.data.equals(forStaff.data)).toBe(true)
+    await expect(
+      getMyOrderInvoice(await buyer(), { orderNumber: number }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+
+    await deliver(number)
+    const o = await order(number)
+    const email = await db().execute<{
+      attachments: { key: string; filename: string }[]
+      invoice_attached: boolean
+    }>(sql`
+      select data->'attachments' as attachments, (data->'props'->>'invoiceAttached')::boolean as invoice_attached
+      from pgboss.job j join notification_logs l on l.id::text = j.data->>'notificationId'
+      where j.name = 'notify.email' and l.reference_id = ${o.id} and l.template = 'order-shipped'`)
+    expect(email.rows).toEqual([
+      {
+        attachments: [
+          { key: booked.invoice_file_key, filename: `Invoice-${number}.pdf` },
+        ],
+        invoice_attached: true,
+      },
+    ])
+  })
+
+  it("books the parcel even when the invoice fails, and fetches it later", async () => {
+    const customer = await buyer()
+    const number = await paidOrder(customer, variantId)
+    failFakeShippingStep("invoice")
+    expect(await ship(number)).toMatchObject({ ok: true, status: "ready" })
+    const booked = await parcel(number)
+    expect(booked).toMatchObject({
+      status: "ready_to_ship",
+      invoice_file_key: null,
+    })
+    await expect(
+      getShipmentInvoice(support, { shipmentId: booked.id }),
+    ).rejects.toMatchObject({ code: "CONFLICT" })
+    await expect(
+      getMyOrderInvoice(customer, { orderNumber: number }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+
+    failFakeShippingStep(null)
+    const later = await getMyOrderInvoice(customer, { orderNumber: number })
+    expect(later.data.subarray(0, 5).toString()).toBe("%PDF-")
+    expect((await parcel(number)).invoice_file_key).not.toBeNull()
   })
 
   it("ignores duplicate and out-of-order courier events", async () => {

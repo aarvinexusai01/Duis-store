@@ -6,6 +6,8 @@ import { getServerEnv } from "@/config/env"
 import { notificationLogs } from "@/db/schema"
 import { getDb } from "@/server/db/client"
 import type { JobPayloads } from "@/server/jobs/queues"
+import { logger } from "@/server/observability/logger"
+import { readPrivateFile } from "@/server/storage/private"
 
 import { renderEmail } from "./render"
 
@@ -56,6 +58,17 @@ async function senderFor(smtpFrom: string): Promise<{
   }
 }
 
+/** The files to attach; a missing one is left out rather than holding the email. */
+async function attachmentsFor(payload: JobPayloads["notify.email"]) {
+  const files = []
+  for (const { key, filename } of payload.attachments ?? []) {
+    const content = await readPrivateFile(key)
+    if (content) files.push({ filename, content })
+    else logger.warn({ key }, "email attachment missing")
+  }
+  return files
+}
+
 /** notify.email handler: render, send, record the outcome. */
 export async function deliverEmail(
   payload: JobPayloads["notify.email"],
@@ -63,6 +76,7 @@ export async function deliverEmail(
   const db = getDb()
   const rendered = renderEmail(payload.template, payload.props)
   const sender = await senderFor(getServerEnv().SMTP_FROM)
+  const attachments = await attachmentsFor(payload)
 
   try {
     const info = await getMailer().sendMail({
@@ -74,6 +88,7 @@ export async function deliverEmail(
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
+      ...(attachments.length > 0 ? { attachments } : {}),
     })
     await db
       .update(notificationLogs)

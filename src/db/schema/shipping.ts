@@ -115,6 +115,8 @@ export const shipments = pgTable(
     breadthCm: integer().notNull(),
     heightCm: integer().notNull(),
     labelFileKey: text(),
+    // The courier's invoice PDF (private storage), fetched after booking.
+    invoiceFileKey: text(),
     steps: jsonb().$type<ShipmentSteps>().notNull().default({}),
     customs: jsonb().$type<ShipmentCustoms>(),
     lastError: text(),

@@ -43,6 +43,8 @@ export type JobPayloads = {
     to: string
     props: Record<string, unknown>
     replyTo?: string
+    /** Private-storage files to attach (e.g. the invoice with "shipped"). */
+    attachments?: { key: string; filename: string }[]
   }
   "notify.whatsapp": {
     notificationId: string

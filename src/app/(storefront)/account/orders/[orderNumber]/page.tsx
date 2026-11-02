@@ -207,6 +207,15 @@ async function Order({ params }: Pick<Props, "params">) {
               />
             )}
           </dl>
+          {order.hasInvoice && (
+            // A file, not a page: a plain link downloads it.
+            <a
+              href={`/account/orders/${order.orderNumber}/invoice`}
+              className="font-medium underline underline-offset-4"
+            >
+              Download invoice (PDF)
+            </a>
+          )}
           <div>
             <h3 className="mb-1 font-semibold">Delivery address</h3>
             <p className="text-muted-foreground">

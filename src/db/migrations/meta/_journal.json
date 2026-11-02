@@ -134,6 +134,13 @@
       "when": 1792750512204,
       "tag": "0018_search_index_queue",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793609321475,
+      "tag": "0019_shipment_invoice",
+      "breakpoints": true
     }
   ]
 }

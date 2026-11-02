@@ -21,6 +21,7 @@ export { orderStatusAfter } from "./fulfilment"
 export { processWebhookEvent, recordWebhook } from "./events"
 export {
   getMyOrder,
+  getMyOrderInvoice,
   listMyOrders,
   type OrderDetail,
   type OrderSummary,
@@ -35,6 +36,7 @@ export {
   canSeeMoney,
   cancelShipment,
   createShipments,
+  getShipmentInvoice,
   getShipmentLabel,
   refundOrder,
   retryShipment,

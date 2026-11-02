@@ -10,6 +10,7 @@ import {
   refunds,
   type ShippingAddressSnapshot,
 } from "@/db/schema"
+import { ensureShipmentInvoice } from "@/features/shipping"
 import { getDb } from "@/server/db/client"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
@@ -92,6 +93,8 @@ export type OrderDetail = {
   parcel: { courier: string | null; awb: string; status: string } | null
   /** A signed link to the public tracking page. */
   trackingPath: string
+  /** The courier's invoice can be downloaded (doc/01 D10). */
+  hasInvoice: boolean
   items: {
     productId: string | null
     title: string
@@ -173,6 +176,7 @@ export const getMyOrder = defineOperation({
       select courier_name, awb, status from shipments
       where order_id = ${o.id} and status <> 'cancelled' order by created_at desc limit 1`)
     const parcel = parcels.rows[0]
+    const invoiceParcel = await invoiceShipmentId(o.id)
     return {
       id: o.id,
       orderNumber: o.orderNumber,
@@ -214,9 +218,46 @@ export const getMyOrder = defineOperation({
           }
         : null,
       trackingPath: `/track/${o.orderNumber}?t=${trackingToken(o.orderNumber)}`,
+      hasInvoice: invoiceParcel !== null,
       items,
       history,
       refunds: refundRows,
     }
+  },
+})
+
+/** The order's own parcel that has (or can get) a courier invoice. */
+async function invoiceShipmentId(orderId: string): Promise<string | null> {
+  const found = await getDb().execute<{ id: string }>(sql`
+    select id from shipments
+    where order_id = ${orderId} and direction = 'forward' and exchange_id is null
+      and (invoice_file_key is not null or (provider_order_id is not null and status <> 'cancelled'))
+    order by (invoice_file_key is not null) desc, created_at desc limit 1`)
+  return found.rows[0]?.id ?? null
+}
+
+/** The customer's invoice for their own order, fetched if not stored yet. */
+export const getMyOrderInvoice = defineOperation({
+  name: "orders.getMyInvoice",
+  access: "authenticated",
+  input: z.object({ orderNumber: z.string().regex(/^DUIS-\d{6,}$/) }),
+  async handler({ actor }, { orderNumber }) {
+    if (actor.kind !== "user")
+      throw new DomainError("UNAUTHENTICATED", "Please sign in to continue.")
+    const [o] = await getDb()
+      .select({ id: orders.id })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.orderNumber, orderNumber),
+          eq(orders.userId, actor.userId),
+        ),
+      )
+    const shipmentId = o ? await invoiceShipmentId(o.id) : null
+    const data = shipmentId
+      ? await ensureShipmentInvoice(shipmentId).catch(() => null)
+      : null
+    if (!data) throw new DomainError("NOT_FOUND", "Invoice not ready yet.")
+    return { data }
   },
 })
