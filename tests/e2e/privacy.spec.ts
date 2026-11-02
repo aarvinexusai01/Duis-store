@@ -4,6 +4,7 @@ import pg from "pg"
 import { NOTICE_VERSION } from "../../src/lib/privacy"
 import { tickConsent } from "./support/consent"
 import { signInWithOtp } from "./support/shop"
+import { createStaff, signInAndSetUpTwoFactor } from "./support/staff"
 
 test("the Privacy Notice stands on its own, in English and Hindi", async ({
   page,
@@ -62,4 +63,75 @@ test("a customer who hasn't accepted this notice is asked once", async ({
   // Asked once: straight in next time.
   await page.goto("/account")
   await expect(page).toHaveURL(/\/account$/)
+})
+
+test("a customer manages their consents, data and nominee", async ({
+  page,
+}) => {
+  await signInWithOtp(page, "/account/privacy")
+  await expect(page).toHaveURL(/\/account\/privacy$/)
+  await expect(
+    page.getByRole("heading", { name: "What you've agreed to" }),
+  ).toBeVisible()
+  await expect(page.getByText("Your account", { exact: true })).toBeVisible()
+
+  const download = page.getByRole("link", { name: "Download my data" })
+  const file = await page.request.get((await download.getAttribute("href"))!)
+  expect(file.headers()["content-disposition"]).toContain("duis-my-data.json")
+  expect((await file.json()).consents.length).toBeGreaterThan(0)
+
+  await page.waitForLoadState("networkidle")
+  await page.getByRole("textbox", { name: "Their name" }).fill("Asha Rao")
+  await page
+    .getByRole("textbox", { name: "Their email or phone number" })
+    .fill("asha@duis.test")
+  await tickConsent(page, "nominee")
+  await page.getByRole("button", { name: "Save nominee" }).click()
+  await expect(
+    page.getByRole("button", { name: "Remove nominee" }),
+  ).toBeVisible()
+})
+
+test("a customer asks for deletion and an admin completes it", async ({
+  browser,
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "admin flows are covered on desktop")
+  test.setTimeout(90_000)
+  const shopper = await browser.newContext()
+  const customer = await shopper.newPage()
+  await signInWithOtp(customer, "/account/privacy")
+  await expect(customer).toHaveURL(/\/account\/privacy$/)
+  await customer.waitForLoadState("networkidle")
+  await customer
+    .getByRole("button", { name: "Request account deletion" })
+    .click()
+  await customer.getByRole("button", { name: "Yes, request deletion" }).click()
+  await expect(customer.getByText(/You asked us to delete/)).toBeVisible()
+  const { id } = (
+    await (await customer.request.get("/api/auth/get-session")).json()
+  ).user as { id: string }
+
+  await page.goto("/")
+  const admin = await createStaff(page, "store_admin")
+  await signInAndSetUpTwoFactor(page, admin)
+  await page.goto("/admin/data-requests")
+  await page.locator(`a[href="/admin/customers/${id}"]`).click()
+  await page.waitForLoadState("networkidle")
+  const erase = page.getByRole("button", {
+    name: "Delete account and personal data",
+  })
+  await expect(erase).toBeDisabled()
+  await page.getByLabel("Type DELETE to confirm").fill("DELETE")
+  await erase.click()
+  await expect(page.getByText(/Account deleted on/)).toBeVisible()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Deleted customer" }),
+  ).toBeVisible()
+
+  // Their session has ended.
+  await customer.goto("/account")
+  await expect(customer).toHaveURL(/\/login/)
+  await shopper.close()
 })

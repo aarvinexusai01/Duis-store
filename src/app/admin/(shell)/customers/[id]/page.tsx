@@ -19,7 +19,7 @@ import { formatPaise } from "@/lib/money"
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/order-status"
 import { WALLET_REASON_LABEL } from "@/lib/wallet-reasons"
 
-import { CodBlockForm, GoodwillForm } from "./customer-forms"
+import { CodBlockForm, EraseCustomerForm, GoodwillForm } from "./customer-forms"
 
 export const metadata: Metadata = { title: "Customer" }
 
@@ -165,11 +165,27 @@ async function Customer({
                 </>
               )}
             </dl>
-            {customer.deletionRequestedAt && (
-              <p className="mt-2 text-sm text-destructive">
-                Asked for account deletion on{" "}
-                {day(customer.deletionRequestedAt)}.
+            {customer.nominee && (
+              <p className="mt-2 text-sm">
+                Nominee: {customer.nominee.name}, {customer.nominee.contact}
               </p>
+            )}
+            {customer.erasedAt ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Account deleted on {day(customer.erasedAt)}.
+              </p>
+            ) : (
+              customer.deletionRequestedAt && (
+                <div className="mt-2 flex flex-col gap-2 text-sm">
+                  <p className="text-destructive">
+                    Asked for account deletion on{" "}
+                    {day(customer.deletionRequestedAt)}.
+                  </p>
+                  {can(actor, { customer: ["erase"] }) && (
+                    <EraseCustomerForm userId={customer.id} />
+                  )}
+                </div>
+              )
             )}
           </Panel>
           <Panel title="Cash on delivery">

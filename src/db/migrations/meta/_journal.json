@@ -148,6 +148,13 @@
       "when": 1793617254378,
       "tag": "0020_data_consents",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793620690738,
+      "tag": "0021_privacy_rights",
+      "breakpoints": true
     }
   ]
 }

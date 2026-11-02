@@ -5,6 +5,7 @@ export const CONTACT_TOPICS = {
   order: "An order",
   exchange: "An exchange or return",
   product: "A product or size",
+  privacy: "My data or privacy",
   other: "Something else",
 } as const
 

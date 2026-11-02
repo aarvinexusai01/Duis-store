@@ -1433,6 +1433,14 @@ The owner asked for a full SEO list (technical, quick wins, on-page, content) pl
   - fixed retention periods: the shop runs none beyond the 72-month tax rule, so the notice promises none;
   - the Board's official complaint address, and the grievance period under the Rules: not confirmed from an official source, so not printed.
 
+**12c built 2026-11-02:** My account → Privacy & data (consents with one-click withdrawal and history, data download, nominee, deletion request, complaints), a "My data or privacy" contact topic, and an admin Data requests list with one-month due dates.
+- **Deletion (`privacy.eraseCustomer`, `customer: erase`: Super Admin and Store Admin):**
+  - only after the customer asked, and refused for staff accounts, open orders, exchanges and refunds, and wallet money;
+  - removes name, contact details, sign-in, addresses, bag, wishlist, alerts, photos, review words, contact messages and labels;
+  - keeps order lines, amounts, place of supply (city, state, PIN) and invoice PDFs for GST;
+  - keeps the anonymised user row, which orders, the wallet ledger and the consent proof refer to.
+- **Not removed, for the owner and a lawyer:** copies held by Razorpay and Shiprocket, staff order notes and audit entries (append-only), and backups until they age out.
+
 **The law, as checked on 2026-11-02:**
 - **Dates:** the DPDP Rules, 2025 were notified on 13 November 2025. Notice (Rule 3), consent, children's data (Rule 10), security, retention and Data Principal rights apply from about **13 May 2027**. Building now gives time to test before then.
 - **Notice (Act s.5, Rule 3):** it must:

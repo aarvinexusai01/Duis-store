@@ -71,7 +71,7 @@ export const contactMessages = pgTable(
     index("contact_messages_email_idx").on(t.email),
     check(
       "contact_messages_topic_check",
-      sql`${t.topic} in ('order', 'exchange', 'product', 'other')`,
+      sql`${t.topic} in ('order', 'exchange', 'product', 'privacy', 'other')`,
     ),
     check(
       "contact_messages_length_check",
@@ -112,7 +112,7 @@ export const dataConsents = pgTable(
     ),
     check(
       "data_consents_purpose_check",
-      sql`${t.purpose} in ('account', 'age', 'order', 'address', 'contact', 'stock_alert', 'review', 'exchange', 'marketing', 'marketing_whatsapp', 'whatsapp_updates')`,
+      sql`${t.purpose} in ('account', 'age', 'order', 'address', 'contact', 'stock_alert', 'review', 'exchange', 'marketing', 'marketing_whatsapp', 'whatsapp_updates', 'nominee')`,
     ),
     check("data_consents_language_check", sql`${t.language} in ('en', 'hi')`),
   ],

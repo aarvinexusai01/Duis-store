@@ -13,6 +13,7 @@ const LINKS: { href: Route; label: string }[] = [
   { href: "/account/profile", label: "Profile" },
   { href: "/account/addresses", label: "Addresses" },
   { href: "/account/security", label: "Security" },
+  { href: "/account/privacy", label: "Privacy & data" },
   { href: "/wishlist", label: "Wishlist" },
 ]
 

@@ -1,6 +1,7 @@
 "use server"
 
 import type { Route } from "next"
+import { refresh } from "next/cache"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -13,10 +14,15 @@ import {
   type NoticeLanguage,
 } from "@/lib/privacy"
 import { safeNextPath } from "@/lib/safe-redirect"
-import { toActionError } from "@/server/action"
+import { toActionError, type ActionError } from "@/server/action"
 import { getActor } from "@/server/auth/session"
 
-import { acceptAccountNotice } from "./service"
+import {
+  acceptAccountNotice,
+  eraseCustomer,
+  setNominee,
+  withdrawConsent,
+} from "./service"
 
 /**
  * Sets the account-consent cookie while the sign-up or sign-in boxes are
@@ -61,4 +67,32 @@ export async function acceptAccountNoticeAction(
     }
   }
   redirect(safeNextPath(String(form.get("next") ?? "")) as Route)
+}
+
+type Result = { ok: true } | ({ ok: false } & ActionError)
+
+async function run(work: () => Promise<unknown>): Promise<Result> {
+  try {
+    await work()
+    refresh()
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, ...toActionError(error) }
+  }
+}
+
+export async function withdrawConsentAction(
+  purpose: Parameters<typeof withdrawConsent>[1]["purpose"],
+) {
+  return run(async () => withdrawConsent(await getActor(), { purpose }))
+}
+
+export async function setNomineeAction(
+  input: Parameters<typeof setNominee>[1],
+) {
+  return run(async () => setNominee(await getActor(), input))
+}
+
+export async function eraseCustomerAction(userId: string) {
+  return run(async () => eraseCustomer(await getActor(), { userId }))
 }

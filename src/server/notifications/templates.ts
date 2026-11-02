@@ -19,6 +19,10 @@ export const emailTemplates = {
     props: linkProps,
     subject: () => "Reset your Duis password",
   },
+  "account-deleted": {
+    props: z.object({ name: z.string().min(1).max(200) }),
+    subject: () => "Your Duis account has been deleted",
+  },
   "order-confirmed": {
     props: z.object({
       name: z.string().min(1).max(200),

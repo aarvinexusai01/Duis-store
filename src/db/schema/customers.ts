@@ -24,6 +24,11 @@ export const customerProfiles = pgTable("customer_profiles", {
   codBlocked: boolean().notNull().default(false),
   codBlockedReason: text(),
   deletionRequestedAt: timestamptz(),
+  // When staff completed the deletion (doc/06 Phase 12).
+  erasedAt: timestamptz(),
+  // Who may use the customer's rights if they die or can't act (DPDP s.14).
+  nomineeName: text(),
+  nomineeContact: text(),
   ...timestamps(),
 })
 

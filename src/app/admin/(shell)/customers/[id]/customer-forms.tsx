@@ -8,8 +8,48 @@ import {
   grantGoodwillAction,
   setCodBlockAction,
 } from "@/features/customers/admin-actions"
+import { eraseCustomerAction } from "@/features/privacy/actions"
 
 const field = "h-9 w-full rounded-sm border border-input bg-paper px-2 text-sm"
+
+/** Irreversible: staff type DELETE, after the customer has asked. */
+export function EraseCustomerForm({ userId }: { userId: string }) {
+  const [typed, setTyped] = useState("")
+  const [pending, startTransition] = useTransition()
+  return (
+    <div className="flex flex-col gap-2 border border-destructive/40 p-3">
+      <p>
+        Removes their name, contact details, addresses, sign-in, photos, reviews
+        and messages. Order and tax records stay, without their name, phone or
+        street. This can&apos;t be undone.
+      </p>
+      <label className="flex flex-col gap-1">
+        Type DELETE to confirm
+        <input
+          value={typed}
+          onChange={(event) => setTyped(event.target.value)}
+          className={field}
+        />
+      </label>
+      <Button
+        type="button"
+        size="sm"
+        variant="destructive"
+        disabled={pending || typed !== "DELETE"}
+        className="self-start rounded-sm"
+        onClick={() =>
+          startTransition(async () => {
+            const result = await eraseCustomerAction(userId)
+            if (result.ok) toast.success("Account deleted")
+            else toast.error(result.message)
+          })
+        }
+      >
+        Delete account and personal data
+      </Button>
+    </div>
+  )
+}
 
 export function CodBlockForm({
   userId,

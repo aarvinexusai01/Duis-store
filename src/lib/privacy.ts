@@ -19,6 +19,7 @@ export const CONSENT_PURPOSES = [
   "marketing",
   "marketing_whatsapp",
   "whatsapp_updates",
+  "nominee",
 ] as const
 export type ConsentPurpose = (typeof CONSENT_PURPOSES)[number]
 
@@ -79,6 +80,10 @@ export const CONSENT_TEXT: Record<
     en: "I agree to DUIS sending updates about my orders to my mobile number on WhatsApp. I can turn this off at any time.",
     hi: "मैं सहमत हूँ कि DUIS मेरे ऑर्डर की जानकारी WhatsApp पर मेरे मोबाइल नंबर पर भेजे। मैं इसे कभी भी बंद कर सकता/सकती हूँ।",
   },
+  nominee: {
+    en: "I confirm this person agrees to being named, and I agree to DUIS using their name and contact details only if they act for me because I have died or can't act myself.",
+    hi: "मैं पुष्टि करता/करती हूँ कि यह व्यक्ति नामित होने के लिए सहमत है, और मैं सहमत हूँ कि DUIS उनके नाम और संपर्क विवरण का उपयोग केवल तभी करे जब वे मेरी मृत्यु या असमर्थता की स्थिति में मेरी ओर से कार्य करें।",
+  },
 }
 
 export const NOTICE_UI: Record<
@@ -99,6 +104,22 @@ export const NOTICE_UI: Record<
     switchTo: "Read in English",
     required: "आगे बढ़ने के लिए कृपया इस बॉक्स पर टिक करें।",
   },
+}
+
+/** What each purpose is called in My account → Privacy & data. */
+export const PURPOSE_LABEL: Record<ConsentPurpose, string> = {
+  account: "Your account",
+  age: "18 or older",
+  order: "Orders",
+  address: "Saved addresses",
+  contact: "Contact messages",
+  stock_alert: "Back-in-stock alerts",
+  review: "Reviews and their photos",
+  exchange: "Exchanges",
+  marketing: "Marketing emails",
+  marketing_whatsapp: "Marketing on WhatsApp",
+  whatsapp_updates: "Order updates on WhatsApp",
+  nominee: "Your nominee",
 }
 
 /** The account-consent cookie set when the sign-up boxes are ticked. */

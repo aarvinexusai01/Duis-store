@@ -26,7 +26,7 @@ export const statements = {
   ],
   exchange: ["read", "decide", "process"],
   discount: ["read", "create", "update", "archive"],
-  customer: ["read", "update", "credit"],
+  customer: ["read", "update", "credit", "erase"],
   review: ["read", "moderate"],
   cms: ["read", "draft", "review", "publish", "archive"],
   settings: ["read", "update"],

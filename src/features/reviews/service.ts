@@ -225,6 +225,32 @@ export async function loadProductReviews(
 }
 
 /** Keeps products.rating_* in step with approved reviews. */
+/**
+ * Takes a customer's reviews off the shop (consent withdrawn, or the account
+ * deleted). `erase` also removes their words and name.
+ */
+export async function hideCustomerReviews(
+  tx: Transaction,
+  userId: string,
+  options: { erase?: boolean } = {},
+): Promise<void> {
+  const hidden = await tx.execute<{ product_id: string }>(sql`
+    update reviews set status = 'rejected'::review_status,
+      moderation_note = 'Customer withdrew consent', moderated_at = now(),
+      ${options.erase ? sql`title = null, body = '[removed]', display_name = 'Verified buyer',` : sql``}
+      updated_at = now()
+    where user_id = ${userId}
+    returning product_id`)
+  const products = [...new Set(hidden.rows.map((row) => row.product_id))]
+  for (const productId of products) await refreshProductRating(tx, productId)
+  if (products.length > 0) {
+    await requestRevalidation(
+      [...products.map(cacheTags.product), cacheTags.productsList],
+      { tx },
+    )
+  }
+}
+
 async function refreshProductRating(tx: Transaction, productId: string) {
   await tx.execute(sql`
     update products p set

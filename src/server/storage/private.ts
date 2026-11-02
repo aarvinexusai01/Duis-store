@@ -1,6 +1,6 @@
 import "server-only"
 import { randomUUID } from "node:crypto"
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
 
 import { getServerEnv } from "@/config/env"
@@ -37,6 +37,13 @@ export async function writePrivateFile(
   await writeFile(temp, data)
   await rename(temp, file)
   return `${area}/${name}`
+}
+
+/** Removes a file; one that's already gone is fine. */
+export async function deletePrivateFile(key: string): Promise<void> {
+  const [area, name, ...rest] = key.split("/")
+  if (rest.length > 0 || !area || !name) return
+  await rm(target(area as PrivateArea, name), { force: true })
 }
 
 export async function readPrivateFile(key: string): Promise<Buffer | null> {

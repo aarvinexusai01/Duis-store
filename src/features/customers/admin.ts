@@ -99,6 +99,8 @@ export type AdminCustomerDetail = {
   codBlockedReason: string | null
   marketingEmail: boolean
   deletionRequestedAt: Date | null
+  erasedAt: Date | null
+  nominee: { name: string; contact: string } | null
   spentPaise: number | null
   addresses: {
     fullName: string
@@ -143,9 +145,13 @@ export const adminGetCustomer = defineOperation({
       cod_blocked_reason: string | null
       marketing_email_consent_at: Date | null
       deletion_requested_at: Date | null
+      erased_at: Date | null
+      nominee_name: string | null
+      nominee_contact: string | null
     }>(sql`
       select u.id, u.name, u.email, u.email_verified, u.phone_number, u.phone_number_verified, u.created_at,
-             cp.cod_blocked, cp.cod_blocked_reason, cp.marketing_email_consent_at, cp.deletion_requested_at
+             cp.cod_blocked, cp.cod_blocked_reason, cp.marketing_email_consent_at, cp.deletion_requested_at,
+             cp.erased_at, cp.nominee_name, cp.nominee_contact
       from users u left join customer_profiles cp on cp.user_id = u.id
       where u.id = ${userId} and ${NOT_STAFF}`)
     const u = found.rows[0]
@@ -203,6 +209,11 @@ export const adminGetCustomer = defineOperation({
       deletionRequestedAt: u.deletion_requested_at
         ? new Date(u.deletion_requested_at)
         : null,
+      erasedAt: u.erased_at ? new Date(u.erased_at) : null,
+      nominee:
+        u.nominee_name && u.nominee_contact
+          ? { name: u.nominee_name, contact: u.nominee_contact }
+          : null,
       spentPaise: money
         ? placed.reduce((sum, o) => sum + o.total_paise, 0)
         : null,

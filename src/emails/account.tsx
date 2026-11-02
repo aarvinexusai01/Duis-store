@@ -49,3 +49,23 @@ export function resetPasswordText({ name, url }: LinkEmailProps): string {
     "This link expires in 1 hour. If you didn't ask for this, ignore this email — your password won't change.",
   ].join("\n\n")
 }
+
+export function AccountDeletedEmail({ name }: { name: string }) {
+  return (
+    <EmailLayout preview="We've deleted your account and personal data.">
+      <EmailText>Hi {name},</EmailText>
+      <EmailText>
+        We&apos;ve deleted your Duis account and personal data, as you asked. We
+        keep only the order and tax records the law requires, without your name,
+        phone number or street address.
+      </EmailText>
+    </EmailLayout>
+  )
+}
+
+export function accountDeletedText({ name }: { name: string }): string {
+  return [
+    `Hi ${name},`,
+    "We've deleted your Duis account and personal data, as you asked. We keep only the order and tax records the law requires, without your name, phone number or street address.",
+  ].join("\n\n")
+}

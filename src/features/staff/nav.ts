@@ -81,6 +81,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         permission: { customer: ["read"] },
       },
       {
+        href: "/admin/data-requests",
+        label: "Data requests",
+        icon: "customers",
+        permission: { customer: ["read"] },
+      },
+      {
         href: "/admin/discounts",
         label: "Discounts",
         icon: "discounts",

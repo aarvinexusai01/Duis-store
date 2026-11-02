@@ -2,6 +2,7 @@
 export {
   adminListReviews,
   displayNameFor,
+  hideCustomerReviews,
   listReviewableItems,
   loadProductReviews,
   moderateReview,

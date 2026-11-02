@@ -152,11 +152,11 @@ export const PRIVACY_NOTICE: Record<NoticeLanguage, PrivacyNoticeContent> = {
       intro:
         "You can do any of these at any time. For anything not listed with a page, write to the privacy address below.",
       items: [
-        "Withdraw consent: turn off marketing and WhatsApp in My account → Profile, or use the unsubscribe link in any marketing email. For other consents, write to us.",
-        "See your data: ask us for a summary of the personal data we hold, what we do with it and who we shared it with.",
+        "Withdraw consent: use My account → Privacy & data, or the unsubscribe link in any marketing email.",
+        "See your data: download a copy from My account → Privacy & data, or ask us for a summary of what we hold, what we do with it and who we shared it with.",
         "Correct it: change your details in My account → Profile and Addresses, or ask us.",
-        "Delete it: request deletion in My account → Profile, or write to us. We remove your personal data except what the law requires us to keep.",
-        "Nominate someone: name a person to use these rights for you if you die or can't act yourself, by writing to us.",
+        "Delete it: request deletion in My account → Privacy & data, or write to us. We remove your personal data except what the law requires us to keep.",
+        "Nominate someone: name a person to use these rights for you if you die or can't act yourself, in My account → Privacy & data.",
         "Complain: see below.",
       ],
       effect:
@@ -292,11 +292,11 @@ export const PRIVACY_NOTICE: Record<NoticeLanguage, PrivacyNoticeContent> = {
       intro:
         "आप इनमें से कोई भी काम कभी भी कर सकते हैं। जिसके लिए कोई पेज नहीं बताया गया है, उसके लिए नीचे दिए गए गोपनीयता पते पर लिखें।",
       items: [
-        "सहमति वापस लें: My account → Profile में मार्केटिंग और WhatsApp बंद करें, या किसी भी मार्केटिंग ईमेल में सदस्यता छोड़ने के लिंक का उपयोग करें। अन्य सहमतियों के लिए हमें लिखें।",
-        "अपना डेटा देखें: हमसे अपने व्यक्तिगत डेटा का सारांश माँगें, हम उसके साथ क्या करते हैं और उसे किसके साथ साझा किया गया।",
+        "सहमति वापस लें: My account → Privacy & data का उपयोग करें, या किसी भी मार्केटिंग ईमेल में सदस्यता छोड़ने का लिंक।",
+        "अपना डेटा देखें: My account → Privacy & data से उसकी प्रति डाउनलोड करें, या हमसे सारांश माँगें कि हमारे पास क्या है, हम उसके साथ क्या करते हैं और उसे किसके साथ साझा किया गया।",
         "इसे सुधारें: My account → Profile और Addresses में अपना विवरण बदलें, या हमसे कहें।",
-        "इसे हटवाएँ: My account → Profile में हटाने का अनुरोध करें, या हमें लिखें। कानून के अनुसार जो रखना ज़रूरी है, उसे छोड़कर हम आपका व्यक्तिगत डेटा हटा देते हैं।",
-        "किसी को नामित करें: हमें लिखकर ऐसे व्यक्ति का नाम दें जो आपकी मृत्यु या असमर्थता की स्थिति में आपकी ओर से इन अधिकारों का उपयोग कर सके।",
+        "इसे हटवाएँ: My account → Privacy & data में हटाने का अनुरोध करें, या हमें लिखें। कानून के अनुसार जो रखना ज़रूरी है, उसे छोड़कर हम आपका व्यक्तिगत डेटा हटा देते हैं।",
+        "किसी को नामित करें: My account → Privacy & data में ऐसे व्यक्ति का नाम दें जो आपकी मृत्यु या असमर्थता की स्थिति में आपकी ओर से इन अधिकारों का उपयोग कर सके।",
         "शिकायत करें: नीचे देखें।",
       ],
       effect:

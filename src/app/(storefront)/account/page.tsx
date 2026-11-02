@@ -25,6 +25,11 @@ async function Overview() {
       body: "Name, contact details and marketing preferences.",
     },
     {
+      href: "/account/privacy",
+      title: "Privacy & data",
+      body: "Your consents, a copy of your data, your nominee and deletion.",
+    },
+    {
       href: "/account/addresses",
       title: "Addresses",
       body: "Where we deliver your orders.",

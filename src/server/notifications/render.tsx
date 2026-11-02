@@ -14,6 +14,8 @@ import {
   testEmailText,
 } from "@/emails/admin"
 import {
+  AccountDeletedEmail,
+  accountDeletedText,
   ResetPasswordEmail,
   resetPasswordText,
   VerifyEmail,
@@ -64,6 +66,10 @@ const views: {
   "reset-password": {
     html: (props) => <ResetPasswordEmail {...props} />,
     text: resetPasswordText,
+  },
+  "account-deleted": {
+    html: (props) => <AccountDeletedEmail {...props} />,
+    text: accountDeletedText,
   },
   "order-confirmed": {
     html: (props) => <OrderConfirmedEmail {...props} />,
