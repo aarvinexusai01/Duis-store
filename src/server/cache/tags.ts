@@ -17,6 +17,8 @@ export const cacheTags = {
   journalList: "journal:list",
   media: (id: string) => `media:${id}`,
   storeSettings: "store:settings",
+  // The USD rate and per-country pricing (doc/06 Phase 13).
+  fxRates: "fx:rates",
 } as const
 
 /** The most tags one revalidation request carries (larger lists are split). */

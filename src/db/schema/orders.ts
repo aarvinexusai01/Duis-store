@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   index,
+  date,
   integer,
   jsonb,
   pgEnum,
@@ -140,6 +141,19 @@ export const orders = pgTable(
     expiredAt: timestamptz(),
     codCollectedAt: timestamptz(),
     reviewRequestedAt: timestamptz(),
+
+    // USD orders (doc/06 Phase 13, ADR-0034): the *Paise columns above hold
+    // the INR equivalent at this rate, so the books and every CHECK stay in
+    // rupees; the *Minor columns are what the customer was charged, in cents.
+    fxRateMicros: integer(),
+    fxSource: text(),
+    fxAsOf: date(),
+    priceUpliftBp: integer(),
+    subtotalMinor: integer(),
+    discountMinor: integer(),
+    shippingFeeMinor: integer(),
+    totalMinor: integer(),
+    onlineAmountMinor: integer(),
     ...timestamps(),
   },
   (t) => [
@@ -148,7 +162,17 @@ export const orders = pgTable(
     index("orders_pending_expiry_idx")
       .on(t.reservationExpiresAt)
       .where(sql`${t.status} = 'pending_payment'`),
-    check("orders_currency_check", sql`${t.currency} = 'INR'`),
+    check(
+      "orders_currency_check",
+      sql`${t.currency} in ('INR', 'USD') and (${t.currency} = 'INR' or ${t.isExport})`,
+    ),
+    check(
+      "orders_minor_check",
+      sql`${t.currency} = 'INR' or (${t.fxRateMicros} > 0 and ${t.fxSource} is not null and ${t.fxAsOf} is not null and ${t.priceUpliftBp} is not null
+        and ${t.subtotalMinor} >= 0 and ${t.discountMinor} >= 0 and ${t.shippingFeeMinor} >= 0
+        and ${t.totalMinor} = ${t.subtotalMinor} - ${t.discountMinor} + ${t.shippingFeeMinor}
+        and ${t.onlineAmountMinor} = ${t.totalMinor} and ${t.walletAppliedPaise} = 0 and ${t.paymentMode} = 'prepaid')`,
+    ),
     check(
       "orders_amounts_check",
       sql`${t.subtotalPaise} >= 0 and ${t.discountPaise} >= 0 and ${t.shippingFeePaise} >= 0 and ${t.codFeePaise} >= 0 and ${t.walletAppliedPaise} >= 0 and ${t.onlineAmountPaise} >= 0 and ${t.codDuePaise} >= 0`,
@@ -199,6 +223,11 @@ export const orderItems = pgTable(
     cgstPaise: integer().notNull().default(0),
     sgstPaise: integer().notNull().default(0),
     igstPaise: integer().notNull().default(0),
+    // USD orders only: the line as charged, in cents (doc/06 Phase 13).
+    unitPriceMinor: integer(),
+    unitMrpMinor: integer(),
+    discountMinor: integer(),
+    lineTotalMinor: integer(),
     exchangedQuantity: integer().notNull().default(0),
     ...timestamps(),
   },
@@ -208,6 +237,10 @@ export const orderItems = pgTable(
     check(
       "order_items_line_check",
       sql`${t.quantity} > 0 and ${t.discountPaise} >= 0 and ${t.lineTotalPaise} = ${t.unitPricePaise} * ${t.quantity} - ${t.discountPaise}`,
+    ),
+    check(
+      "order_items_minor_check",
+      sql`${t.lineTotalMinor} is null or (${t.discountMinor} >= 0 and ${t.lineTotalMinor} = ${t.unitPriceMinor} * ${t.quantity} - ${t.discountMinor})`,
     ),
     check(
       "order_items_tax_check",
@@ -229,6 +262,8 @@ export const orderDiscounts = pgTable(
     couponId: uuid().references(() => coupons.id, { onDelete: "set null" }),
     label: text().notNull(),
     amountPaise: integer().notNull(),
+    // USD orders only: the discount as charged, in cents.
+    amountMinor: integer(),
     // Amount per order line position: { "0": 1200, "1": 800 }.
     allocation: jsonb().$type<Record<string, number>>().notNull(),
     createdAt: timestamptz().notNull().defaultNow(),

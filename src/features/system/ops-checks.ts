@@ -55,6 +55,8 @@ async function liveChecks(now: Date): Promise<LiveCheck[]> {
   if (redis) checks.push(redis)
   const search = await searchCheck()
   if (search) checks.push(search)
+  const fx = await fxCheck(now)
+  if (fx) checks.push(fx)
 
   const beat = heartbeat.rows[0]?.at ? new Date(heartbeat.rows[0].at) : null
   const workerOk =
@@ -111,6 +113,33 @@ async function liveChecks(now: Date): Promise<LiveCheck[]> {
     checks.push({ key: "backup.wal", ok, detail })
   }
   return checks
+}
+
+// The ECB publishes on working days; four days covers a long weekend.
+const FX_MAX_AGE_MS = 4 * 24 * 3_600_000
+
+async function fxCheck(now: Date): Promise<LiveCheck | null> {
+  const found = await getDb().execute<{
+    enabled: boolean
+    mode: string
+    as_of: string | null
+  }>(sql`
+    select s.usd_pricing_enabled as enabled, s.usd_rate_mode as mode,
+      (select max(as_of)::text from fx_rates) as as_of
+    from store_settings s where s.id = 1`)
+  const row = found.rows[0]
+  if (!row?.enabled || row.mode === "manual") return null
+  const asOf = row.as_of ? new Date(`${row.as_of}T00:00:00Z`) : null
+  const ok = asOf !== null && now.getTime() - asOf.getTime() < FX_MAX_AGE_MS
+  return {
+    key: "pricing.fx",
+    ok,
+    detail: ok
+      ? null
+      : asOf
+        ? `The last rate is from ${row.as_of}; USD prices still use it. Check the pricing.refresh-fx job, or lock a rate in Settings.`
+        : "No exchange rate has been fetched, so USD checkout can't price orders.",
+  }
 }
 
 async function redisCheck(): Promise<LiveCheck | null> {

@@ -14,6 +14,11 @@ import {
   updateShippingSettings,
 } from "./admin"
 import { testIntegration } from "./health"
+import {
+  fetchUsdRateNow,
+  saveCountryPricing,
+  updateUsdRateSettings,
+} from "./usd"
 
 export type AdminResult<T = object> =
   ({ ok: true } & T) | ({ ok: false } & ActionError)
@@ -60,6 +65,22 @@ export async function updateNotificationSettingsAction(
   input: Input<typeof updateNotificationSettings>,
 ) {
   return run(async () => updateNotificationSettings(await getActor(), input))
+}
+
+export async function updateUsdRateSettingsAction(
+  input: Input<typeof updateUsdRateSettings>,
+) {
+  return run(async () => updateUsdRateSettings(await getActor(), input))
+}
+
+export async function saveCountryPricingAction(
+  input: Input<typeof saveCountryPricing>,
+) {
+  return run(async () => saveCountryPricing(await getActor(), input))
+}
+
+export async function fetchUsdRateNowAction() {
+  return run(async () => fetchUsdRateNow(await getActor(), {}))
 }
 
 export async function addTaxRuleAction(input: Input<typeof addTaxRule>) {

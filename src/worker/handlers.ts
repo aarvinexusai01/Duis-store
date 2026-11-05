@@ -16,6 +16,7 @@ import { sendBackInStock } from "@/features/alerts"
 import { sendCartReminders } from "@/features/marketing"
 import { processRefund } from "@/features/payments"
 import { sendReviewRequests } from "@/features/reviews"
+import { refreshUsdRate } from "@/features/settings"
 import { runOpsChecks } from "@/features/system"
 import {
   processTrackingWebhook,
@@ -126,6 +127,9 @@ const handlers: { [Q in QueueName]: Handler<Q> } = {
     const sent = await runOpsChecks()
     if (sent > 0) logger.warn({ sent }, "ops alert emails queued")
   },
+  "pricing.refresh-fx": async () => {
+    await refreshUsdRate()
+  },
   "shipping.sync-tracking": async () => {
     const applied = await syncActiveShipments()
     if (applied > 0) logger.info({ applied }, "parcel tracking synced")
@@ -147,6 +151,8 @@ const SCHEDULES: { queue: QueueName; cron: string }[] = [
   { queue: QUEUES.publishScheduledContent, cron: "* * * * *" },
   { queue: QUEUES.opsCheck, cron: "*/15 * * * *" },
   { queue: QUEUES.reconcileSearch, cron: "45 3 * * *" },
+  // The ECB publishes around 16:00 CET (about 20:30 IST).
+  { queue: QUEUES.refreshFxRate, cron: "15 21 * * *" },
 ]
 
 /**

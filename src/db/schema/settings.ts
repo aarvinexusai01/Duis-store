@@ -8,9 +8,10 @@ import {
   pgEnum,
   pgTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/pg-core"
 
-import { primaryId, timestamps } from "./columns"
+import { primaryId, timestamps, timestamptz } from "./columns"
 
 export const codAdvanceType = pgEnum("cod_advance_type", ["fixed", "percent"])
 export const rtoAdvancePolicy = pgEnum("rto_advance_policy", [
@@ -60,10 +61,24 @@ export const storeSettings = pgTable(
     notifyOrderShipped: boolean().notNull().default(true),
     notifyPaymentReminder: boolean().notNull().default(true),
     notifyLowStock: boolean().notNull().default(true),
+    // Prices in US dollars outside India (doc/06 Phase 13, ADR-0034). Off
+    // until Razorpay has enabled USD; then the delivery country decides.
+    usdPricingEnabled: boolean().notNull().default(false),
+    // "auto": the latest ECB rate in fx_rates; "manual": the rate below.
+    usdRateMode: text().notNull().default("auto"),
+    // Rupees per US dollar × 1,000,000 (₹84.50 = 84_500_000).
+    usdManualRateMicros: integer(),
+    // The increase on product prices for countries without their own, in
+    // basis points (1500 = 15%).
+    defaultUpliftBp: integer().notNull().default(0),
     ...timestamps(),
   },
   (t) => [
     check("store_settings_singleton_check", sql`${t.id} = 1`),
+    check(
+      "store_settings_usd_check",
+      sql`${t.usdRateMode} in ('auto', 'manual') and (${t.usdManualRateMicros} is null or ${t.usdManualRateMicros} between 10000000 and 500000000) and ${t.defaultUpliftBp} between 0 and 10000`,
+    ),
     check(
       "store_settings_amounts_check",
       sql`${t.freeShippingThresholdPaise} >= 0 and ${t.codAdvanceValue} >= 0 and ${t.codMaxOrderPaise} >= 0 and ${t.codFeePaise} >= 0`,
@@ -103,5 +118,48 @@ export const taxRules = pgTable(
       "tax_rules_rates_check",
       sql`${t.rateBelowBp} between 0 and 10000 and ${t.rateAboveBp} between 0 and 10000`,
     ),
+  ],
+)
+
+/**
+ * Per-country pricing for USD orders (doc/06 Phase 13): the increase on
+ * product prices (null: the store default) and a flat shipping fee in US
+ * cents. A country on the shipping list without a row can't check out yet.
+ */
+export const countryPricing = pgTable(
+  "country_pricing",
+  {
+    countryCode: text().primaryKey(),
+    upliftBp: integer(),
+    shippingFeeCents: integer().notNull(),
+    ...timestamps(),
+  },
+  (t) => [
+    check(
+      "country_pricing_check",
+      sql`${t.countryCode} ~ '^[A-Z]{2}$' and ${t.countryCode} <> 'IN' and (${t.upliftBp} is null or ${t.upliftBp} between 0 and 10000) and ${t.shippingFeeCents} between 0 and 1000000`,
+    ),
+  ],
+)
+
+/**
+ * Exchange rates as published (doc/06 Phase 13): one row per source day.
+ * The latest row is the "last good rate" when a fetch fails.
+ */
+export const fxRates = pgTable(
+  "fx_rates",
+  {
+    id: primaryId(),
+    base: text().notNull().default("USD"),
+    quote: text().notNull().default("INR"),
+    // Rupees per US dollar × 1,000,000.
+    rateMicros: integer().notNull(),
+    asOf: date().notNull(),
+    source: text().notNull(),
+    fetchedAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("fx_rates_day_key").on(t.base, t.quote, t.asOf),
+    check("fx_rates_rate_check", sql`${t.rateMicros} > 0`),
   ],
 )

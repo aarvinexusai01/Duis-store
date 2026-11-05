@@ -5,17 +5,25 @@ import { toast } from "sonner"
 
 import { StatusBadge } from "@/components/admin/page-header"
 import { Button } from "@/components/ui/button"
-import type { AdminSettings, IntegrationStatus } from "@/features/settings"
+import type {
+  AdminSettings,
+  IntegrationStatus,
+  UsdPricingAdmin,
+} from "@/features/settings"
 import {
   addTaxRuleAction,
+  fetchUsdRateNowAction,
+  saveCountryPricingAction,
   testIntegrationAction,
   updateCodSettingsAction,
   updateLegalSettingsAction,
   updateNotificationSettingsAction,
   updatePolicySettingsAction,
   updateShippingSettingsAction,
+  updateUsdRateSettingsAction,
 } from "@/features/settings/admin-actions"
 import { COUNTRY_NAMES } from "@/lib/countries"
+import { formatMoney, formatRate, paiseToUsdCents, parseRate } from "@/lib/fx"
 import { INDIAN_STATES } from "@/lib/india"
 
 const field =
@@ -746,5 +754,287 @@ export function IntegrationsPanel({
         ))}
       </ul>
     </section>
+  )
+}
+
+/**
+ * Prices in US dollars outside India (doc/06 Phase 13): the rate, the default
+ * increase, and each shipping country's increase and flat fee.
+ */
+export function UsdPricingForms({
+  settings,
+  usd,
+  canEdit,
+}: Props & { usd: UsdPricingAdmin }) {
+  const [mode, setMode] = useState(settings.usdRateMode)
+  const [manual, setManual] = useState(
+    settings.usdManualRateMicros
+      ? String(settings.usdManualRateMicros / 1_000_000)
+      : "",
+  )
+  const [defaultPercent, setDefaultPercent] = useState(
+    String(settings.defaultUpliftBp / 100),
+  )
+  const [fetching, startFetch] = useTransition()
+  const codes = [
+    ...new Set([
+      ...settings.internationalCountryCodes,
+      ...usd.countries.map((c) => c.countryCode),
+    ]),
+  ].sort((a, b) => (COUNTRY_NAMES[a] ?? a).localeCompare(COUNTRY_NAMES[b] ?? b))
+  const saved = new Map(usd.countries.map((c) => [c.countryCode, c]))
+  const previewRate =
+    mode === "manual" ? parseRate(manual) : (usd.latest?.rateMicros ?? null)
+  const percentBp = (value: string) => Math.round(Number(value || "0") * 100)
+  const preview = (upliftBp: number) =>
+    previewRate
+      ? formatMoney(
+          paiseToUsdCents(249_900, { rateMicros: previewRate, upliftBp }),
+          "USD",
+        )
+      : "no rate yet"
+
+  return (
+    <>
+      <Section
+        id="usd"
+        title="International pricing (USD)"
+        description="Customers outside India will see and pay prices in US dollars: the rupee price at this rate, increased by the country's percentage, rounded up to .99. Switching it on comes with the next update, once Razorpay has enabled USD."
+        canEdit={canEdit}
+        onSubmit={() =>
+          updateUsdRateSettingsAction({
+            usdRateMode: mode,
+            usdManualRateMicros: mode === "manual" ? parseRate(manual) : null,
+            defaultUpliftBp: percentBp(defaultPercent),
+          })
+        }
+      >
+        {(errors) => (
+          <>
+            <div className="flex flex-col gap-1 text-sm">
+              <span>
+                Rate in use:{" "}
+                <strong>
+                  {usd.effective
+                    ? `1 USD = ${formatRate(usd.effective.rateMicros)}`
+                    : "none yet"}
+                </strong>
+                {usd.effective &&
+                  ` (${usd.effective.source === "manual" ? "locked by you" : `${usd.effective.source.toUpperCase()}, ${usd.effective.asOf}`})`}
+              </span>
+              {usd.latest && (
+                <span className="text-xs text-muted-foreground">
+                  Latest published: {formatRate(usd.latest.rateMicros)} on{" "}
+                  {usd.latest.asOf}, fetched daily at 21:15 IST.
+                </span>
+              )}
+              {canEdit && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={fetching}
+                  className="mt-1 self-start rounded-sm"
+                  onClick={() =>
+                    startFetch(async () => {
+                      const result = await fetchUsdRateNowAction()
+                      if (result.ok) toast.success("Rate fetched")
+                      else toast.error(result.message)
+                    })
+                  }
+                >
+                  {fetching ? "Fetching…" : "Fetch now"}
+                </Button>
+              )}
+            </div>
+            <fieldset className="flex flex-col gap-2 text-sm">
+              <legend className="mb-1">Exchange rate</legend>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={mode === "auto"}
+                  onChange={() => setMode("auto")}
+                />
+                The European Central Bank&apos;s rate, updated daily
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={mode === "manual"}
+                  onChange={() => setMode("manual")}
+                />
+                A fixed rate I set
+              </label>
+            </fieldset>
+            {mode === "manual" && (
+              <Field
+                label="₹ per US dollar"
+                hint="e.g. 84.50"
+                error={errors.usdManualRateMicros}
+              >
+                <input
+                  value={manual}
+                  onChange={(event) => setManual(event.target.value)}
+                  inputMode="decimal"
+                  required
+                  className={`${field} max-w-48`}
+                />
+              </Field>
+            )}
+            <Field
+              label="Increase for countries without their own (%)"
+              hint={`₹2,499 becomes ${preview(percentBp(defaultPercent))}.`}
+              error={errors.defaultUpliftBp}
+            >
+              <input
+                value={defaultPercent}
+                onChange={(event) => setDefaultPercent(event.target.value)}
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                className={`${field} max-w-48`}
+              />
+            </Field>
+          </>
+        )}
+      </Section>
+      <CountryPricingForm
+        codes={codes}
+        saved={saved}
+        defaultUpliftBp={settings.defaultUpliftBp}
+        preview={preview}
+        canEdit={canEdit}
+      />
+    </>
+  )
+}
+
+function CountryPricingForm({
+  codes,
+  saved,
+  defaultUpliftBp,
+  preview,
+  canEdit,
+}: {
+  codes: string[]
+  saved: Map<string, UsdPricingAdmin["countries"][number]>
+  defaultUpliftBp: number
+  preview: (upliftBp: number) => string
+  canEdit: boolean
+}) {
+  const [percents, setPercents] = useState<Record<string, string>>(
+    Object.fromEntries(
+      codes.map((code) => {
+        const bp = saved.get(code)?.upliftBp
+        return [code, bp === null || bp === undefined ? "" : String(bp / 100)]
+      }),
+    ),
+  )
+  const missing = codes.filter((code) => !saved.has(code))
+  return (
+    <Section
+      id="usd-countries"
+      title="Countries: increase and shipping"
+      description="One row per country ticked under Shipping. A country needs a shipping fee before customers there can check out. Leave the increase blank to use the default."
+      canEdit={canEdit}
+      onSubmit={(form) =>
+        saveCountryPricingAction({
+          countries: codes
+            .filter((code) => text(form, `fee-${code}`) !== "")
+            .map((code) => ({
+              countryCode: code,
+              shippingFeeCents: Math.round(
+                Number(text(form, `fee-${code}`)) * 100,
+              ),
+              upliftBp:
+                text(form, `uplift-${code}`) === ""
+                  ? null
+                  : Math.round(Number(text(form, `uplift-${code}`)) * 100),
+            })),
+        })
+      }
+    >
+      {() =>
+        codes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No international countries yet: tick them under Shipping first.
+          </p>
+        ) : (
+          <>
+            {missing.length > 0 && (
+              <p className="text-sm text-destructive">
+                No shipping fee yet for:{" "}
+                {missing.map((code) => COUNTRY_NAMES[code] ?? code).join(", ")}.
+              </p>
+            )}
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="py-1 font-medium">Country</th>
+                  <th className="py-1 font-medium">Increase (%)</th>
+                  <th className="py-1 font-medium">Shipping (US$)</th>
+                  <th className="py-1 font-medium">₹2,499 becomes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {codes.map((code) => {
+                  const row = saved.get(code)
+                  const percent = percents[code] ?? ""
+                  return (
+                    <tr key={code} className="border-t">
+                      <td className="py-1.5 pr-2">
+                        {COUNTRY_NAMES[code] ?? code}
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          name={`uplift-${code}`}
+                          aria-label={`Increase for ${COUNTRY_NAMES[code] ?? code}`}
+                          value={percent}
+                          onChange={(event) =>
+                            setPercents((current) => ({
+                              ...current,
+                              [code]: event.target.value,
+                            }))
+                          }
+                          type="number"
+                          min={0}
+                          max={100}
+                          step="0.01"
+                          placeholder={String(defaultUpliftBp / 100)}
+                          className={`${field} max-w-24`}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          name={`fee-${code}`}
+                          aria-label={`Shipping fee for ${COUNTRY_NAMES[code] ?? code}`}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          defaultValue={
+                            row ? (row.shippingFeeCents / 100).toFixed(2) : ""
+                          }
+                          className={`${field} max-w-28`}
+                        />
+                      </td>
+                      <td className="py-1.5 text-muted-foreground">
+                        {preview(
+                          percent === ""
+                            ? defaultUpliftBp
+                            : Math.round(Number(percent) * 100),
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </>
+        )
+      }
+    </Section>
   )
 }

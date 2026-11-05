@@ -30,6 +30,7 @@ export const QUEUES = {
   publishScheduledContent: "cms.publish-scheduled",
   opsCheck: "system.ops-check",
   reconcileSearch: "search.reconcile",
+  refreshFxRate: "pricing.refresh-fx",
 } as const
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES]
@@ -71,6 +72,7 @@ export type JobPayloads = {
   "cms.publish-scheduled": null
   "system.ops-check": null
   "search.reconcile": null
+  "pricing.refresh-fx": null
 }
 
 type QueuePolicy = Parameters<PgBoss["createQueue"]>[1]
@@ -210,6 +212,16 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
     retryLimit: 2,
     retryDelay: 600,
     expireInSeconds: 600,
+  },
+  // The daily USD rate (doc/06 Phase 13); the last good rate stays in use
+  // while it retries, and the ops check warns when it gets old.
+  "pricing.refresh-fx": {
+    policy: "stately",
+    retryLimit: 5,
+    retryDelay: 900,
+    retryBackoff: true,
+    expireInSeconds: 120,
+    deadLetter,
   },
   // Server health (doc/07 §7); the next run covers a failed one.
   "system.ops-check": {

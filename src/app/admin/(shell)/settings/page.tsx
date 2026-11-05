@@ -3,7 +3,11 @@ import { Suspense } from "react"
 
 import { AdminPageHeader, NoAccess } from "@/components/admin/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getAdminSettings, getIntegrationHealth } from "@/features/settings"
+import {
+  getAdminSettings,
+  getIntegrationHealth,
+  getUsdPricingAdmin,
+} from "@/features/settings"
 import { can, requireStaff } from "@/features/staff"
 
 import {
@@ -14,6 +18,7 @@ import {
   PoliciesForm,
   ShippingForm,
   TaxRules,
+  UsdPricingForms,
 } from "./settings-forms"
 
 export const metadata: Metadata = { title: "Settings" }
@@ -29,9 +34,10 @@ export default function SettingsPage() {
 async function Settings() {
   const actor = await requireStaff("/admin/settings")
   if (!can(actor, { settings: ["read"] })) return <NoAccess />
-  const [settings, health] = await Promise.all([
+  const [settings, health, usd] = await Promise.all([
     getAdminSettings(actor, {}),
     getIntegrationHealth(actor, {}),
+    getUsdPricingAdmin(actor, {}),
   ])
   const canEdit = can(actor, { settings: ["update"] })
   return (
@@ -47,6 +53,7 @@ async function Settings() {
         {[
           ["legal", "Store & legal"],
           ["shipping", "Shipping"],
+          ["usd", "International pricing"],
           ["cod", "Cash on delivery"],
           ["policies", "Policies"],
           ["notifications", "Emails"],
@@ -65,6 +72,7 @@ async function Settings() {
       <div className="flex max-w-3xl flex-col gap-6">
         <LegalForm settings={settings} canEdit={canEdit} />
         <ShippingForm settings={settings} canEdit={canEdit} />
+        <UsdPricingForms settings={settings} usd={usd} canEdit={canEdit} />
         <CodForm settings={settings} canEdit={canEdit} />
         <PoliciesForm settings={settings} canEdit={canEdit} />
         <NotificationsForm settings={settings} canEdit={canEdit} />

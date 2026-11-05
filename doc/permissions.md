@@ -161,6 +161,7 @@ Amounts (order totals, payments, refunds and customer spend) are returned only t
 | `reports.sales` | ✓ | ✓ | · | · | · | · | · |
 | `settings.addTaxRule` | ✓ | ✓ | · | · | · | · | · |
 | `settings.get` | ✓ | ✓ | · | · | · | · | · |
+| `settings.getUsdPricing` | ✓ | ✓ | · | · | · | · | · |
 | `settings.integrationHealth` | ✓ | ✓ | · | · | · | · | · |
 | `settings.testIntegration` | ✓ | ✓ | · | · | · | · | · |
 | `settings.updateCod` | ✓ | ✓ | · | · | · | · | · |
@@ -168,6 +169,9 @@ Amounts (order totals, payments, refunds and customer spend) are returned only t
 | `settings.updateNotifications` | ✓ | ✓ | · | · | · | · | · |
 | `settings.updatePolicies` | ✓ | ✓ | · | · | · | · | · |
 | `settings.updateShipping` | ✓ | ✓ | · | · | · | · | · |
+| `settings.updateUsdRate` | ✓ | ✓ | · | · | · | · | · |
+| `settings.saveCountryPricing` | ✓ | ✓ | · | · | · | · | · |
+| `settings.fetchUsdRate` | ✓ | ✓ | · | · | · | · | · |
 | `staff.acceptInvitation` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `staff.getInvitation` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `staff.invite` | ✓ | · | · | · | · | · | · |

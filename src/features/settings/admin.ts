@@ -44,6 +44,10 @@ export type AdminSettings = {
   notifyOrderShipped: boolean
   notifyPaymentReminder: boolean
   notifyLowStock: boolean
+  usdPricingEnabled: boolean
+  usdRateMode: "auto" | "manual"
+  usdManualRateMicros: number | null
+  defaultUpliftBp: number
   updatedAt: Date
   taxRules: {
     id: string
@@ -83,6 +87,10 @@ const COLUMNS: Record<
   notifyOrderShipped: "notify_order_shipped",
   notifyPaymentReminder: "notify_payment_reminder",
   notifyLowStock: "notify_low_stock",
+  usdPricingEnabled: "usd_pricing_enabled",
+  usdRateMode: "usd_rate_mode",
+  usdManualRateMicros: "usd_manual_rate_micros",
+  defaultUpliftBp: "default_uplift_bp",
 }
 
 export const getAdminSettings = defineOperation({
@@ -133,7 +141,7 @@ export const getAdminSettings = defineOperation({
  * Saves some settings columns: reads the old values, updates, audits the
  * difference and, when customers see them, refreshes the storefront.
  */
-async function saveSection(
+export async function saveSection(
   actor: Actor,
   section: string,
   values: Partial<Record<keyof typeof COLUMNS, unknown>>,

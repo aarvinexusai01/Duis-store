@@ -1513,3 +1513,45 @@ The owner asked for a full SEO list (technical, quick wins, on-page, content) pl
 - **Notice:** the notice page meets Rule 3's list.
 - **Rights:** a customer can see, withdraw, download and delete.
 - **Tests:** all suites pass.
+
+---
+
+## Phase 13: US-dollar prices outside India
+
+**Plan (written and approved 2026-11-05).** [ADR-0034](adr/0034-usd-pricing-outside-india.md) has the decisions.
+
+**Owner decisions (2026-11-05):**
+- Customers outside India **pay in USD** (Razorpay enables international payments and USD).
+- **A % increase per country** set in admin, with a default for the rest; it applies to product prices only.
+- The ECB rate is fetched **daily**, and staff can lock one instead.
+- Prices round **up to .99**.
+- Shipping is a **flat USD fee per country**, booked by hand until an international courier is connected.
+- Visitors see dollars by **Cloudflare country**, with a **header switch**; the delivery country decides at checkout.
+
+**Slices, each with a review stop:**
+- **13a: Foundations** (customers see no change):
+  - migration 0022;
+  - `src/lib/fx.ts`;
+  - the `pricing.refresh-fx` job and the stale-rate ops check;
+  - Settings → International pricing (rate mode and locked rate, default %, per-country % and fee, "Fetch now", preview).
+- **13b: Checkout and payment:**
+  - the engine's currency, `src/features/pricing/usd.ts` and the INR ledger;
+  - the quote hash covers the rate;
+  - Razorpay in USD;
+  - the on switch, with a Razorpay preflight.
+- **13c: After purchase:** refunds and emails in the order's currency; the admin order view with the rate; manual shipment entry; CSV columns; the Meta event.
+- **13d: Storefront:** detection and the `duis_cur` cookie, the switcher, `<Price>` everywhere, Nginx bypass, SEO guards, analytics, and the go-live runbook.
+
+**13a built 2026-11-05.**
+
+**Before switching on (owner):**
+- Razorpay international + USD;
+- countries ticked under Shipping, each with a fee and %;
+- IEC and LUT;
+- the CA's answer on the invoice rate.
+
+**Exit criteria:**
+- USD orders charge exactly the shown dollar price and keep a consistent INR ledger.
+- Refunds go back in the order's currency.
+- Indian visitors and crawlers always see INR.
+- All suites pass.

@@ -46,6 +46,8 @@ export const payments = pgTable(
     provider: text().notNull(),
     providerOrderId: text().notNull().unique(),
     providerPaymentId: text().unique(),
+    // In minor units of `currency`: paise for INR, cents for USD (ADR-0034).
+    // Named for the rupee case; renaming needs an expand/contract migration.
     amountPaise: integer().notNull(),
     refundedPaise: integer().notNull().default(0),
     currency: text().notNull().default("INR"),
@@ -59,6 +61,7 @@ export const payments = pgTable(
   },
   (t) => [
     index("payments_order_idx").on(t.orderId, t.createdAt),
+    check("payments_currency_check", sql`${t.currency} in ('INR', 'USD')`),
     check(
       "payments_amount_check",
       sql`${t.amountPaise} > 0 and ${t.refundedPaise} between 0 and ${t.amountPaise}`,
@@ -76,7 +79,9 @@ export const refunds = pgTable(
     orderId: uuid()
       .notNull()
       .references(() => orders.id, { onDelete: "restrict" }),
+    // In minor units of `currency`, which is always the payment's.
     amountPaise: integer().notNull(),
+    currency: text().notNull().default("INR"),
     reason: text().notNull(),
     status: refundStatus().notNull().default("pending"),
     providerRefundId: text().unique(),

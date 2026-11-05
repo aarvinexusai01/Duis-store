@@ -44,6 +44,8 @@ export const OPS_RULES: Record<string, Rule> = {
     label: "Product search (Elasticsearch)",
     external: false,
   },
+  // Only reported once USD pricing is switched on (doc/06 Phase 13).
+  "pricing.fx": { label: "US dollar exchange rate", external: false },
   "backup.wal": {
     label: "Continuous database archiving (WAL)",
     external: false,
