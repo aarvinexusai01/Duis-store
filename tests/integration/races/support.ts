@@ -154,7 +154,7 @@ export async function capture(customer: Buyer, result: PlaceResult) {
     providerOrderId: result.payment.providerOrderId,
     providerPaymentId: paymentId,
     signature,
-    amountPaise: result.payment.amountPaise,
+    amountPaise: result.payment.amountMinor,
   }
 }
 

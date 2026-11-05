@@ -5,15 +5,22 @@ import { sql } from "drizzle-orm"
 import type { ShippingAddressSnapshot } from "@/db/schema"
 import { findUsableCoupon, loadAutomaticDiscounts } from "@/features/discounts"
 import {
+  inrLedger,
   quote as priceQuote,
   quoteFingerprint,
+  toUsdInput,
+  withFx,
+  type InrLedger,
   type PaymentModeInput,
   type PricingCoupon,
   type PricingLine,
   type Quote,
+  type QuoteInput,
   type QuoteIssue,
   type TaxRule,
+  type UsdTerms,
 } from "@/features/pricing"
+import { loadEffectiveUsdRate } from "@/features/settings"
 import { checkServiceability, getShippingProvider } from "@/features/shipping"
 import { spendableBalance } from "@/features/wallet"
 import type { UserActor } from "@/server/auth/actor"
@@ -43,10 +50,15 @@ export type StoreSettings = {
   reservationTtlMinutes: number
   registeredStateCode: string
   internationalCountryCodes: string[]
+  usdPricingEnabled: boolean
+  defaultUpliftBp: number
 }
 
 export type CheckoutContext = {
+  /** In the quote's currency: rupees, or dollars outside India (ADR-0034). */
   quote: Quote
+  /** USD quotes: the rupee equivalent written to the books. */
+  ledger: InrLedger | null
   hash: string
   address: ShippingAddressSnapshot
   coupon: PricingCoupon | null
@@ -72,6 +84,8 @@ export async function loadStoreSettings(): Promise<StoreSettings> {
     reservation_ttl_minutes: number
     registered_state_code: string
     international_country_codes: string[]
+    usd_pricing_enabled: boolean
+    default_uplift_bp: number
   }>(sql`select * from store_settings where id = 1`)
   const row = result.rows[0]
   if (!row) throw new Error("store_settings row missing (run the migrations)")
@@ -85,6 +99,43 @@ export async function loadStoreSettings(): Promise<StoreSettings> {
     reservationTtlMinutes: row.reservation_ttl_minutes,
     registeredStateCode: row.registered_state_code,
     internationalCountryCodes: row.international_country_codes,
+    usdPricingEnabled: row.usd_pricing_enabled,
+    defaultUpliftBp: row.default_uplift_bp,
+  }
+}
+
+/**
+ * The dollar terms for a delivery country (doc/06 Phase 13): the rate in
+ * force now (read, never cached, so the order keeps what was charged), the
+ * country's increase and its flat shipping fee. A reason instead when the
+ * country can't be priced yet.
+ */
+async function loadUsdTerms(
+  countryCode: string,
+  settings: StoreSettings,
+): Promise<{ terms: UsdTerms } | { reason: string }> {
+  const db = getDb()
+  const [rate, country] = await Promise.all([
+    loadEffectiveUsdRate(db),
+    db.execute<{ uplift_bp: number | null; shipping_fee_cents: number }>(sql`
+      select uplift_bp, shipping_fee_cents from country_pricing where country_code = ${countryCode}`),
+  ])
+  const row = country.rows[0]
+  if (!row) return { reason: "We don't ship to this country yet." }
+  if (!rate) {
+    return {
+      reason:
+        "International checkout is briefly unavailable. Please try again later.",
+    }
+  }
+  return {
+    terms: {
+      rateMicros: rate.rateMicros,
+      source: rate.source,
+      asOf: rate.asOf,
+      upliftBp: row.uplift_bp ?? settings.defaultUpliftBp,
+      shippingFeeCents: row.shipping_fee_cents,
+    },
   }
 }
 
@@ -277,16 +328,28 @@ export async function buildCheckoutContext(
 
   const domestic = address.countryCode === "IN"
   const extraIssues: QuoteIssue[] = []
-  if (
-    !domestic &&
-    !settings.internationalCountryCodes.includes(address.countryCode)
-  ) {
+  const shipsThere =
+    domestic || settings.internationalCountryCodes.includes(address.countryCode)
+  if (!shipsThere) {
     extraIssues.push({
       code: "DELIVERY_UNAVAILABLE",
       message: "We don't ship to this country yet.",
       blocking: true,
     })
   }
+  // Outside India, in dollars once switched on: the delivery country decides.
+  const usd =
+    !domestic && shipsThere && settings.usdPricingEnabled
+      ? await loadUsdTerms(address.countryCode, settings)
+      : null
+  if (usd && "reason" in usd) {
+    extraIssues.push({
+      code: "DELIVERY_UNAVAILABLE",
+      message: usd.reason,
+      blocking: true,
+    })
+  }
+  const usdTerms = usd && "terms" in usd ? usd.terms : null
   for (const problem of cart.problems) {
     extraIssues.push({ code: "UNAVAILABLE", message: problem, blocking: true })
   }
@@ -310,16 +373,17 @@ export async function buildCheckoutContext(
   // An unavailable COD request stays as asked: the engine reports why.
   const paymentMode = choices.paymentMode
 
-  const ratePaise = cart.lines.length
-    ? await getShippingProvider().quoteRate({
-        countryCode: address.countryCode,
-        pincode: domestic ? address.postalCode : null,
-        weightGrams: cart.weightGrams,
-        cod: paymentMode === "partial_cod",
-      })
-    : null
+  const ratePaise =
+    cart.lines.length && !usdTerms
+      ? await getShippingProvider().quoteRate({
+          countryCode: address.countryCode,
+          pincode: domestic ? address.postalCode : null,
+          weightGrams: cart.weightGrams,
+          cod: paymentMode === "partial_cod",
+        })
+      : null
 
-  const q = priceQuote({
+  const rupeeInput: QuoteInput = {
     lines: cart.lines,
     automaticDiscounts,
     coupon,
@@ -346,7 +410,15 @@ export async function buildCheckoutContext(
       requestedPaise: choices.useWallet ? walletBalancePaise : 0,
     },
     taxRules,
-  })
+  }
+  let q: Quote
+  if (usdTerms) {
+    const converted = toUsdInput(rupeeInput, usdTerms)
+    q = withFx(priceQuote(converted.input), usdTerms)
+    q.issues.push(...converted.issues)
+  } else {
+    q = priceQuote(rupeeInput)
+  }
   q.issues.push(...extraIssues)
   if (couponError) {
     q.issues.push({
@@ -358,11 +430,13 @@ export async function buildCheckoutContext(
 
   return {
     quote: q,
+    ledger: q.currency === "USD" ? inrLedger(q) : null,
     hash: hashQuote(q),
     address,
     coupon: q.couponCode ? coupon : null,
     couponError,
-    walletBalancePaise,
+    // Wallet credit is in rupees: only for orders delivered in India.
+    walletBalancePaise: usdTerms ? 0 : walletBalancePaise,
     codAvailable: codReason === null,
     codReason,
     settings,

@@ -6,6 +6,7 @@ import { withTransaction, type Transaction } from "@/server/db/transaction"
 import { DomainError } from "@/server/errors"
 import { enqueue } from "@/server/jobs/enqueue"
 import { QUEUES } from "@/server/jobs/queues"
+import type { Currency } from "@/lib/fx"
 import { logger } from "@/server/observability/logger"
 
 import {
@@ -26,8 +27,10 @@ export type PaymentRow = {
   provider: string
   provider_order_id: string
   provider_payment_id: string | null
+  /** Minor units of `currency`: paise, or cents for USD (ADR-0034). */
   amount_paise: number
   refunded_paise: number
+  currency: Currency
   status:
     | "created"
     | "authorized"
@@ -38,7 +41,7 @@ export type PaymentRow = {
 }
 
 const PAYMENT_COLUMNS = sql`id, order_id, purpose, provider, provider_order_id, provider_payment_id,
-  amount_paise, refunded_paise, status`
+  amount_paise, refunded_paise, currency, status`
 
 /**
  * The gateway order the customer pays into. A retry after a failed attempt
@@ -48,6 +51,8 @@ export async function ensureGatewayOrder(input: {
   orderId: string
   orderNumber: string
   amountPaise: number
+  /** The order's charge currency; exchanges and COD are always rupees. */
+  currency?: Currency
   purpose: "full" | "advance" | "exchange_difference"
 }): Promise<{
   providerOrderId: string
@@ -56,11 +61,12 @@ export async function ensureGatewayOrder(input: {
   publicKey: string
 }> {
   const gateway = getPaymentGateway()
+  const currency = input.currency ?? "INR"
   const existing = await getDb().execute<PaymentRow>(sql`
     select ${PAYMENT_COLUMNS} from payments
     where order_id = ${input.orderId} and purpose = ${input.purpose}
       and provider = ${gateway.name} and status in ('created', 'failed')
-      and amount_paise = ${input.amountPaise}
+      and amount_paise = ${input.amountPaise} and currency = ${currency}
     order by created_at desc limit 1`)
   const row = existing.rows[0]
   if (row) {
@@ -75,6 +81,7 @@ export async function ensureGatewayOrder(input: {
   try {
     order = await gateway.createOrder({
       amountPaise: input.amountPaise,
+      currency,
       receipt: input.orderNumber,
       notes: { order_id: input.orderId, order_number: input.orderNumber },
     })
@@ -90,12 +97,12 @@ export async function ensureGatewayOrder(input: {
       "Payments are briefly unavailable. Your items are held for 15 minutes, so please try again in a moment.",
     )
   }
-  if (order.amountPaise !== input.amountPaise || order.currency !== "INR") {
+  if (order.amountPaise !== input.amountPaise || order.currency !== currency) {
     throw new Error("gateway order amount mismatch")
   }
   await getDb().execute(sql`
-    insert into payments (order_id, purpose, provider, provider_order_id, amount_paise)
-    values (${input.orderId}, ${input.purpose}, ${gateway.name}, ${order.id}, ${input.amountPaise})`)
+    insert into payments (order_id, purpose, provider, provider_order_id, amount_paise, currency)
+    values (${input.orderId}, ${input.purpose}, ${gateway.name}, ${order.id}, ${input.amountPaise}, ${currency})`)
   return {
     providerOrderId: order.id,
     amountPaise: order.amountPaise,
@@ -120,7 +127,10 @@ export async function markCaptured(
   row: PaymentRow,
   payment: GatewayPayment,
 ): Promise<void> {
-  if (payment.amountPaise !== row.amount_paise || payment.currency !== "INR") {
+  if (
+    payment.amountPaise !== row.amount_paise ||
+    payment.currency !== row.currency
+  ) {
     throw new DomainError(
       "CONFLICT",
       "Payment amount does not match the order.",
@@ -154,7 +164,11 @@ export async function captureIfAuthorized(
   payment: GatewayPayment,
 ): Promise<GatewayPayment> {
   if (payment.status !== "authorized") return payment
-  return getPaymentGateway().capture(payment.id, payment.amountPaise)
+  return getPaymentGateway().capture(
+    payment.id,
+    payment.amountPaise,
+    payment.currency as Currency,
+  )
 }
 
 /**
@@ -188,8 +202,10 @@ export async function requestRefund(
     throw new DomainError("CONFLICT", "This payment has already been refunded.")
   }
   const created = await tx.execute<{ id: string }>(sql`
-    insert into refunds (payment_id, order_id, amount_paise, reason, idempotency_key, initiated_by)
-    values (${input.paymentId}, ${input.orderId}, ${input.amountPaise}, ${input.reason}, ${input.idempotencyKey}, ${input.initiatedBy ?? null})
+    insert into refunds (payment_id, order_id, amount_paise, currency, reason, idempotency_key, initiated_by)
+    values (${input.paymentId}, ${input.orderId}, ${input.amountPaise},
+      (select currency from payments where id = ${input.paymentId}),
+      ${input.reason}, ${input.idempotencyKey}, ${input.initiatedBy ?? null})
     on conflict (idempotency_key) do nothing
     returning id`)
   const id = created.rows[0]?.id

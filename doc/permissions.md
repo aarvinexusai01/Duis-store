@@ -172,6 +172,7 @@ Amounts (order totals, payments, refunds and customer spend) are returned only t
 | `settings.updateUsdRate` | ✓ | ✓ | · | · | · | · | · |
 | `settings.saveCountryPricing` | ✓ | ✓ | · | · | · | · | · |
 | `settings.fetchUsdRate` | ✓ | ✓ | · | · | · | · | · |
+| `settings.setUsdPricing` | ✓ | ✓ | · | · | · | · | · |
 | `staff.acceptInvitation` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `staff.getInvitation` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `staff.invite` | ✓ | · | · | · | · | · | · |

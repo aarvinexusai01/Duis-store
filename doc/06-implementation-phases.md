@@ -1544,6 +1544,12 @@ The owner asked for a full SEO list (technical, quick wins, on-page, content) pl
 
 **13a built 2026-11-05.**
 
+**13b built 2026-11-05.** Checkout, payment and the switch:
+- **Pricing:** outside India, once switched on, `toUsdInput` converts the order before the engine prices it, and `inrLedger` writes the rupee books line by line. The quote fingerprint covers the rate and increase, for USD quotes only (rupee hashes are unchanged).
+- **Payment:** Razorpay orders, captures and the payment checks follow the order's currency, and refunds are recorded in the payment's currency.
+- **The switch:** `settings.setUsdPricing` checks the rate, a priced shipping country, and a $1 Razorpay USD order.
+- **Customer pages:** the checkout and success pages show the charged currency; the rest of the account pages and the emails come with 13c.
+
 **Before switching on (owner):**
 - Razorpay international + USD;
 - countries ticked under Shipping, each with a fee and %;

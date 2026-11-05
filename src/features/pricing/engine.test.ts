@@ -258,7 +258,7 @@ describe("quote", () => {
         lines: [line({ unitPricePaise: 300_000 })],
       }),
     )
-    expect(big.issues[0]!.message).toMatch(/up to ₹2500/)
+    expect(big.issues[0]!.message).toMatch(/up to ₹2,500/)
     const blocked = quote(
       input({
         paymentMode: "partial_cod",

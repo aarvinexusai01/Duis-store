@@ -14,6 +14,7 @@ import { ConsentFields } from "@/features/privacy"
 import type { NoticeLanguage } from "@/lib/privacy"
 import { countryName } from "@/lib/countries"
 import { INDIAN_STATES } from "@/lib/india"
+import { formatMoney } from "@/lib/fx"
 import { formatPaise } from "@/lib/money"
 import { cn } from "@/lib/utils"
 
@@ -178,6 +179,8 @@ export function CheckoutForm({
 
   const q = view.quote
   const intl = q.isExport
+  // The order's own currency: dollars outside India once switched on.
+  const money = (minor: number) => formatMoney(minor, q.currency)
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1fr)_24rem]">
@@ -249,7 +252,7 @@ export function CheckoutForm({
               title="Pay online"
               body={
                 intl
-                  ? "International cards, charged in INR."
+                  ? `International cards, charged in ${q.currency === "USD" ? "US dollars" : "rupees"}.`
                   : "UPI, cards, net banking or wallets through Razorpay."
               }
             />
@@ -361,7 +364,7 @@ export function CheckoutForm({
                 </span>
               </span>
               <span className="shrink-0 tabular-nums">
-                {formatPaise(line.subtotalPaise)}
+                {money(line.subtotalPaise)}
               </span>
             </li>
           ))}
@@ -372,53 +375,48 @@ export function CheckoutForm({
             pending && "opacity-60",
           )}
         >
-          <Row label="Subtotal" value={formatPaise(q.subtotalPaise)} />
+          <Row label="Subtotal" value={money(q.subtotalPaise)} />
           {q.discounts.map((d) => (
             <Row
               key={d.label}
               label={d.label}
-              value={`−${formatPaise(d.amountPaise)}`}
+              value={`−${money(d.amountPaise)}`}
               className="text-rust"
             />
           ))}
           <Row
             label="Shipping"
             value={
-              q.shippingFeePaise === 0
-                ? "Free"
-                : formatPaise(q.shippingFeePaise)
+              q.shippingFeePaise === 0 ? "Free" : money(q.shippingFeePaise)
             }
           />
           {q.codFeePaise > 0 && (
-            <Row label="COD fee" value={formatPaise(q.codFeePaise)} />
+            <Row label="COD fee" value={money(q.codFeePaise)} />
           )}
           <Row
             label="Total"
-            value={formatPaise(q.totalPaise)}
+            value={money(q.totalPaise)}
             className="border-t pt-2 text-base font-semibold"
           />
           {q.walletAppliedPaise > 0 && (
             <Row
               label="Paid from wallet"
-              value={`−${formatPaise(q.walletAppliedPaise)}`}
+              value={`−${money(q.walletAppliedPaise)}`}
             />
           )}
           <Row
             label="Pay now"
-            value={formatPaise(q.onlineAmountPaise)}
+            value={money(q.onlineAmountPaise)}
             className="font-semibold"
           />
           {q.codDuePaise > 0 && (
-            <Row
-              label="Pay in cash on delivery"
-              value={formatPaise(q.codDuePaise)}
-            />
+            <Row label="Pay in cash on delivery" value={money(q.codDuePaise)} />
           )}
         </dl>
         <p className="mt-3 text-xs text-muted-foreground">
           {intl
             ? "Exported without Indian GST. Import duties and taxes, if any, are charged by your country's customs on delivery and paid by you."
-            : `Prices include GST (${formatPaise(q.taxTotalPaise)}).`}
+            : `Prices include GST (${money(q.taxTotalPaise)}).`}
         </p>
 
         {blocking.length > 0 && (
@@ -463,7 +461,7 @@ export function CheckoutForm({
             ? "Processing…"
             : q.onlineAmountPaise === 0
               ? "Place order"
-              : `Place order & pay ${formatPaise(q.onlineAmountPaise)}`}
+              : `Place order & pay ${money(q.onlineAmountPaise)}`}
         </Button>
         <p className="mt-3 text-xs text-muted-foreground">
           Items are held for {view.reservationMinutes} minutes while you pay. By

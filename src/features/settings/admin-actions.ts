@@ -17,6 +17,7 @@ import { testIntegration } from "./health"
 import {
   fetchUsdRateNow,
   saveCountryPricing,
+  setUsdPricingEnabled,
   updateUsdRateSettings,
 } from "./usd"
 
@@ -77,6 +78,10 @@ export async function saveCountryPricingAction(
   input: Input<typeof saveCountryPricing>,
 ) {
   return run(async () => saveCountryPricing(await getActor(), input))
+}
+
+export async function setUsdPricingEnabledAction(enabled: boolean) {
+  return run(async () => setUsdPricingEnabled(await getActor(), { enabled }))
 }
 
 export async function fetchUsdRateNowAction() {

@@ -1,9 +1,14 @@
+import { formatMoney, type Currency } from "@/lib/fx"
+
 /**
  * The pricing engine (doc/03 §1): a pure function from loaded data to a
  * complete quote. No I/O and no clock, so every rule is unit-tested, and the
- * same inputs always give the same quote. All money is integer paise;
- * divisions round in the customer's favour where a choice exists, and the
- * GST split always adds back up to the line total.
+ * same inputs always give the same quote. All money is integers; divisions
+ * round in the customer's favour where a choice exists, and the GST split
+ * always adds back up to the line total.
+ *
+ * The `*Paise` fields hold minor units of the quote's `currency`: paise for
+ * INR, cents for a USD quote (doc/06 Phase 13, built by ./usd.ts).
  */
 
 export type PricingLine = {
@@ -53,6 +58,8 @@ export type TaxRule = {
 export type PaymentModeInput = "prepaid" | "partial_cod"
 
 export type QuoteInput = {
+  /** INR unless ./usd.ts converted the input to dollars. */
+  currency?: Currency
   lines: PricingLine[]
   automaticDiscounts: PricingDiscount[]
   /** Already checked for dates, status and usage limits by the service. */
@@ -111,6 +118,9 @@ export type QuoteIssue = {
 }
 
 export type Quote = {
+  currency: Currency
+  /** USD quotes: the rate and the country's increase they were priced at. */
+  fx?: { rateMicros: number; upliftBp: number; source: string; asOf: string }
   lines: QuoteLine[]
   discounts: QuoteDiscount[]
   couponCode: string | null
@@ -221,7 +231,16 @@ export function splitTax(
 
 export function quote(input: QuoteInput): Quote {
   const issues: QuoteIssue[] = []
+  const currency = input.currency ?? "INR"
+  const money = (minor: number) => formatMoney(minor, currency)
   const isExport = input.destination.countryCode !== "IN"
+  if (currency !== "INR" && !isExport) {
+    issues.push({
+      code: "DELIVERY_UNAVAILABLE",
+      message: "Orders delivered in India are priced in rupees.",
+      blocking: true,
+    })
+  }
   const intraState =
     !isExport && input.destination.stateCode === input.registeredStateCode
 
@@ -310,7 +329,7 @@ export function quote(input: QuoteInput): Quote {
     if (afterAutomatic < coupon.minOrderPaise) {
       issues.push({
         code: "COUPON_NOT_APPLICABLE",
-        message: `Add items worth ₹${Math.ceil((coupon.minOrderPaise - afterAutomatic) / 100)} more to use ${coupon.code}.`,
+        message: `Add items worth ${money(coupon.minOrderPaise - afterAutomatic)} more to use ${coupon.code}.`,
         blocking: false,
       })
     } else if (base === 0) {
@@ -376,7 +395,7 @@ export function quote(input: QuoteInput): Quote {
         ? (input.cod.ineligibleReason ??
           "Cash on delivery isn't available for this order.")
         : total > input.cod.maxOrderPaise
-          ? `Cash on delivery is available on orders up to ₹${input.cod.maxOrderPaise / 100}.`
+          ? `Cash on delivery is available on orders up to ${money(input.cod.maxOrderPaise)}.`
           : null
     if (reason) {
       issues.push({ code: "COD_UNAVAILABLE", message: reason, blocking: true })
@@ -443,6 +462,7 @@ export function quote(input: QuoteInput): Quote {
       : 0
 
   return {
+    currency,
     lines,
     discounts: discountsOut,
     couponCode,
@@ -490,5 +510,9 @@ export function quoteFingerprint(q: Quote): string {
     q.onlineAmountPaise,
     q.codDuePaise,
     q.paymentMode,
+    // Only USD quotes carry these, so rupee hashes are unchanged.
+    ...(q.currency === "INR"
+      ? []
+      : [q.currency, q.fx?.rateMicros, q.fx?.upliftBp]),
   ])
 }

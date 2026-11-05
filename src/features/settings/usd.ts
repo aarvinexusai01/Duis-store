@@ -2,6 +2,7 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { z } from "zod"
 
+import { getPaymentGateway } from "@/features/payments"
 import { COUNTRY_CODE_SET } from "@/lib/countries"
 import {
   parseEcbUsdInr,
@@ -267,6 +268,59 @@ export const saveCountryPricing = defineOperation({
       await requestRevalidation([cacheTags.fxRates], { tx })
     })
     return {}
+  },
+})
+
+/**
+ * Switches dollar pricing on or off. Switching on checks first that a rate
+ * is in force, a shipping country has its fee, and Razorpay accepts USD (a
+ * $1 order that is never paid: creating one charges nothing).
+ */
+export const setUsdPricingEnabled = defineOperation({
+  name: "settings.setUsdPricing",
+  access: { settings: ["update"] },
+  input: z.object({ enabled: z.boolean() }),
+  async handler({ actor, log }, { enabled }) {
+    if (enabled) {
+      const db = getDb()
+      if (!(await loadEffectiveUsdRate(db))) {
+        throw new DomainError(
+          "INVALID_STATE",
+          "There's no exchange rate yet. Fetch one, or set a fixed rate.",
+        )
+      }
+      const priced = await db.execute<{ n: number }>(sql`
+        select count(*)::int as n from country_pricing c, store_settings s
+        where s.id = 1 and c.country_code = any(s.international_country_codes)`)
+      if (priced.rows[0]!.n === 0) {
+        throw new DomainError(
+          "INVALID_STATE",
+          "Give at least one shipping country its fee first.",
+        )
+      }
+      try {
+        await getPaymentGateway().createOrder({
+          amountPaise: 100,
+          currency: "USD",
+          receipt: "usd-preflight",
+          notes: { purpose: "Checking USD is enabled" },
+        })
+      } catch (error) {
+        log.warn({ err: error }, "USD preflight refused by the gateway")
+        throw new DomainError(
+          "INVALID_STATE",
+          "Razorpay hasn't enabled US dollars on this account yet. Ask Razorpay to enable international payments and USD, then try again.",
+        )
+      }
+    }
+    const result = await saveSection(
+      actor,
+      "usd_pricing",
+      { usdPricingEnabled: enabled },
+      { storefront: true },
+    )
+    await requestRevalidation([cacheTags.fxRates])
+    return result
   },
 })
 

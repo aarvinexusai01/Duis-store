@@ -14,6 +14,7 @@ import {
   addTaxRuleAction,
   fetchUsdRateNowAction,
   saveCountryPricingAction,
+  setUsdPricingEnabledAction,
   testIntegrationAction,
   updateCodSettingsAction,
   updateLegalSettingsAction,
@@ -776,6 +777,7 @@ export function UsdPricingForms({
     String(settings.defaultUpliftBp / 100),
   )
   const [fetching, startFetch] = useTransition()
+  const [switching, startSwitch] = useTransition()
   const codes = [
     ...new Set([
       ...settings.internationalCountryCodes,
@@ -799,7 +801,7 @@ export function UsdPricingForms({
       <Section
         id="usd"
         title="International pricing (USD)"
-        description="Customers outside India will see and pay prices in US dollars: the rupee price at this rate, increased by the country's percentage, rounded up to .99. Switching it on comes with the next update, once Razorpay has enabled USD."
+        description="Customers outside India see and pay prices in US dollars: the rupee price at this rate, increased by the country's percentage, rounded up to .99. India always stays in rupees."
         canEdit={canEdit}
         onSubmit={() =>
           updateUsdRateSettingsAction({
@@ -811,6 +813,47 @@ export function UsdPricingForms({
       >
         {(errors) => (
           <>
+            <div className="flex flex-wrap items-center gap-3 rounded-sm border p-3 text-sm">
+              <span>
+                Dollar checkout:{" "}
+                <StatusBadge
+                  tone={settings.usdPricingEnabled ? "good" : "neutral"}
+                >
+                  {settings.usdPricingEnabled ? "On" : "Off"}
+                </StatusBadge>
+              </span>
+              {canEdit && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={settings.usdPricingEnabled ? "outline" : "default"}
+                  disabled={switching}
+                  className="rounded-sm"
+                  onClick={() =>
+                    startSwitch(async () => {
+                      const on = !settings.usdPricingEnabled
+                      if (
+                        on &&
+                        !window.confirm(
+                          "Customers outside India will pay in US dollars from now on. Continue?",
+                        )
+                      )
+                        return
+                      const result = await setUsdPricingEnabledAction(on)
+                      if (result.ok)
+                        toast.success(
+                          on
+                            ? "Dollar checkout is on"
+                            : "Dollar checkout is off",
+                        )
+                      else toast.error(result.message)
+                    })
+                  }
+                >
+                  {settings.usdPricingEnabled ? "Switch off" : "Switch on"}
+                </Button>
+              )}
+            </div>
             <div className="flex flex-col gap-1 text-sm">
               <span>
                 Rate in use:{" "}

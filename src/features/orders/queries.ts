@@ -11,6 +11,7 @@ import {
   type ShippingAddressSnapshot,
 } from "@/db/schema"
 import { ensureShipmentInvoice } from "@/features/shipping"
+import type { Currency } from "@/lib/fx"
 import { getDb } from "@/server/db/client"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
@@ -85,6 +86,18 @@ export type OrderDetail = {
   walletAppliedPaise: number
   onlineAmountPaise: number
   codDuePaise: number
+  /**
+   * What the customer was charged, in minor units of `currency` (doc/06
+   * Phase 13): the same as the *Paise fields for rupee orders; the dollar
+   * amounts for USD orders, whose *Paise fields are the rupee books.
+   */
+  currency: Currency
+  charged: {
+    subtotal: number
+    discount: number
+    shippingFee: number
+    total: number
+  }
   couponCode: string | null
   isExport: boolean
   canCancel: boolean
@@ -198,6 +211,21 @@ export const getMyOrder = defineOperation({
       walletAppliedPaise: o.walletAppliedPaise,
       onlineAmountPaise: o.onlineAmountPaise,
       codDuePaise: o.codDuePaise,
+      currency: o.currency as Currency,
+      charged:
+        o.currency === "USD"
+          ? {
+              subtotal: o.subtotalMinor!,
+              discount: o.discountMinor!,
+              shippingFee: o.shippingFeeMinor!,
+              total: o.totalMinor!,
+            }
+          : {
+              subtotal: o.subtotalPaise,
+              discount: o.discountPaise,
+              shippingFee: o.shippingFeePaise,
+              total: o.totalPaise,
+            },
       couponCode: o.couponCode,
       isExport: o.isExport,
       // Once a parcel is booked, only staff can cancel (with the courier).

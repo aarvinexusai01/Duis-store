@@ -256,7 +256,7 @@ describe("an exchange end to end", () => {
     expect((await exchange(exchangeNumber)).status).toBe("awaiting_payment")
 
     const payment = await startExchangePayment(customer, { exchangeNumber })
-    expect(payment.amountPaise).toBe(99_900 - 79_900)
+    expect(payment.amountMinor).toBe(99_900 - 79_900)
     const { paymentId, signature } = await simulatePayment(customer, {
       orderNumber: number,
       providerOrderId: payment.providerOrderId,

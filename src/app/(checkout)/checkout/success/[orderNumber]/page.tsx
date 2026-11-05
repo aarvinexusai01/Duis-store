@@ -10,6 +10,7 @@ import { purchaseEventId } from "@/features/analytics"
 import { TrackEvent } from "@/features/analytics/ui/track-event"
 import { requireUser } from "@/features/auth/session-guard"
 import { getMyOrder } from "@/features/orders"
+import { formatMoney } from "@/lib/fx"
 import { formatPaise } from "@/lib/money"
 import { cn } from "@/lib/utils"
 import { isDomainError } from "@/server/errors"
@@ -108,7 +109,9 @@ async function Success({ params }: Pick<Props, "params">) {
       <dl className="mt-6 space-y-2 border bg-card p-5 text-sm">
         <div className="flex justify-between">
           <dt>Total</dt>
-          <dd className="font-semibold">{formatPaise(order.totalPaise)}</dd>
+          <dd className="font-semibold">
+            {formatMoney(order.charged.total, order.currency)}
+          </dd>
         </div>
         {order.codDuePaise > 0 && (
           <div className="flex justify-between">

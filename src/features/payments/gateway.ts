@@ -9,6 +9,8 @@ import { getServerEnv } from "@/config/env"
  * development and tests and is refused in production by env validation.
  */
 
+import type { Currency } from "@/lib/fx"
+
 export type GatewayOrder = { id: string; amountPaise: number; currency: string }
 
 export type GatewayPayment = {
@@ -38,14 +40,20 @@ export interface PaymentGateway {
   readonly name: "razorpay" | "fake"
   /** Public key for the browser checkout. */
   readonly publicKey: string
+  /** `amountPaise` is in minor units of `currency` (cents for USD, ADR-0034). */
   createOrder(input: {
     amountPaise: number
+    currency: Currency
     receipt: string
     notes: Record<string, string>
   }): Promise<GatewayOrder>
   fetchOrderPayments(orderId: string): Promise<GatewayPayment[]>
   fetchPayment(paymentId: string): Promise<GatewayPayment>
-  capture(paymentId: string, amountPaise: number): Promise<GatewayPayment>
+  capture(
+    paymentId: string,
+    amountPaise: number,
+    currency: Currency,
+  ): Promise<GatewayPayment>
   refund(input: {
     paymentId: string
     amountPaise: number
@@ -149,14 +157,14 @@ function razorpay(
       await call("GET", "/orders?count=1")
     },
     publicKey: keyId,
-    async createOrder({ amountPaise, receipt, notes }) {
+    async createOrder({ amountPaise, currency, receipt, notes }) {
       const order = await call<{
         id: string
         amount: number
         currency: string
       }>("POST", "/orders", {
         amount: amountPaise,
-        currency: "INR",
+        currency,
         receipt,
         notes,
       })
@@ -181,14 +189,14 @@ function razorpay(
         ),
       )
     },
-    async capture(paymentId, amountPaise) {
+    async capture(paymentId, amountPaise, currency) {
       return toPayment(
         await call<RazorpayPayment>(
           "POST",
           `/payments/${encodeURIComponent(paymentId)}/capture`,
           {
             amount: amountPaise,
-            currency: "INR",
+            currency,
           },
         ),
       )
@@ -288,11 +296,11 @@ const fake: PaymentGateway = {
   name: "fake",
   publicKey: "fake_key",
   async ping() {},
-  async createOrder({ amountPaise }) {
+  async createOrder({ amountPaise, currency }) {
     const order = {
       id: `fake_order_${crypto.randomUUID().replace(/-/g, "")}`,
       amountPaise,
-      currency: "INR",
+      currency,
     }
     await fakePut("order", order.id, order)
     return order
@@ -357,8 +365,8 @@ export async function simulateFakePayment(
     orderId,
     status: outcome,
     amountPaise: order.amountPaise,
-    currency: "INR",
-    method: "upi",
+    currency: order.currency,
+    method: order.currency === "INR" ? "upi" : "card",
     errorCode: outcome === "failed" ? "BAD_REQUEST_ERROR" : null,
     errorReason: outcome === "failed" ? "Payment declined (simulated)" : null,
   }

@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { formatPaise } from "@/lib/money"
+import { formatMoney } from "@/lib/fx"
 
 import {
   simulatePaymentAction,
@@ -107,7 +107,7 @@ export function usePayment(): {
       return new Promise<PaymentOutcome>((resolve, reject) => {
         const checkout = new window.Razorpay!({
           key: options.key,
-          amount: options.amountPaise,
+          amount: options.amountMinor,
           currency: options.currency,
           order_id: options.providerOrderId,
           name: "Duis",
@@ -144,7 +144,7 @@ export function usePayment(): {
         </DialogHeader>
         {fake && (
           <p className="text-2xl font-semibold">
-            {formatPaise(fake.options.amountPaise)}
+            {formatMoney(fake.options.amountMinor, fake.options.currency)}
           </p>
         )}
         <div className="flex flex-wrap gap-2">

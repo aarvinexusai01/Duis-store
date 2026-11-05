@@ -346,8 +346,8 @@ describe("webhooks", () => {
       id: paymentId,
       order_id: providerOrderId,
       status,
-      amount: result.payment.amountPaise,
-      currency: "INR",
+      amount: result.payment.amountMinor,
+      currency: result.payment.currency,
       method: "upi",
     })
     const events = [

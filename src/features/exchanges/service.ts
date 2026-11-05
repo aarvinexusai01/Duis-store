@@ -475,8 +475,10 @@ export const startExchangePayment = defineOperation({
         providerOrderId = existing.rows[0]?.provider_order_id ?? null
       }
       if (!providerOrderId) {
+        // Exchanges are India-only, so the difference is in rupees.
         const order = await gateway.createOrder({
           amountPaise: row.price_difference_paise,
+          currency: "INR",
           receipt: row.exchange_number,
           notes: { exchange: row.exchange_number, order: row.order_number },
         })
@@ -499,7 +501,7 @@ export const startExchangePayment = defineOperation({
         provider: gateway.name,
         key: gateway.publicKey,
         providerOrderId,
-        amountPaise: row.price_difference_paise,
+        amountMinor: row.price_difference_paise,
         currency: "INR" as const,
         orderNumber: row.order_number,
         prefill: {

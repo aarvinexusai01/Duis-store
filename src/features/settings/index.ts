@@ -22,6 +22,7 @@ export {
   loadEffectiveUsdRate,
   refreshUsdRate,
   saveCountryPricing,
+  setUsdPricingEnabled,
   updateUsdRateSettings,
   type EffectiveRate,
   type UsdPricingAdmin,

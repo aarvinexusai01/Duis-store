@@ -20,6 +20,7 @@ import {
 import { debitWallet } from "@/features/wallet"
 import { getServerEnv } from "@/config/env"
 import { STORE_POLICY } from "@/config/store-policy"
+import type { Currency } from "@/lib/fx"
 import type { Actor, UserActor } from "@/server/auth/actor"
 import { getDb } from "@/server/db/client"
 import { withTransaction } from "@/server/db/transaction"
@@ -111,8 +112,9 @@ export type PaymentOptions = {
   provider: "razorpay" | "fake"
   key: string
   providerOrderId: string
-  amountPaise: number
-  currency: "INR"
+  /** In minor units of `currency`: paise, or cents for USD. */
+  amountMinor: number
+  currency: Currency
   orderNumber: string
   prefill: { name: string; email?: string; contact?: string }
 }
@@ -126,13 +128,15 @@ async function paymentOptions(orderId: string): Promise<PaymentOptions> {
     order_number: string
     status: string
     payment_mode: "prepaid" | "partial_cod"
-    online_amount_paise: number
+    currency: Currency
+    online_amount: number
     reservation_expires_at: Date | null
     customer_name: string
     customer_email: string | null
     customer_phone: string | null
   }>(sql`
-    select order_number, status, payment_mode, online_amount_paise, reservation_expires_at,
+    select order_number, status, payment_mode, currency,
+           coalesce(online_amount_minor, online_amount_paise) as online_amount, reservation_expires_at,
            customer_name, customer_email, customer_phone
     from orders where id = ${orderId}`)
   const order = result.rows[0]!
@@ -154,15 +158,16 @@ async function paymentOptions(orderId: string): Promise<PaymentOptions> {
   const gatewayOrder = await ensureGatewayOrder({
     orderId,
     orderNumber: order.order_number,
-    amountPaise: order.online_amount_paise,
+    amountPaise: order.online_amount,
+    currency: order.currency,
     purpose: order.payment_mode === "partial_cod" ? "advance" : "full",
   })
   return {
     provider: gatewayOrder.provider as PaymentOptions["provider"],
     key: gatewayOrder.publicKey,
     providerOrderId: gatewayOrder.providerOrderId,
-    amountPaise: gatewayOrder.amountPaise,
-    currency: "INR",
+    amountMinor: gatewayOrder.amountPaise,
+    currency: order.currency,
     orderNumber: order.order_number,
     prefill: {
       name: order.customer_name,
@@ -252,6 +257,40 @@ export const placeOrder = defineOperation({
       })
     }
     const q = ctx.quote
+    // What the books record (doc/06 Phase 13): the quote itself for rupees;
+    // for dollars, the rupee equivalent, with the charged cents beside it.
+    const usd = ctx.ledger && q.fx ? { ledger: ctx.ledger, fx: q.fx } : null
+    const books = usd
+      ? {
+          subtotal: usd.ledger.subtotalPaise,
+          discount: usd.ledger.discountPaise,
+          shipping: usd.ledger.shippingFeePaise,
+          cod: 0,
+          tax: 0,
+          total: usd.ledger.totalPaise,
+          wallet: 0,
+          online: usd.ledger.totalPaise,
+          codDue: 0,
+          fees: {
+            taxRateBp: 0,
+            taxablePaise: usd.ledger.shippingFeePaise,
+            cgstPaise: 0,
+            sgstPaise: 0,
+            igstPaise: 0,
+          },
+        }
+      : {
+          subtotal: q.subtotalPaise,
+          discount: q.discountPaise,
+          shipping: q.shippingFeePaise,
+          cod: q.codFeePaise,
+          tax: q.taxTotalPaise,
+          total: q.totalPaise,
+          wallet: q.walletAppliedPaise,
+          online: q.onlineAmountPaise,
+          codDue: q.codDuePaise,
+          fees: q.fees,
+        }
 
     let orderId: string
     try {
@@ -278,16 +317,22 @@ export const placeOrder = defineOperation({
             wallet_applied_paise, online_amount_paise, cod_due_paise,
             fee_tax_rate_bp, fee_taxable_paise, fee_cgst_paise, fee_sgst_paise, fee_igst_paise,
             coupon_code, shipping_address, customer_name, customer_email, customer_phone,
-            place_idempotency_key, quote, quote_hash, reservation_expires_at, marketing_context)
+            place_idempotency_key, quote, quote_hash, reservation_expires_at, marketing_context,
+            currency, fx_rate_micros, fx_source, fx_as_of, price_uplift_bp,
+            subtotal_minor, discount_minor, shipping_fee_minor, total_minor, online_amount_minor)
           values (${user.userId}, ${q.paymentMode}, ${ctx.address.countryCode}, ${q.isExport},
-            ${q.subtotalPaise}, ${q.discountPaise}, ${q.shippingFeePaise}, ${q.codFeePaise}, ${q.taxTotalPaise}, ${q.totalPaise},
-            ${q.walletAppliedPaise}, ${q.onlineAmountPaise}, ${q.codDuePaise},
-            ${q.fees.taxRateBp}, ${q.fees.taxablePaise}, ${q.fees.cgstPaise}, ${q.fees.sgstPaise}, ${q.fees.igstPaise},
+            ${books.subtotal}, ${books.discount}, ${books.shipping}, ${books.cod}, ${books.tax}, ${books.total},
+            ${books.wallet}, ${books.online}, ${books.codDue},
+            ${books.fees.taxRateBp}, ${books.fees.taxablePaise}, ${books.fees.cgstPaise}, ${books.fees.sgstPaise}, ${books.fees.igstPaise},
             ${q.couponCode}, ${JSON.stringify(ctx.address)}::jsonb, ${ctx.address.fullName},
             ${ctx.customer.email}, ${ctx.address.phone},
             ${key}, ${JSON.stringify(q)}::jsonb, ${ctx.hash},
             now() + make_interval(mins => ${ctx.settings.reservationTtlMinutes}),
-            ${input.marketingContext ? JSON.stringify(input.marketingContext) : null}::jsonb)
+            ${input.marketingContext ? JSON.stringify(input.marketingContext) : null}::jsonb,
+            ${q.currency}, ${usd?.fx.rateMicros ?? null}, ${usd?.fx.source ?? null}, ${usd?.fx.asOf ?? null},
+            ${usd?.fx.upliftBp ?? null},
+            ${usd ? q.subtotalPaise : null}, ${usd ? q.discountPaise : null}, ${usd ? q.shippingFeePaise : null},
+            ${usd ? q.totalPaise : null}, ${usd ? q.onlineAmountPaise : null})
           returning id`)
         const id = inserted.rows[0]!.id
         await recordConsents(tx, {
@@ -297,21 +342,37 @@ export const placeOrder = defineOperation({
           language: input.consentLanguage,
           reference: { type: "order", id },
         })
-        for (const line of q.lines) {
+        for (const [i, line] of q.lines.entries()) {
+          // Dollar lines go in the books in rupees (no GST on exports).
+          const inr = usd
+            ? {
+                ...usd.ledger.lines[i]!,
+                taxRateBp: 0,
+                taxablePaise: usd.ledger.lines[i]!.lineTotalPaise,
+                cgstPaise: 0,
+                sgstPaise: 0,
+                igstPaise: 0,
+              }
+            : line
           await tx.execute(sql`
             insert into order_items (order_id, position, variant_id, product_id, sku, title, variant_label, image_key,
               hsn_code, unit_price_paise, unit_mrp_paise, quantity, discount_paise, line_total_paise,
-              tax_rate_bp, taxable_paise, cgst_paise, sgst_paise, igst_paise)
+              tax_rate_bp, taxable_paise, cgst_paise, sgst_paise, igst_paise,
+              unit_price_minor, unit_mrp_minor, discount_minor, line_total_minor)
             values (${id}, ${line.position}, ${line.variantId}, ${line.productId}, ${line.sku}, ${line.title},
-              ${line.variantLabel}, ${line.imageKey}, ${line.hsnCode}, ${line.unitPricePaise}, ${line.unitMrpPaise},
-              ${line.quantity}, ${line.discountPaise}, ${line.lineTotalPaise}, ${line.taxRateBp}, ${line.taxablePaise},
-              ${line.cgstPaise}, ${line.sgstPaise}, ${line.igstPaise})`)
+              ${line.variantLabel}, ${line.imageKey}, ${line.hsnCode}, ${inr.unitPricePaise}, ${inr.unitMrpPaise},
+              ${line.quantity}, ${inr.discountPaise}, ${inr.lineTotalPaise}, ${inr.taxRateBp}, ${inr.taxablePaise},
+              ${inr.cgstPaise}, ${inr.sgstPaise}, ${inr.igstPaise},
+              ${usd ? line.unitPricePaise : null}, ${usd ? line.unitMrpPaise : null},
+              ${usd ? line.discountPaise : null}, ${usd ? line.lineTotalPaise : null})`)
         }
-        for (const discount of q.discounts) {
+        for (const [i, discount] of q.discounts.entries()) {
+          const inr = usd ? usd.ledger.discounts[i]! : discount
           await tx.execute(sql`
-            insert into order_discounts (order_id, discount_id, coupon_id, label, amount_paise, allocation)
+            insert into order_discounts (order_id, discount_id, coupon_id, label, amount_paise, allocation, amount_minor)
             values (${id}, ${discount.discountId}, ${discount.couponId}, ${discount.label},
-                    ${discount.amountPaise}, ${JSON.stringify(discount.allocation)}::jsonb)`)
+                    ${inr.amountPaise}, ${JSON.stringify(inr.allocation)}::jsonb,
+                    ${usd ? discount.amountPaise : null})`)
         }
         await reserveStock(
           tx,
@@ -330,13 +391,17 @@ export const placeOrder = defineOperation({
             idempotencyKey: walletKey(id),
           })
         }
-        const couponLine = q.discounts.find((d) => d.couponId)
+        const couponIndex = q.discounts.findIndex((d) => d.couponId)
+        const couponLine = q.discounts[couponIndex]
         if (couponLine?.couponId) {
           await redeemCoupon(tx, {
             couponId: couponLine.couponId,
             orderId: id,
             userId: user.userId,
-            amountPaise: couponLine.amountPaise,
+            // Coupon reports stay in rupees.
+            amountPaise: usd
+              ? usd.ledger.discounts[couponIndex]!.amountPaise
+              : couponLine.amountPaise,
           })
         }
         await recordChange(tx, id, {
@@ -362,7 +427,12 @@ export const placeOrder = defineOperation({
       )
     ).rows[0]!.order_number
     log.info(
-      { orderNumber, total: q.totalPaise, mode: q.paymentMode },
+      {
+        orderNumber,
+        total: q.totalPaise,
+        currency: q.currency,
+        mode: q.paymentMode,
+      },
       "order placed",
     )
 
