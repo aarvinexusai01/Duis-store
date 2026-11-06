@@ -5,8 +5,8 @@ import type { Route } from "next"
 import { useRouter } from "next/navigation"
 import { useEffect, useId, useRef, useState } from "react"
 
+import { useMoney } from "@/components/brand/display-currency"
 import type { Suggestions } from "@/features/catalog"
-import { formatPaise } from "@/lib/money"
 import { MIN_SUGGEST_LENGTH, normaliseSearchQuery } from "@/lib/search-query"
 import { cn } from "@/lib/utils"
 
@@ -26,6 +26,7 @@ export function SearchBox({
   onNavigate?: () => void
 }) {
   const router = useRouter()
+  const money = useMoney()
   const listId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState("")
@@ -66,7 +67,7 @@ export function SearchBox({
     ...(data?.products ?? []).map((product) => ({
       href: `/products/${product.slug}`,
       label: product.title,
-      detail: formatPaise(product.pricePaise),
+      detail: money.format(product.pricePaise),
     })),
   ]
   const expanded = open && options.length > 0

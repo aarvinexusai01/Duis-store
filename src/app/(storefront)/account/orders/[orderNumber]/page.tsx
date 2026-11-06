@@ -8,6 +8,7 @@ import { PageSkeleton } from "@/components/page-skeleton"
 import { requireUser } from "@/features/auth/session-guard"
 import { getMyOrder } from "@/features/orders"
 import { listReviewableItems } from "@/features/reviews"
+import { formatMoney } from "@/lib/fx"
 import { formatPaise } from "@/lib/money"
 import { ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/order-status"
 import { isDomainError } from "@/server/errors"
@@ -46,6 +47,8 @@ async function Order({ params }: Pick<Props, "params">) {
   const reachedAt = new Map(statusHistory.map((h) => [h.to, h.at]))
   const address = order.shippingAddress
 
+  // What the customer was charged, in its own currency (ADR-0034).
+  const money = (minor: number) => formatMoney(minor, order.currency)
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -88,7 +91,7 @@ async function Order({ params }: Pick<Props, "params">) {
             ? "Payment wasn't completed in time, so this order wasn't placed and nothing was charged."
             : "This order was cancelled."}
           {order.refunds.length > 0 &&
-            ` Refunds: ${order.refunds.map((r) => `${formatPaise(r.amountPaise)} (${r.status})`).join(", ")}.`}
+            ` Refunds: ${order.refunds.map((r) => `${money(r.amountPaise)} (${r.status})`).join(", ")}.`}
         </p>
       ) : order.status !== "pending_payment" ? (
         <ol
@@ -168,32 +171,32 @@ async function Order({ params }: Pick<Props, "params">) {
                 </span>
               </span>
               <span className="tabular-nums">
-                {formatPaise(item.lineTotalPaise)}
+                {money(item.lineTotalCharged)}
               </span>
             </li>
           ))}
         </ul>
         <div className="flex flex-col gap-6 text-sm">
           <dl className="space-y-1.5">
-            <Row label="Subtotal" value={formatPaise(order.subtotalPaise)} />
-            {order.discountPaise > 0 && (
+            <Row label="Subtotal" value={money(order.charged.subtotal)} />
+            {order.charged.discount > 0 && (
               <Row
                 label="Discounts"
-                value={`−${formatPaise(order.discountPaise)}`}
+                value={`−${money(order.charged.discount)}`}
               />
             )}
             <Row
               label="Shipping"
               value={
-                order.shippingFeePaise
-                  ? formatPaise(order.shippingFeePaise)
+                order.charged.shippingFee
+                  ? money(order.charged.shippingFee)
                   : "Free"
               }
             />
             {order.codFeePaise > 0 && (
               <Row label="COD fee" value={formatPaise(order.codFeePaise)} />
             )}
-            <Row label="Total" value={formatPaise(order.totalPaise)} strong />
+            <Row label="Total" value={money(order.charged.total)} strong />
             {order.walletAppliedPaise > 0 && (
               <Row
                 label="Wallet"
@@ -202,7 +205,11 @@ async function Order({ params }: Pick<Props, "params">) {
             )}
             <Row
               label="Paid online"
-              value={formatPaise(order.onlineAmountPaise)}
+              value={
+                order.currency === "INR"
+                  ? formatPaise(order.onlineAmountPaise)
+                  : money(order.charged.total)
+              }
             />
             {order.codDuePaise > 0 && (
               <Row

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 
 import { sql } from "drizzle-orm"
-import { beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { addCartItem } from "@/features/cart"
 import { publishProduct, setProductMedia } from "@/features/catalog"
@@ -628,6 +628,20 @@ describe("wallet expiry", () => {
 })
 
 describe("international checkout", () => {
+  // Its own shipping list (GB served, BR not), restored afterwards.
+  let codes: string[] = []
+  beforeAll(async () => {
+    const before = await db().execute<{ codes: string[] }>(sql`
+      select international_country_codes as codes from store_settings where id = 1`)
+    codes = before.rows[0]!.codes
+    await db().execute(sql`
+      update store_settings set international_country_codes = '{GB}' where id = 1`)
+  })
+  afterAll(async () => {
+    await db().execute(sql`
+      update store_settings set international_country_codes = ${`{${codes.join(",")}}`}::text[] where id = 1`)
+  })
+
   async function abroad(countryCode: string) {
     const buyer = await customer()
     const { id } = await saveAddress(buyer, {

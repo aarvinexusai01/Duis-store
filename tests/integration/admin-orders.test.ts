@@ -317,6 +317,7 @@ describe("refunds", () => {
     expect(detail.money!.refundable).toEqual({
       toSourcePaise: total,
       toWalletPaise: total,
+      currency: "INR",
     })
 
     await refundOrder(admin, {

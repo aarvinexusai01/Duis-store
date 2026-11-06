@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet"
 import type { ResolvedNavItem } from "@/features/cms"
 
+import { CurrencySwitch } from "./currency-switch"
 import { NavBadge } from "./main-nav"
 
 /** Drawer navigation below the `lg` breakpoint. */
@@ -113,6 +114,7 @@ export function MobileNav({ items }: { items: ResolvedNavItem[] }) {
               </DrawerLink>
             </li>
           </ul>
+          <CurrencySwitch tone="light" className="mt-6 w-fit sm:hidden" />
         </nav>
       </SheetContent>
     </Sheet>

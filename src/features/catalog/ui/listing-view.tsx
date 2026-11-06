@@ -1,11 +1,12 @@
 import { CheckIcon, XIcon } from "lucide-react"
 import type { Route } from "next"
 import Link from "next/link"
+import type { ReactNode } from "react"
 
+import { Money } from "@/components/brand/display-currency"
 import { Breadcrumbs, type Crumb } from "@/components/breadcrumbs"
 import { JsonLd } from "@/components/json-ld"
 import { ProductGrid } from "@/components/product/product-card"
-import { formatPaise } from "@/lib/money"
 import {
   FACET_KEYS,
   EMPTY_PARAMS,
@@ -249,8 +250,8 @@ function FacetPanel(props: ListingViewProps) {
             Price
           </legend>
           <p className="mb-3 text-xs text-muted-foreground">
-            {formatPaise(listing.priceRange.minPaise)} –{" "}
-            {formatPaise(listing.priceRange.maxPaise)}
+            <Money paise={listing.priceRange.minPaise} /> –{" "}
+            <Money paise={listing.priceRange.maxPaise} />
           </p>
           <PriceFilter
             basePath={props.basePath}
@@ -292,29 +293,40 @@ function ActiveFilters({
   href: (next: ListingParams) => Route
 }) {
   const { params, listing } = props
-  const chips: { label: string; next: ListingParams }[] = []
+  const chips: { key: string; label: ReactNode; next: ListingParams }[] = []
   for (const key of FACET_KEYS) {
     for (const value of params[key]) {
       const label =
         listing.facets[key].find((option) => option.value === value)?.label ??
         value
-      chips.push({ label, next: toggleFacet(params, key, value) })
+      chips.push({
+        key: `${key}:${value}`,
+        label,
+        next: toggleFacet(params, key, value),
+      })
     }
   }
   if (params.priceMinPaise !== null || params.priceMaxPaise !== null) {
-    const min =
-      params.priceMinPaise === null ? "₹0" : formatPaise(params.priceMinPaise)
-    const max =
-      params.priceMaxPaise === null
-        ? "+"
-        : `– ${formatPaise(params.priceMaxPaise)}`
     chips.push({
-      label: `${min} ${max}`,
+      key: "price",
+      label: (
+        <>
+          <Money paise={params.priceMinPaise ?? 0} />{" "}
+          {params.priceMaxPaise === null ? (
+            "+"
+          ) : (
+            <>
+              – <Money paise={params.priceMaxPaise} />
+            </>
+          )}
+        </>
+      ),
       next: { ...params, priceMinPaise: null, priceMaxPaise: null, page: 1 },
     })
   }
   if (params.available) {
     chips.push({
+      key: "available",
       label: "In stock",
       next: { ...params, available: false, page: 1 },
     })
@@ -325,7 +337,7 @@ function ActiveFilters({
       aria-label="Active filters"
     >
       {chips.map((chip) => (
-        <li key={chip.label}>
+        <li key={chip.key}>
           <Link
             href={href(chip.next)}
             rel="nofollow"

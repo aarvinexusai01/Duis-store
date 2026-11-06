@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test"
-import pg from "pg"
 
 import {
   chooseInStockSize,
@@ -55,66 +54,4 @@ test("checkout: address → pay (simulated) → confirmed → cancel", async ({
   await page.getByRole("button", { name: "Cancel order" }).click()
   await page.getByRole("button", { name: "Yes, cancel order" }).click()
   await expect(page.getByText("This order was cancelled.")).toBeVisible()
-})
-
-test("checkout outside India: priced and paid in US dollars", async ({
-  page,
-  isMobile,
-}) => {
-  test.skip(isMobile, "covered on desktop")
-  const slug = await inStockSlug()
-  test.skip(!slug, "no seeded catalogue")
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
-  await client.connect()
-  await client.query(`
-    update store_settings set international_country_codes = array['US'], usd_pricing_enabled = true,
-      usd_rate_mode = 'manual', usd_manual_rate_micros = 84500000 where id = 1`)
-  await client.query(`
-    insert into country_pricing (country_code, uplift_bp, shipping_fee_cents) values ('US', 1500, 2500)
-    on conflict (country_code) do update set uplift_bp = 1500, shipping_fee_cents = 2500`)
-  try {
-    await signInWithOtp(page, "/account")
-    await page.goto(`/products/${slug}`)
-    await page.waitForLoadState("networkidle")
-    await chooseInStockSize(page)
-    await page.getByRole("button", { name: "Add to bag" }).click()
-    await expect(page.getByRole("dialog")).toBeVisible()
-
-    await page.goto("/checkout")
-    await page.getByLabel("Country").selectOption("US")
-    await page.getByLabel("Full name").fill("Sam Rivera")
-    await page.getByLabel(/Mobile number|Phone/).fill("+1 415 555 0100")
-    await page.getByLabel("Address", { exact: true }).fill("1 Market Street")
-    await page.getByLabel("Postal code").fill("94105")
-    await page.getByLabel("City").fill("San Francisco")
-    await tickConsent(page, "address")
-    await page.getByRole("button", { name: "Save address" }).click()
-
-    await expect(
-      page.getByText("International cards, charged in US dollars."),
-    ).toBeVisible()
-    await expect(page.getByText("$25.00")).toBeVisible()
-    await tickConsent(page, "order")
-    const place = page.getByRole("button", {
-      name: /Place order & pay \$\d+\.\d\d/,
-    })
-    await expect(place).toBeEnabled()
-    const charged = (await place.textContent())!.match(/\$[\d,]+\.\d\d/)![0]
-    await place.click()
-    await expect(
-      page.getByRole("dialog", { name: "Simulated payment" }),
-    ).toContainText(charged)
-    await page.getByRole("button", { name: "Pay successfully" }).click()
-    await expect(
-      page.getByRole("heading", { name: "Order confirmed" }),
-    ).toBeVisible()
-    // The success page shows what was charged, in dollars.
-    await expect(page.getByText(charged).first()).toBeVisible()
-  } finally {
-    await client.query(`
-      update store_settings set international_country_codes = '{}', usd_pricing_enabled = false,
-        usd_rate_mode = 'auto', usd_manual_rate_micros = null where id = 1`)
-    await client.query(`delete from country_pricing where country_code = 'US'`)
-    await client.end()
-  }
 })

@@ -81,9 +81,12 @@ async function Success({ params }: Pick<Props, "params">) {
           name: "purchase",
           orderNumber: order.orderNumber,
           eventId: purchaseEventId(order.orderNumber),
-          valuePaise: order.totalPaise,
-          taxPaise: order.taxTotalPaise,
-          shippingPaise: order.shippingFeePaise,
+          // In the currency charged, as the server's Meta event reports it.
+          currency: order.currency,
+          valueMinor: order.charged.total,
+          // Dollar orders are zero-rated exports (ADR-0034).
+          taxMinor: order.currency === "INR" ? order.taxTotalPaise : 0,
+          shippingMinor: order.charged.shippingFee,
           ...(order.couponCode ? { coupon: order.couponCode } : {}),
           items: order.items
             .filter((item) => item.productId)
@@ -91,7 +94,7 @@ async function Success({ params }: Pick<Props, "params">) {
               id: item.productId!,
               name: item.title,
               variant: item.sku,
-              pricePaise: item.unitPricePaise,
+              priceMinor: item.unitPriceCharged,
               quantity: item.quantity,
             })),
         }}

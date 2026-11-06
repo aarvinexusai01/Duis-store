@@ -13,6 +13,16 @@ import {
 import { SHIPMENT_STATUS_LABEL } from "@/lib/order-status"
 import { cn } from "@/lib/utils"
 
+// What a hand-booked parcel's next update records.
+const NEXT_STEP: Record<string, string> = {
+  ready_to_ship: "picked up",
+  picked_up: "in transit",
+  in_transit: "out for delivery",
+  out_for_delivery: "delivered",
+  undelivered: "out for delivery",
+  rto_initiated: "returned to us",
+}
+
 /**
  * Label, invoice, retry and cancel for one parcel; scan simulation with the
  * demo courier.
@@ -23,12 +33,15 @@ export function ParcelActions({
   hasLabel,
   invoice,
   canSimulate,
+  manual = false,
 }: {
   shipmentId: string
   status: string
   hasLabel: boolean
   invoice: "stored" | "fetchable" | null
   canSimulate: boolean
+  /** Booked by hand: "next scan" is staff updating its progress. */
+  manual?: boolean
 }) {
   const [pending, startTransition] = useTransition()
   const act = (
@@ -121,7 +134,7 @@ export function ParcelActions({
       {canSimulate && moving && (
         <span className="flex flex-wrap gap-2 rounded-sm border border-dashed p-1">
           <span className="self-center px-1 text-xs text-muted-foreground">
-            Demo scans:
+            {manual ? "Update tracking:" : "Demo scans:"}
           </span>
           <Button
             size="sm"
@@ -130,11 +143,11 @@ export function ParcelActions({
             onClick={() =>
               act(
                 () => simulateTrackingAction({ shipmentId, outcome: "next" }),
-                "Scan added",
+                manual ? "Tracking updated" : "Scan added",
               )
             }
           >
-            Next scan
+            {manual ? `Mark ${NEXT_STEP[status] ?? "next step"}` : "Next scan"}
           </Button>
           {status === "out_for_delivery" && (
             <Button

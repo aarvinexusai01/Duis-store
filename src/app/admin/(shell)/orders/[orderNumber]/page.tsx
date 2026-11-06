@@ -15,6 +15,7 @@ import { can, requireStaff } from "@/features/staff"
 import { isDomainError } from "@/server/errors"
 import { countryName } from "@/lib/countries"
 import { stateName } from "@/lib/india"
+import { formatMoney, formatRate } from "@/lib/fx"
 import { formatPaise } from "@/lib/money"
 import {
   ORDER_STATUS_LABEL,
@@ -107,7 +108,8 @@ async function Order({
               refund:
                 allowed.refund &&
                 money !== null &&
-                money.refundable.toWalletPaise > 0,
+                (money.refundable.toWalletPaise > 0 ||
+                  money.refundable.toSourcePaise > 0),
             }}
             refundable={money?.refundable ?? null}
             defaultWeightGrams={
@@ -117,6 +119,7 @@ async function Order({
             hasLiveParcel={order.shipments.some(
               (s) => s.status !== "cancelled",
             )}
+            isExport={order.isExport}
           />
         }
       />
@@ -252,6 +255,28 @@ async function Order({
                 )}
               </dl>
             )}
+            {money?.charged && money.fx && (
+              <div className="mt-4 ml-auto max-w-xs rounded-sm border p-3 text-sm">
+                <p className="font-semibold">
+                  Charged {formatMoney(money.charged.total, money.currency)}
+                </p>
+                <p className="text-muted-foreground">
+                  Products{" "}
+                  {formatMoney(
+                    money.charged.subtotal - money.charged.discount,
+                    money.currency,
+                  )}{" "}
+                  + shipping{" "}
+                  {formatMoney(money.charged.shippingFee, money.currency)}. The
+                  rupee amounts above are at 1 USD ={" "}
+                  {formatRate(money.fx.rateMicros)} (
+                  {money.fx.source === "manual"
+                    ? "fixed rate"
+                    : `${money.fx.source.toUpperCase()}, ${money.fx.asOf}`}
+                  ), with a {money.fx.upliftBp / 100}% country increase.
+                </p>
+              </div>
+            )}
           </Panel>
 
           <Panel title="Parcel">
@@ -306,7 +331,10 @@ async function Order({
                           status={parcel.status}
                           hasLabel={parcel.hasLabel}
                           invoice={parcel.invoice}
-                          canSimulate={order.can.simulate}
+                          canSimulate={
+                            order.can.simulate || parcel.provider === "manual"
+                          }
+                          manual={parcel.provider === "manual"}
                         />
                       )}
                     </div>
@@ -359,9 +387,9 @@ async function Order({
                         )}
                       </span>
                       <span className="tabular-nums">
-                        {formatPaise(p.amountPaise)} · {p.status}
+                        {formatMoney(p.amountPaise, p.currency)} · {p.status}
                         {p.refundedPaise > 0 &&
-                          ` · refunded ${formatPaise(p.refundedPaise)}`}
+                          ` · refunded ${formatMoney(p.refundedPaise, p.currency)}`}
                       </span>
                     </li>
                   ))}
@@ -375,7 +403,7 @@ async function Order({
                         {r.by && ` · by ${r.by}`}
                       </span>
                       <span className="tabular-nums">
-                        −{formatPaise(r.amountPaise)} · {r.status}
+                        −{formatMoney(r.amountPaise, r.currency)} · {r.status}
                       </span>
                     </li>
                   ))}

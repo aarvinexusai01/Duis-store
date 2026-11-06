@@ -15,11 +15,12 @@ export {
   type IntegrationStatus,
 } from "./health"
 export { describeCodAdvance, loadStorePolicy, type StorePolicy } from "./policy"
-export { getStorePolicy } from "./queries"
+export { getStorefrontUsdPricing, getStorePolicy } from "./queries"
 export {
   fetchUsdRateNow,
   getUsdPricingAdmin,
   loadEffectiveUsdRate,
+  loadStorefrontUsdPricing,
   refreshUsdRate,
   saveCountryPricing,
   setUsdPricingEnabled,

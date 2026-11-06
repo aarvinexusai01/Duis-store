@@ -1550,6 +1550,21 @@ The owner asked for a full SEO list (technical, quick wins, on-page, content) pl
 - **The switch:** `settings.setUsdPricing` checks the rate, a priced shipping country, and a $1 Razorpay USD order.
 - **Customer pages:** the checkout and success pages show the charged currency; the rest of the account pages and the emails come with 13c.
 
+**13c built 2026-11-06.** After purchase:
+- **Emails:** confirmation, cancellation, refund and WhatsApp in the order's currency.
+- **My orders:** amounts are what was charged.
+- **Admin:** the order list shows "$ · ₹"; the order page has a Charged panel with the rate, source and increase; payments, refunds and the refund form are in the order's currency, with no wallet refund on USD orders. The Refund button now also shows when only a refund to the payment is possible.
+- **Exports are entered by hand** (`orders.recordManualShipment`, provider `manual`) and moved on with "Mark picked up … delivered", which sends the usual shipped email.
+- **Reports:** the sales report's refunded total converts dollar refunds at their order's rate; the GST CSV gets foreign currency, value and rate columns, and the orders CSV the charged total.
+- **Change from the plan:** the Meta server purchase event stays in INR until 13d, so it keeps matching the browser pixel, which sends INR until then.
+
+**13d built 2026-11-06.** Dollar prices on the shop:
+- **Who sees dollars:** visitors whose Cloudflare country isn't India, once switched on. Indian and unknown visitors see rupees. Search engines and link previews always get rupees. Anyone can change it with the **₹ INR / $ USD** switch in the header (in the menu on phones), kept in the `duis_cur` cookie.
+- **Where:** `<Price>` and `<Money>` (product cards, product page, bag lines and summary, search suggestions, the listing price range, filter chips and the price filter, which takes dollars). The bag total adds up converted line prices, as checkout does, and drops the India free-shipping nudge.
+- **Analytics:** the browser and Meta server purchase events report the charged currency and amounts; view, add-to-bag and begin-checkout events stay in rupees.
+- **Change from the plan:** no detection in `src/proxy.ts` and no Nginx bypass. Pages are rendered in rupees for everyone and the browser converts them with `/api/pricing` (ADR-0034 §6). The page cache and the structured data stay as they were.
+- **Go-live:** [doc/runbooks/usd-pricing.md](runbooks/usd-pricing.md).
+
 **Before switching on (owner):**
 - Razorpay international + USD;
 - countries ticked under Shipping, each with a fee and %;

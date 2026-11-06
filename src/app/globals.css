@@ -109,6 +109,14 @@ html:not([data-admin]) *::-webkit-scrollbar {
   display: none;
 }
 
+/*
+ * A visitor who last saw dollars: prices stay blank, not in rupees, until
+ * the page has converted them (components/brand/display-currency.tsx).
+ */
+html[data-price-pending] [data-price] {
+  visibility: hidden;
+}
+
 @utility page-container {
   margin-inline: auto;
   width: 100%;

@@ -25,6 +25,9 @@ export type OrderSummary = {
   status: string
   paymentStatus: string
   totalPaise: number
+  /** The total as charged, in `currency`. */
+  currency: Currency
+  totalCharged: number
   itemCount: number
   placedAt: Date
   imageKey: string | null
@@ -43,11 +46,14 @@ export const listMyOrders = defineOperation({
       status: string
       payment_status: string
       total_paise: number
+      currency: Currency
+      total_charged: number
       item_count: number
       placed_at: Date
       image_key: string | null
     }>(sql`
-      select o.order_number, o.status, o.payment_status, o.total_paise, o.placed_at,
+      select o.order_number, o.status, o.payment_status, o.total_paise, o.placed_at, o.currency,
+             coalesce(o.total_minor, o.total_paise) as total_charged,
              (select sum(quantity)::int from order_items where order_id = o.id) as item_count,
              (select image_key from order_items where order_id = o.id order by position limit 1) as image_key
       from orders o
@@ -58,6 +64,8 @@ export const listMyOrders = defineOperation({
       status: r.status,
       paymentStatus: r.payment_status,
       totalPaise: r.total_paise,
+      currency: r.currency,
+      totalCharged: r.total_charged,
       itemCount: r.item_count,
       placedAt: new Date(r.placed_at),
       imageKey: r.image_key,
@@ -116,8 +124,12 @@ export type OrderDetail = {
     imageKey: string | null
     quantity: number
     unitPricePaise: number
+    /** The unit price as charged, in `currency`. */
+    unitPriceCharged: number
     discountPaise: number
     lineTotalPaise: number
+    /** The line as charged, in `currency` (the dollars on a USD order). */
+    lineTotalCharged: number
     productSlug: string | null
   }[]
   history: { field: string; to: string; at: Date }[]
@@ -152,8 +164,10 @@ export const getMyOrder = defineOperation({
           imageKey: orderItems.imageKey,
           quantity: orderItems.quantity,
           unitPricePaise: orderItems.unitPricePaise,
+          unitPriceCharged: sql<number>`coalesce(${orderItems.unitPriceMinor}, ${orderItems.unitPricePaise})`,
           discountPaise: orderItems.discountPaise,
           lineTotalPaise: orderItems.lineTotalPaise,
+          lineTotalCharged: sql<number>`coalesce(${orderItems.lineTotalMinor}, ${orderItems.lineTotalPaise})`,
           productSlug: sql<
             string | null
           >`case when ${products.status} = 'active' then ${products.slug}::text end`,

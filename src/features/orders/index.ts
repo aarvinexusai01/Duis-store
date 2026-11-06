@@ -37,6 +37,7 @@ export {
   cancelShipment,
   createShipments,
   getShipmentInvoice,
+  recordManualShipment,
   getShipmentLabel,
   refundOrder,
   retryShipment,

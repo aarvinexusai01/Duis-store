@@ -84,6 +84,8 @@ export async function createShipmentRecord(
     customs: ShipmentCustoms | null
     items: { orderItemId: string; quantity: number }[]
     createdBy: string | null
+    /** "manual" for a parcel staff booked with a courier themselves. */
+    provider?: string
   },
 ): Promise<string> {
   const count = await tx.execute<{ n: number }>(
@@ -95,7 +97,7 @@ export async function createShipmentRecord(
       insert into shipments (order_id, direction, exchange_id, provider, channel_order_id, cod_amount_paise,
                              weight_grams, length_cm, breadth_cm, height_cm, customs, created_by)
       values (${input.orderId}, ${input.direction ?? "forward"}::shipment_direction, ${input.exchangeId ?? null},
-              ${getShippingProvider().name}, ${channelOrderId}, ${input.codAmountPaise},
+              ${input.provider ?? getShippingProvider().name}, ${channelOrderId}, ${input.codAmountPaise},
               ${input.weightGrams}, ${input.lengthCm}, ${input.breadthCm}, ${input.heightCm},
               ${input.customs ? JSON.stringify(input.customs) : null}::jsonb, ${input.createdBy})
       returning id`)
@@ -639,15 +641,6 @@ export async function simulateTrackingEvent(
   outcome: "next" | "undelivered" | "rto",
   actor: Actor,
 ): Promise<ShipmentStatus> {
-  if (
-    getServerEnv().APP_ENV === "production" ||
-    getShippingProvider().name !== "fake"
-  ) {
-    throw new DomainError(
-      "FORBIDDEN",
-      "Tracking can only be simulated with the fake courier.",
-    )
-  }
   const found = await getDb().execute<{
     status: ShipmentStatus
     provider: string
@@ -656,7 +649,20 @@ export async function simulateTrackingEvent(
     sql`select status, provider, last_event_at from shipments where id = ${shipmentId}`,
   )
   const row = found.rows[0]
-  if (!row || row.provider !== "fake")
+  // Staff update a parcel they booked by hand; the demo courier's scans
+  // are for development and tests only.
+  const manual = row?.provider === "manual"
+  if (
+    !manual &&
+    (getServerEnv().APP_ENV === "production" ||
+      getShippingProvider().name !== "fake")
+  ) {
+    throw new DomainError(
+      "FORBIDDEN",
+      "Tracking can only be simulated with the fake courier.",
+    )
+  }
+  if (!row || (!manual && row.provider !== "fake"))
     throw new DomainError("NOT_FOUND", "Parcel not found.")
   const word =
     outcome === "rto" && row.status !== "rto_initiated"
@@ -682,8 +688,8 @@ export async function simulateTrackingEvent(
     {
       providerStatus: word,
       occurredAt: new Date(Math.max(Date.now(), last + 1000)),
-      location: "Demo hub",
-      description: "Simulated scan",
+      location: manual ? null : "Demo hub",
+      description: manual ? "Updated by staff" : "Simulated scan",
     },
     { actor },
   )
@@ -691,6 +697,35 @@ export async function simulateTrackingEvent(
     sql`select status from shipments where id = ${shipmentId}`,
   )
   return after.rows[0]!.status
+}
+
+/**
+ * A parcel staff booked with a courier themselves (exports, until an
+ * international courier is connected): it is ready to ship with the
+ * carrier's tracking number, and staff move it on with simulateTrackingEvent.
+ */
+export async function markManuallyBooked(
+  tx: Transaction,
+  shipmentId: string,
+  input: { carrier: string; awb: string; actor: Actor },
+): Promise<void> {
+  const updated = await tx.execute<ShipmentRow>(sql`
+    update shipments set awb = ${input.awb}, courier_name = ${input.carrier},
+      status = 'ready_to_ship', updated_at = now()
+    where id = ${shipmentId} and provider = 'manual' and status = 'pending'
+    returning *`)
+  const row = updated.rows[0]
+  if (!row) throw new Error("not a pending manual parcel")
+  await notify(tx, {
+    shipmentId,
+    orderId: row.order_id,
+    direction: row.direction,
+    exchangeId: row.exchange_id,
+    from: "pending",
+    to: "ready_to_ship",
+    occurredAt: new Date(),
+    actor: input.actor,
+  })
 }
 
 export async function readShipmentLabel(

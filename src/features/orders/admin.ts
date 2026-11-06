@@ -12,6 +12,7 @@ import {
   createShipmentRecord,
   customsFor,
   ensureShipmentInvoice,
+  markManuallyBooked,
   getShippingProvider,
   readShipmentLabel,
   scheduleShipmentRetry,
@@ -19,13 +20,14 @@ import {
   type ShipmentStatus,
 } from "@/features/shipping"
 import { creditWallet } from "@/features/wallet"
+import { formatMoney, type Currency } from "@/lib/fx"
 import { formatPaise } from "@/lib/money"
 import type { Actor } from "@/server/auth/actor"
 import { rolesAllow } from "@/server/auth/permissions"
 import { writeAudit } from "@/server/audit"
 import { getDb } from "@/server/db/client"
 import { withTransaction, type Transaction } from "@/server/db/transaction"
-import { DomainError } from "@/server/errors"
+import { DomainError, isUniqueViolation } from "@/server/errors"
 import { queueEmail } from "@/server/notifications/email"
 import { defineOperation } from "@/server/operation"
 
@@ -94,6 +96,8 @@ export type AdminOrderRow = {
   isExport: boolean
   itemCount: number
   totalPaise: number | null
+  /** USD orders: what was charged, beside the rupee books above. */
+  charged: { currency: Currency; amountMinor: number } | null
   shipmentStatus: ShipmentStatus | null
   awb: string | null
 }
@@ -129,12 +133,14 @@ export const adminListOrders = defineOperation({
       is_export: boolean
       item_count: number
       total_paise: number
+      currency: Currency
+      total_minor: number | null
       shipment_status: ShipmentStatus | null
       awb: string | null
       total: number
     }>(sql`
       select o.order_number, o.placed_at, o.customer_name, o.status, o.payment_status, o.payment_mode,
-             o.is_export, o.total_paise,
+             o.is_export, o.total_paise, o.currency, o.total_minor,
              (select coalesce(sum(quantity), 0)::int from order_items where order_id = o.id) as item_count,
              s.status as shipment_status, s.awb,
              count(*) over ()::int as total
@@ -170,6 +176,10 @@ export const adminListOrders = defineOperation({
         isExport: r.is_export,
         itemCount: r.item_count,
         totalPaise: money ? r.total_paise : null,
+        charged:
+          money && r.currency !== "INR" && r.total_minor !== null
+            ? { currency: r.currency, amountMinor: r.total_minor }
+            : null,
         shipmentStatus: r.shipment_status,
         awb: r.awb,
       })),
@@ -179,7 +189,15 @@ export const adminListOrders = defineOperation({
 
 // --- Detail -----------------------------------------------------------------------------
 
-type Refundable = { toSourcePaise: number; toWalletPaise: number }
+/**
+ * In the order's currency: rupees, or cents for a USD order, which can only
+ * be refunded to its payment (wallet credit is in rupees, ADR-0034).
+ */
+type Refundable = {
+  toSourcePaise: number
+  toWalletPaise: number
+  currency: Currency
+}
 
 /**
  * What can still be refunded: everything collected (online, wallet and COD
@@ -207,6 +225,10 @@ async function refundableFor(
   const cash = await db.execute<{ amount: number }>(
     sql`select coalesce(sum(amount_paise), 0)::int as amount from cod_remittances where order_id = ${orderId}`,
   )
+  const order = await db.execute<{ currency: Currency }>(
+    sql`select currency from orders where id = ${orderId}`,
+  )
+  const currency = order.rows[0]?.currency ?? "INR"
   const perPayment = payments.rows
     .map((p) => ({ id: p.id, available: Math.max(0, p.amount_paise - p.used) }))
     .sort((a, b) => b.available - a.available)
@@ -224,7 +246,8 @@ async function refundableFor(
   return {
     perPayment,
     toSourcePaise: Math.min(remaining, source),
-    toWalletPaise: remaining,
+    toWalletPaise: currency === "INR" ? remaining : 0,
+    currency,
   }
 }
 
@@ -269,6 +292,22 @@ export type AdminOrderDetail = {
     } | null
   }[]
   money: {
+    /** The charge currency; the *Paise fields are always the rupee books. */
+    currency: Currency
+    /** USD orders: what was charged, in cents. */
+    charged: {
+      subtotal: number
+      discount: number
+      shippingFee: number
+      total: number
+    } | null
+    /** USD orders: the rate and the country's increase used. */
+    fx: {
+      rateMicros: number
+      source: string
+      asOf: string
+      upliftBp: number
+    } | null
     subtotalPaise: number
     discountPaise: number
     shippingFeePaise: number
@@ -285,14 +324,17 @@ export type AdminOrderDetail = {
       provider: string
       providerPaymentId: string | null
       purpose: string
+      /** In `currency`'s minor units. */
       amountPaise: number
       refundedPaise: number
+      currency: Currency
       status: string
       method: string | null
       capturedAt: Date | null
     }[]
     refunds: {
       amountPaise: number
+      currency: Currency
       status: string
       reason: string
       at: Date
@@ -378,8 +420,17 @@ export const adminGetOrder = defineOperation({
       coupon_code: string | null
       cod_blocked: boolean | null
       order_count: number
+      currency: Currency
+      fx_rate_micros: number | null
+      fx_source: string | null
+      fx_as_of: string | null
+      price_uplift_bp: number | null
+      subtotal_minor: number | null
+      discount_minor: number | null
+      shipping_fee_minor: number | null
+      total_minor: number | null
     }>(sql`
-      select o.*, cp.cod_blocked,
+      select o.*, o.fx_as_of::text as fx_as_of, cp.cod_blocked,
         (select count(*)::int from orders x where x.user_id = o.user_id and x.status not in ('pending_payment', 'expired')) as order_count
       from orders o left join customer_profiles cp on cp.user_id = o.user_id
       where o.order_number = ${input.orderNumber}`)
@@ -477,20 +528,22 @@ export const adminGetOrder = defineOperation({
             purpose: string
             amount_paise: number
             refunded_paise: number
+            currency: Currency
             status: string
             method: string | null
             captured_at: Date | null
           }>(sql`
-            select id, provider, provider_payment_id, purpose, amount_paise, refunded_paise, status, method, captured_at
+            select id, provider, provider_payment_id, purpose, amount_paise, refunded_paise, currency, status, method, captured_at
             from payments where order_id = ${o.id} order by created_at`),
           db.execute<{
             amount_paise: number
+            currency: Currency
             status: string
             reason: string
             created_at: Date
             by: string | null
           }>(sql`
-            select r.amount_paise, r.status, r.reason, r.created_at, u.name as by
+            select r.amount_paise, r.currency, r.status, r.reason, r.created_at, u.name as by
             from refunds r left join users u on u.id = r.initiated_by
             where r.order_id = ${o.id} order by r.created_at`),
           db.execute<{
@@ -506,6 +559,25 @@ export const adminGetOrder = defineOperation({
           refundableFor(db, o.id),
         ])
       moneyBlock = {
+        currency: o.currency,
+        charged:
+          o.currency !== "INR" && o.total_minor !== null
+            ? {
+                subtotal: o.subtotal_minor!,
+                discount: o.discount_minor!,
+                shippingFee: o.shipping_fee_minor!,
+                total: o.total_minor,
+              }
+            : null,
+        fx:
+          o.fx_rate_micros && o.fx_source && o.fx_as_of
+            ? {
+                rateMicros: o.fx_rate_micros,
+                source: o.fx_source,
+                asOf: o.fx_as_of,
+                upliftBp: o.price_uplift_bp ?? 0,
+              }
+            : null,
         subtotalPaise: o.subtotal_paise,
         discountPaise: o.discount_paise,
         shippingFeePaise: o.shipping_fee_paise,
@@ -527,12 +599,14 @@ export const adminGetOrder = defineOperation({
           purpose: p.purpose,
           amountPaise: p.amount_paise,
           refundedPaise: p.refunded_paise,
+          currency: p.currency,
           status: p.status,
           method: p.method,
           capturedAt: p.captured_at ? new Date(p.captured_at) : null,
         })),
         refunds: refundRows.rows.map((r) => ({
           amountPaise: r.amount_paise,
+          currency: r.currency,
           status: r.status,
           reason: r.reason,
           at: new Date(r.created_at),
@@ -553,6 +627,7 @@ export const adminGetOrder = defineOperation({
         refundable: {
           toSourcePaise: refundable.toSourcePaise,
           toWalletPaise: refundable.toWalletPaise,
+          currency: refundable.currency,
         },
       }
     }
@@ -964,6 +1039,127 @@ async function auditShipment(actor: Actor, action: string, shipmentId: string) {
   )
 }
 
+/**
+ * An export parcel staff booked with a courier themselves (doc/06 Phase 13):
+ * no international courier is connected yet, so they enter its carrier and
+ * tracking number and then update its progress by hand.
+ */
+export const recordManualShipment = defineOperation({
+  name: "orders.recordManualShipment",
+  access: { order: ["fulfil"] },
+  input: z.object({
+    orderNumber,
+    carrier: z.string().trim().min(2, "Enter the courier's name.").max(60),
+    awb: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9-]{4,40}$/, "Enter the tracking number."),
+  }),
+  async handler({ actor }, input) {
+    try {
+      return await withTransaction(async (tx) => {
+        const order = await lockOrder(
+          tx,
+          await findOrderId(tx, input.orderNumber),
+        )
+        const state = await tx.execute<{
+          fulfillment_status: string
+          is_export: boolean
+        }>(
+          sql`select fulfillment_status, is_export from orders where id = ${order.id}`,
+        )
+        const { fulfillment_status, is_export } = state.rows[0]!
+        if (!is_export) {
+          throw new DomainError(
+            "INVALID_STATE",
+            "Orders in India are booked with the courier from here.",
+          )
+        }
+        if (
+          !["confirmed", "processing"].includes(order.status) ||
+          fulfillment_status !== "unfulfilled"
+        ) {
+          throw new DomainError(
+            "INVALID_STATE",
+            "Only confirmed orders that haven't shipped can be booked.",
+          )
+        }
+        const items = await tx.execute<{
+          id: string
+          title: string
+          hsn_code: string
+          quantity: number
+          line_total_paise: number
+          weight_grams: number
+          country_of_origin: string | null
+        }>(sql`
+          select oi.id, oi.title, oi.hsn_code, oi.quantity, oi.line_total_paise,
+                 coalesce(v.weight_grams_override, p.weight_grams, 300) as weight_grams, p.country_of_origin
+          from order_items oi
+          left join product_variants v on v.id = oi.variant_id
+          left join products p on p.id = oi.product_id
+          where oi.order_id = ${order.id} order by oi.position`)
+        const id = await createShipmentRecord(tx, {
+          orderId: order.id,
+          orderNumber: order.order_number,
+          provider: "manual",
+          codAmountPaise: 0,
+          weightGrams:
+            items.rows.reduce((s, i) => s + i.weight_grams * i.quantity, 0) +
+            PACKAGING_GRAMS,
+          ...DEFAULT_BOX,
+          customs: customsFor(
+            items.rows.map((i) => ({
+              title: i.title,
+              hsnCode: i.hsn_code,
+              quantity: i.quantity,
+              lineTotalPaise: i.line_total_paise,
+              countryOfOrigin: i.country_of_origin,
+            })),
+          ),
+          items: items.rows.map((i) => ({
+            orderItemId: i.id,
+            quantity: i.quantity,
+          })),
+          createdBy: userIdOf(actor),
+        })
+        await markManuallyBooked(tx, id, {
+          carrier: input.carrier,
+          awb: input.awb,
+          actor,
+        })
+        if (order.status === "confirmed") {
+          await tx.execute(
+            sql`update orders set status = 'processing', updated_at = now() where id = ${order.id}`,
+          )
+          await recordChange(tx, order.id, {
+            field: "status",
+            from: "confirmed",
+            to: "processing",
+            actor,
+            reason: "parcel_booked",
+          })
+        }
+        await writeAudit(tx, actor, {
+          action: "shipment.record_manual",
+          entityType: "order",
+          entityId: order.id,
+          changes: { shipmentId: id, carrier: input.carrier, awb: input.awb },
+        })
+        return { shipmentId: id }
+      })
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new DomainError(
+          "CONFLICT",
+          "That tracking number is already on another parcel.",
+        )
+      }
+      throw error
+    }
+  },
+})
+
 export const retryShipment = defineOperation({
   name: "orders.retryShipment",
   access: { order: ["fulfil"] },
@@ -1103,6 +1299,13 @@ export const refundOrder = defineOperation({
         )
       }
       const refundable = await refundableFor(tx, order.id)
+      if (refundable.currency !== "INR" && input.destination === "wallet") {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "A dollar order can only be refunded to its original payment.",
+        )
+      }
+      const amount = (minor: number) => formatMoney(minor, refundable.currency)
       const max =
         input.destination === "source"
           ? refundable.toSourcePaise
@@ -1110,8 +1313,8 @@ export const refundOrder = defineOperation({
       if (input.amountPaise > max) {
         throw new DomainError(
           "VALIDATION_FAILED",
-          `At most ${formatPaise(max)} can be refunded ${input.destination === "source" ? "to the original payment" : "to the wallet"}.`,
-          { issues: { amountPaise: [`Up to ${formatPaise(max)}.`] } },
+          `At most ${amount(max)} can be refunded ${input.destination === "source" ? "to the original payment" : "to the wallet"}.`,
+          { issues: { amountPaise: [`Up to ${amount(max)}.`] } },
         )
       }
       if (input.destination === "source") {

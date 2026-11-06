@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 import { AccountConsentFields } from "@/features/privacy"
 import { authClient } from "@/lib/auth-client"
@@ -27,6 +27,7 @@ export function RegisterForm({
   const [pending, setPending] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [consented, setConsented] = useState(false)
+  const consentSaved = useRef<Promise<void>>(Promise.resolve())
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -38,6 +39,7 @@ export function RegisterForm({
     }
     setError("")
     setPending(true)
+    await consentSaved.current
     const { error } = await authClient.signUp.email(
       {
         name: String(form.get("name")).trim(),
@@ -91,7 +93,12 @@ export function RegisterForm({
         required
         hint="At least 10 characters."
       />
-      <AccountConsentFields onChange={setConsented} />
+      <AccountConsentFields
+        onChange={(ticked, saved) => {
+          setConsented(ticked)
+          consentSaved.current = saved
+        }}
+      />
       <FormMessage tone="error">{error}</FormMessage>
       {captcha.element}
       <SubmitButton pending={pending}>Create account</SubmitButton>

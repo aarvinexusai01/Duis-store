@@ -5,6 +5,7 @@ import type { Route } from "next"
 import { useRouter } from "next/navigation"
 import { useState, type ReactNode } from "react"
 
+import { useMoney } from "@/components/brand/display-currency"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -15,6 +16,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { usdCentsToListPaise } from "@/lib/display-currency"
 import { listingUrl, type ListingParams, type Sort } from "@/lib/listing-params"
 
 const SORT_LABELS: Record<Sort, string> = {
@@ -61,28 +63,53 @@ export function SortSelect({
   )
 }
 
-/** Rupee range; the URL keeps whole rupees (?price=500-999). */
-export function PriceFilter({
-  basePath,
-  params,
-  range,
-  extraQuery,
-}: {
+/**
+ * Price range; the URL keeps whole rupees (?price=500-999). A visitor shown
+ * dollars types dollars (doc/06 Phase 13d), turned into the rupee range.
+ */
+export function PriceFilter(props: {
   basePath: string
   params: ListingParams
   extraQuery?: Record<string, string>
   range: { minPaise: number; maxPaise: number }
 }) {
+  const money = useMoney()
+  // Restart the inputs when the currency arrives or changes.
+  return <PriceFilterForm key={money.currency} {...props} money={money} />
+}
+
+function PriceFilterForm({
+  basePath,
+  params,
+  range,
+  extraQuery,
+  money,
+}: {
+  basePath: string
+  params: ListingParams
+  extraQuery?: Record<string, string>
+  range: { minPaise: number; maxPaise: number }
+  money: ReturnType<typeof useMoney>
+}) {
   const router = useRouter()
-  const toRupees = (paise: number | null) =>
-    paise === null ? "" : String(Math.round(paise / 100))
-  const [min, setMin] = useState(toRupees(params.priceMinPaise))
-  const [max, setMax] = useState(toRupees(params.priceMaxPaise))
+  const usd = money.usd
+  const symbol = usd ? "$" : "₹"
+  const toUnits = (paise: number | null) =>
+    paise === null ? "" : String(Math.round(money.toMinor(paise) / 100))
+  // Whole units typed → paise, rounded out to whole rupees for the URL.
+  const toPaise = (units: string, round: (n: number) => number) => {
+    if (!units) return null
+    const whole = Math.max(0, Number(units))
+    const paise = usd ? usdCentsToListPaise(whole * 100, usd) : whole * 100
+    return round(paise / 100) * 100
+  }
+  const [min, setMin] = useState(toUnits(params.priceMinPaise))
+  const [max, setMax] = useState(toUnits(params.priceMaxPaise))
 
   const apply = (event: React.FormEvent) => {
     event.preventDefault()
-    const minPaise = min ? Math.max(0, Math.floor(Number(min))) * 100 : null
-    const maxPaise = max ? Math.max(0, Math.ceil(Number(max))) * 100 : null
+    const minPaise = toPaise(min, Math.floor)
+    const maxPaise = toPaise(max, Math.ceil)
     const ordered =
       minPaise !== null && maxPaise !== null && minPaise > maxPaise
         ? { priceMinPaise: maxPaise, priceMaxPaise: minPaise }
@@ -99,24 +126,24 @@ export function PriceFilter({
   return (
     <form onSubmit={apply} className="flex items-end gap-2">
       <label className="flex-1 text-xs text-muted-foreground">
-        Min ₹
+        Min {symbol}
         <input
           inputMode="numeric"
           pattern="[0-9]*"
           value={min}
           onChange={(event) => setMin(event.target.value.replace(/\D/g, ""))}
-          placeholder={toRupees(range.minPaise)}
+          placeholder={toUnits(range.minPaise)}
           className="mt-1 h-9 w-full border border-input bg-card px-2 text-sm text-foreground"
         />
       </label>
       <label className="flex-1 text-xs text-muted-foreground">
-        Max ₹
+        Max {symbol}
         <input
           inputMode="numeric"
           pattern="[0-9]*"
           value={max}
           onChange={(event) => setMax(event.target.value.replace(/\D/g, ""))}
-          placeholder={toRupees(range.maxPaise)}
+          placeholder={toUnits(range.maxPaise)}
           className="mt-1 h-9 w-full border border-input bg-card px-2 text-sm text-foreground"
         />
       </label>
