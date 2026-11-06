@@ -45,7 +45,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   const imagekit = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
   if (imagekit) preconnect(new URL(imagekit).origin)
   return (
-    <html lang="en-IN" className={cn(display.variable, body.variable)}>
+    // The storefront's price script may mark <html> before hydration.
+    <html
+      lang="en-IN"
+      className={cn(display.variable, body.variable)}
+      suppressHydrationWarning
+    >
       <body className="flex min-h-dvh flex-col bg-background font-sans text-foreground antialiased">
         {children}
         <Toaster position="top-center" />

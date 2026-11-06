@@ -184,7 +184,7 @@ function Purchase({
           id: product.id,
           name: product.title,
           variant: variant.sku,
-          pricePaise: variant.pricePaise,
+          priceMinor: variant.pricePaise,
           quantity: 1,
         },
       })

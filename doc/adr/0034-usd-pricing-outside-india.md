@@ -29,7 +29,8 @@ ADR-0018 kept one price list in INR: international customers paid rupees and the
    - COD, which ADR-0018 already limits to India.
 6. **Search engines and caches.**
    - Crawlers always get INR pages and INR structured data. Googlebot crawls from the US, and Google requires the visible price to match the structured data.
-   - Nginx serves cached pages only to visitors certain to see INR.
+   - Pages are rendered in INR for everyone, so the Nginx page cache needs no per-country copies. The browser converts on screen with the terms from `/api/pricing` (the visitor's `CF-IPCountry` and the rate), which gives crawlers INR only.
+   - *Changed in 13d (2026-11-06):* the plan was to render dollars on the server, with Nginx bypassing its cache for visitors who might see USD. That would make every page outside India uncached and tie the HTML to a header. Converting in the browser keeps one cached page. The cost is a moment of hidden prices on a dollar visitor's page load.
 7. **Off until it's ready.** The switch stays off until checkout, after-sale and storefront support have shipped and Razorpay has enabled USD (a preflight checks this).
 
 ## Consequences

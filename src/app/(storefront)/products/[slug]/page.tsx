@@ -176,7 +176,7 @@ async function Product({ params }: Pick<Props, "params">) {
           item: {
             id: product.id,
             name: product.title,
-            pricePaise: Math.min(...product.variants.map((v) => v.pricePaise)),
+            priceMinor: Math.min(...product.variants.map((v) => v.pricePaise)),
             quantity: 1,
           },
         }}

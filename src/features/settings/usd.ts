@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { getPaymentGateway } from "@/features/payments"
 import { COUNTRY_CODE_SET } from "@/lib/countries"
+import type { StorefrontUsdPricing } from "@/lib/display-currency"
 import {
   parseEcbUsdInr,
   parseFrankfurterUsdInr,
@@ -67,6 +68,32 @@ export async function loadEffectiveUsdRate(
   return row.rate && row.source && row.as_of
     ? { rateMicros: row.rate, source: row.source, asOf: row.as_of }
     : null
+}
+
+/**
+ * The storefront's dollar terms (doc/06 Phase 13d): null while dollar prices
+ * are off or no rate is known yet, so the shop stays in rupees.
+ */
+export async function loadStorefrontUsdPricing(
+  db: Database | Transaction,
+): Promise<StorefrontUsdPricing> {
+  const found = await db.execute<{ enabled: boolean; default_bp: number }>(sql`
+    select usd_pricing_enabled as enabled, default_uplift_bp as default_bp
+    from store_settings where id = 1`)
+  const settings = found.rows[0]
+  if (!settings?.enabled) return null
+  const rate = await loadEffectiveUsdRate(db)
+  if (!rate) return null
+  const countries = await db.execute<{ code: string; bp: number }>(sql`
+    select country_code as code, uplift_bp as bp
+    from country_pricing where uplift_bp is not null`)
+  return {
+    rateMicros: rate.rateMicros,
+    defaultUpliftBp: settings.default_bp,
+    countryUpliftBp: Object.fromEntries(
+      countries.rows.map((row) => [row.code, row.bp]),
+    ),
+  }
 }
 
 type Fetch = typeof fetch

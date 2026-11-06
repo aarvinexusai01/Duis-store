@@ -124,6 +124,8 @@ export type OrderDetail = {
     imageKey: string | null
     quantity: number
     unitPricePaise: number
+    /** The unit price as charged, in `currency`. */
+    unitPriceCharged: number
     discountPaise: number
     lineTotalPaise: number
     /** The line as charged, in `currency` (the dollars on a USD order). */
@@ -162,6 +164,7 @@ export const getMyOrder = defineOperation({
           imageKey: orderItems.imageKey,
           quantity: orderItems.quantity,
           unitPricePaise: orderItems.unitPricePaise,
+          unitPriceCharged: sql<number>`coalesce(${orderItems.unitPriceMinor}, ${orderItems.unitPricePaise})`,
           discountPaise: orderItems.discountPaise,
           lineTotalPaise: orderItems.lineTotalPaise,
           lineTotalCharged: sql<number>`coalesce(${orderItems.lineTotalMinor}, ${orderItems.lineTotalPaise})`,

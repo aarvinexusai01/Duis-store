@@ -1,3 +1,5 @@
+import type { Currency } from "@/lib/fx"
+
 import type { ConsentChoice } from "../consent"
 
 /**
@@ -30,7 +32,8 @@ export type AnalyticsItem = {
   id: string
   name: string
   variant?: string
-  pricePaise: number
+  /** Minor units of the event's currency: paise, or cents on a dollar purchase. */
+  priceMinor: number
   quantity: number
 }
 
@@ -43,9 +46,11 @@ export type AnalyticsEvent =
       orderNumber: string
       /** Shared with the Conversions API so Meta counts it once. */
       eventId: string
-      valuePaise: number
-      taxPaise: number
-      shippingPaise: number
+      /** What was charged (doc/06 Phase 13d); other events are in rupees. */
+      currency: Currency
+      valueMinor: number
+      taxMinor: number
+      shippingMinor: number
       coupon?: string
       items: AnalyticsItem[]
     }
@@ -133,28 +138,29 @@ export function pixelPageView() {
   if (state.pixel) window.fbq?.("track", "PageView")
 }
 
-const rupees = (paise: number) => Math.round(paise) / 100
+// Both currencies have 100 minor units.
+const units = (minor: number) => Math.round(minor) / 100
 
 function gaItems(items: AnalyticsItem[]) {
   return items.map((item) => ({
     item_id: item.id,
     item_name: item.name,
     ...(item.variant ? { item_variant: item.variant } : {}),
-    price: rupees(item.pricePaise),
+    price: units(item.priceMinor),
     quantity: item.quantity,
   }))
 }
 
-function metaContents(items: AnalyticsItem[]) {
+function metaContents(items: AnalyticsItem[], currency: Currency = "INR") {
   return {
     content_type: "product",
     content_ids: items.map((item) => item.id),
     contents: items.map((item) => ({
       id: item.id,
       quantity: item.quantity,
-      item_price: rupees(item.pricePaise),
+      item_price: units(item.priceMinor),
     })),
-    currency: "INR",
+    currency,
   }
 }
 
@@ -164,7 +170,7 @@ function send(event: AnalyticsEvent) {
   switch (event.name) {
     case "view_item":
     case "add_to_cart": {
-      const value = rupees(event.item.pricePaise * event.item.quantity)
+      const value = units(event.item.priceMinor * event.item.quantity)
       gtag?.("event", event.name, {
         currency: "INR",
         value,
@@ -180,22 +186,22 @@ function send(event: AnalyticsEvent) {
     case "begin_checkout":
       gtag?.("event", "begin_checkout", {
         currency: "INR",
-        value: rupees(event.valuePaise),
+        value: units(event.valuePaise),
         items: gaItems(event.items),
       })
       fbq?.("track", "InitiateCheckout", {
         ...metaContents(event.items),
-        value: rupees(event.valuePaise),
+        value: units(event.valuePaise),
         num_items: event.items.reduce((n, i) => n + i.quantity, 0),
       })
       break
     case "purchase":
       gtag?.("event", "purchase", {
         transaction_id: event.orderNumber,
-        currency: "INR",
-        value: rupees(event.valuePaise),
-        tax: rupees(event.taxPaise),
-        shipping: rupees(event.shippingPaise),
+        currency: event.currency,
+        value: units(event.valueMinor),
+        tax: units(event.taxMinor),
+        shipping: units(event.shippingMinor),
         ...(event.coupon ? { coupon: event.coupon } : {}),
         items: gaItems(event.items),
       })
@@ -203,8 +209,8 @@ function send(event: AnalyticsEvent) {
         "track",
         "Purchase",
         {
-          ...metaContents(event.items),
-          value: rupees(event.valuePaise),
+          ...metaContents(event.items, event.currency),
+          value: units(event.valueMinor),
           order_id: event.orderNumber,
           num_items: event.items.reduce((n, i) => n + i.quantity, 0),
         },

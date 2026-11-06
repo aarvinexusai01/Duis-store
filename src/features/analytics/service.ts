@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { getServerEnv } from "@/config/env"
+import type { Currency } from "@/lib/fx"
 import { getDb } from "@/server/db/client"
 import type { Transaction } from "@/server/db/transaction"
 import { enqueue } from "@/server/jobs/enqueue"
@@ -81,7 +82,8 @@ export type MetaEvent = {
   event_source_url: string
   user_data: Record<string, string | string[] | undefined>
   custom_data: {
-    currency: "INR"
+    /** As charged (doc/06 Phase 13d), matching the browser's event. */
+    currency: Currency
     value: number
     order_id: string
     content_type: "product"
@@ -103,7 +105,8 @@ export async function buildMetaPurchase(
   const found = await db.execute<{
     order_number: string
     user_id: string
-    total_paise: number
+    currency: Currency
+    total_charged: number
     confirmed_at: Date | null
     customer_email: string | null
     customer_phone: string | null
@@ -120,7 +123,8 @@ export async function buildMetaPurchase(
       userAgent?: string
     } | null
   }>(sql`
-    select order_number, user_id, total_paise, confirmed_at, customer_email, customer_phone,
+    select order_number, user_id, currency,
+           coalesce(total_minor, total_paise) as total_charged, confirmed_at, customer_email, customer_phone,
            shipping_address, marketing_context
     from orders where id = ${orderId}`)
   const order = found.rows[0]
@@ -128,9 +132,11 @@ export async function buildMetaPurchase(
   const items = await db.execute<{
     product_id: string | null
     quantity: number
-    unit_price_paise: number
+    unit_price: number
   }>(sql`
-    select product_id, quantity, unit_price_paise from order_items
+    select product_id, quantity,
+           coalesce(unit_price_minor, unit_price_paise) as unit_price
+    from order_items
     where order_id = ${orderId} order by position`)
   const lines = items.rows.filter((i) => i.product_id)
   const context = order.marketing_context
@@ -165,15 +171,15 @@ export async function buildMetaPurchase(
       client_user_agent: context.userAgent,
     },
     custom_data: {
-      currency: "INR",
-      value: order.total_paise / 100,
+      currency: order.currency,
+      value: order.total_charged / 100,
       order_id: order.order_number,
       content_type: "product",
       content_ids: lines.map((l) => l.product_id!),
       contents: lines.map((l) => ({
         id: l.product_id!,
         quantity: l.quantity,
-        item_price: l.unit_price_paise / 100,
+        item_price: l.unit_price / 100,
       })),
       num_items: lines.reduce((sum, l) => sum + l.quantity, 0),
     },

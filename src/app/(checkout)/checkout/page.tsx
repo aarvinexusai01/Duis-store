@@ -71,7 +71,7 @@ async function Checkout() {
             id: line.productId,
             name: line.title,
             variant: line.sku,
-            pricePaise: line.unitPricePaise,
+            priceMinor: line.unitPricePaise,
             quantity: line.quantity,
           })),
         }}

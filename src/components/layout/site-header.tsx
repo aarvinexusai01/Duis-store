@@ -20,6 +20,7 @@ import {
 } from "@/features/cms/queries"
 import { cn } from "@/lib/utils"
 
+import { CurrencySwitch } from "./currency-switch"
 import { MainNav } from "./main-nav"
 import { MobileNav } from "./mobile-nav"
 import { MobileSearch } from "./mobile-search"
@@ -63,6 +64,7 @@ export function SiteHeader({ draft }: { draft?: ChromeDraft } = {}) {
             </Suspense>
           </div>
           <div className="flex items-center gap-0.5">
+            <CurrencySwitch className="mr-2 hidden sm:flex" />
             <SearchBox className="mr-2 hidden w-64 md:block xl:w-80" />
             <MobileSearch />
             <Link

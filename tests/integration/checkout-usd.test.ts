@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto"
 import { sql } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
+import { buildMetaPurchase } from "@/features/analytics"
 import { addCartItem } from "@/features/cart"
 import {
   getCheckoutQuote,
@@ -24,7 +25,10 @@ import {
   simulateTracking,
 } from "@/features/orders"
 import { exportGstCsv } from "@/features/reports"
-import { setUsdPricingEnabled } from "@/features/settings"
+import {
+  loadStorefrontUsdPricing,
+  setUsdPricingEnabled,
+} from "@/features/settings"
 import { creditWallet } from "@/features/wallet"
 import { formatMoney, paiseToUsdCents, usdCentsToPaise } from "@/lib/fx"
 import type { UserActor } from "@/server/auth/actor"
@@ -314,6 +318,27 @@ describe("checkout outside India, in dollars", () => {
   })
 })
 
+describe("dollar prices on the shop", () => {
+  it("gives the storefront the rate and each country's increase, or nothing while off", async () => {
+    await setRate(RATE)
+    expect(await loadStorefrontUsdPricing(db())).toMatchObject({
+      rateMicros: RATE,
+      defaultUpliftBp: 0,
+      countryUpliftBp: expect.objectContaining({ US: UPLIFT }),
+    })
+    await db().execute(
+      sql`update store_settings set usd_pricing_enabled = false where id = 1`,
+    )
+    try {
+      expect(await loadStorefrontUsdPricing(db())).toBeNull()
+    } finally {
+      await db().execute(
+        sql`update store_settings set usd_pricing_enabled = true where id = 1`,
+      )
+    }
+  })
+})
+
 describe("switching dollar checkout on", () => {
   it("checks the rate, a priced country and the gateway first", async () => {
     const admin = await createUserActor("store_admin")
@@ -365,6 +390,28 @@ describe("after a dollar order is placed", () => {
       order by j.created_on desc limit 1`)
     return found.rows[0]?.props
   }
+
+  it("tells Meta the purchase in dollars, as charged", async () => {
+    const { orderNumber, charged } = await paidUsOrder()
+    await db().execute(sql`
+      update orders set marketing_context = ${JSON.stringify({ fbp: "fb.1.1700000000000.1", userAgent: "Mozilla/5.0 test" })}::jsonb
+      where order_number = ${orderNumber}`)
+    const found = await db().execute<{ id: string }>(
+      sql`select id from orders where order_number = ${orderNumber}`,
+    )
+    const event = await buildMetaPurchase(found.rows[0]!.id)
+    const unit = paiseToUsdCents(pricePaise, {
+      rateMicros: RATE,
+      upliftBp: UPLIFT,
+    })
+    expect(event?.custom_data).toMatchObject({
+      currency: "USD",
+      value: charged / 100,
+      contents: [
+        expect.objectContaining({ quantity: 1, item_price: unit / 100 }),
+      ],
+    })
+  })
 
   it("emails and shows the customer dollars", async () => {
     const { buyer, orderNumber, charged } = await paidUsOrder()
