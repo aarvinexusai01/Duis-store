@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c1b6d0b6-499e-49de-b487-a16fef0c53c1",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.architecture-system.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-system.html",
+  "specification": {
+    "sha256": "1b320643847567aebc991e497561108361dcd94cd83d1c274eebfbaf72218b42",
+    "bytes": 8417
+  },
+  "artifact": {
+    "sha256": "bceac9f91d0c7de50320a154cb7bed5b43b96c7d169a36925afb495b93d2539e",
+    "bytes": 875216
+  }
+}

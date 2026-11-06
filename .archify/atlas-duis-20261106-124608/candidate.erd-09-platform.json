@@ -1,0 +1,794 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 9/9 · Settings, operations and privacy",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-09-platform.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 84,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "store_settings",
+      "label": "store_settings",
+      "pos": [
+        40,
+        40
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "integer",
+          "key": "pk"
+        },
+        {
+          "name": "free_shipping_threshold_paise",
+          "type": "integer"
+        },
+        {
+          "name": "partial_cod_enabled",
+          "type": "boolean"
+        },
+        {
+          "name": "cod_advance_type",
+          "type": "cod_advance_type"
+        },
+        {
+          "name": "cod_advance_value",
+          "type": "integer"
+        },
+        {
+          "name": "cod_max_order_paise",
+          "type": "integer"
+        },
+        {
+          "name": "cod_fee_paise",
+          "type": "integer"
+        },
+        {
+          "name": "reservation_ttl_minutes",
+          "type": "integer"
+        },
+        {
+          "name": "exchange_window_days",
+          "type": "integer"
+        },
+        {
+          "name": "max_exchanges_per_item",
+          "type": "integer"
+        },
+        {
+          "name": "rto_advance_policy",
+          "type": "rto_advance_policy"
+        },
+        {
+          "name": "promo_credit_validity_days",
+          "type": "integer"
+        },
+        {
+          "name": "legal_name",
+          "type": "text"
+        },
+        {
+          "name": "gstin",
+          "type": "text"
+        },
+        {
+          "name": "registered_state_code",
+          "type": "text"
+        },
+        {
+          "name": "iec_code",
+          "type": "text"
+        },
+        {
+          "name": "lut_reference",
+          "type": "text"
+        },
+        {
+          "name": "international_country_codes",
+          "type": "text[]"
+        },
+        {
+          "name": "email_sender_name",
+          "type": "text"
+        },
+        {
+          "name": "email_reply_to",
+          "type": "text"
+        },
+        {
+          "name": "support_email",
+          "type": "text"
+        },
+        {
+          "name": "notify_order_shipped",
+          "type": "boolean"
+        },
+        {
+          "name": "notify_payment_reminder",
+          "type": "boolean"
+        },
+        {
+          "name": "notify_low_stock",
+          "type": "boolean"
+        },
+        {
+          "name": "usd_pricing_enabled",
+          "type": "boolean"
+        },
+        {
+          "name": "usd_rate_mode",
+          "type": "text"
+        },
+        {
+          "name": "usd_manual_rate_micros",
+          "type": "integer"
+        },
+        {
+          "name": "default_uplift_bp",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/settings.ts",
+          "line": 27,
+          "end_line": 101
+        }
+      ]
+    },
+    {
+      "id": "fx_rates",
+      "label": "fx_rates",
+      "pos": [
+        40,
+        720
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "base",
+          "type": "text"
+        },
+        {
+          "name": "quote",
+          "type": "text"
+        },
+        {
+          "name": "rate_micros",
+          "type": "integer"
+        },
+        {
+          "name": "as_of",
+          "type": "date"
+        },
+        {
+          "name": "source",
+          "type": "text"
+        },
+        {
+          "name": "fetched_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/settings.ts",
+          "line": 149,
+          "end_line": 165
+        }
+      ],
+      "sublabel": "unique (base, quote, as_of)"
+    },
+    {
+      "id": "tax_rules",
+      "label": "tax_rules",
+      "pos": [
+        464,
+        40
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "hsn_prefix",
+          "type": "text"
+        },
+        {
+          "name": "price_threshold_paise",
+          "type": "integer"
+        },
+        {
+          "name": "rate_below_bp",
+          "type": "integer"
+        },
+        {
+          "name": "rate_above_bp",
+          "type": "integer"
+        },
+        {
+          "name": "effective_from",
+          "type": "date"
+        },
+        {
+          "name": "effective_to",
+          "type": "date"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/settings.ts",
+          "line": 102,
+          "end_line": 128
+        }
+      ]
+    },
+    {
+      "id": "country_pricing",
+      "label": "country_pricing",
+      "pos": [
+        464,
+        300
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "country_code",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "uplift_bp",
+          "type": "integer"
+        },
+        {
+          "name": "shipping_fee_cents",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/settings.ts",
+          "line": 129,
+          "end_line": 148
+        }
+      ]
+    },
+    {
+      "id": "idempotency_keys",
+      "label": "idempotency_keys",
+      "pos": [
+        464,
+        480
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "key",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "scope",
+          "type": "text"
+        },
+        {
+          "name": "request_hash",
+          "type": "text"
+        },
+        {
+          "name": "response",
+          "type": "jsonb"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/ops.ts",
+          "line": 42,
+          "end_line": 53
+        }
+      ]
+    },
+    {
+      "id": "ops_checks",
+      "label": "ops_checks",
+      "pos": [
+        464,
+        680
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "key",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "ok",
+          "type": "boolean"
+        },
+        {
+          "name": "detail",
+          "type": "text"
+        },
+        {
+          "name": "checked_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "last_ok_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "alerted_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/ops.ts",
+          "line": 96,
+          "end_line": 111
+        }
+      ]
+    },
+    {
+      "id": "app_rate_limits",
+      "label": "app_rate_limits",
+      "pos": [
+        464,
+        880
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "key",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "window_start",
+          "type": "timestamptz"
+        },
+        {
+          "name": "count",
+          "type": "integer"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/ops.ts",
+          "line": 112,
+          "end_line": 116
+        }
+      ]
+    },
+    {
+      "id": "audit_logs",
+      "label": "audit_logs",
+      "pos": [
+        828,
+        40
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "actor_user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "actor_type",
+          "type": "text"
+        },
+        {
+          "name": "actor_roles",
+          "type": "text[]"
+        },
+        {
+          "name": "action",
+          "type": "text"
+        },
+        {
+          "name": "entity_type",
+          "type": "text"
+        },
+        {
+          "name": "entity_id",
+          "type": "text"
+        },
+        {
+          "name": "changes",
+          "type": "jsonb"
+        },
+        {
+          "name": "ip",
+          "type": "text"
+        },
+        {
+          "name": "request_id",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/ops.ts",
+          "line": 17,
+          "end_line": 40
+        }
+      ]
+    },
+    {
+      "id": "notification_logs",
+      "label": "notification_logs",
+      "pos": [
+        828,
+        340
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "channel",
+          "type": "notification_channel"
+        },
+        {
+          "name": "template",
+          "type": "text"
+        },
+        {
+          "name": "recipient",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "notification_status"
+        },
+        {
+          "name": "provider",
+          "type": "text"
+        },
+        {
+          "name": "provider_message_id",
+          "type": "text"
+        },
+        {
+          "name": "attempts",
+          "type": "integer"
+        },
+        {
+          "name": "error",
+          "type": "text"
+        },
+        {
+          "name": "reference_type",
+          "type": "text"
+        },
+        {
+          "name": "reference_id",
+          "type": "text"
+        },
+        {
+          "name": "sent_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/ops.ts",
+          "line": 66,
+          "end_line": 95
+        }
+      ]
+    },
+    {
+      "id": "consent_records",
+      "label": "consent_records",
+      "pos": [
+        828,
+        720
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "visitor_id",
+          "type": "uuid"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "analytics",
+          "type": "boolean"
+        },
+        {
+          "name": "marketing",
+          "type": "boolean"
+        },
+        {
+          "name": "version",
+          "type": "integer"
+        },
+        {
+          "name": "source",
+          "type": "text"
+        },
+        {
+          "name": "user_agent",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/consent.ts",
+          "line": 21,
+          "end_line": 43
+        }
+      ]
+    },
+    {
+      "id": "contact_messages",
+      "label": "contact_messages",
+      "pos": [
+        1192,
+        40
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "email",
+          "type": "citext"
+        },
+        {
+          "name": "phone",
+          "type": "text"
+        },
+        {
+          "name": "order_number",
+          "type": "text"
+        },
+        {
+          "name": "topic",
+          "type": "text"
+        },
+        {
+          "name": "message",
+          "type": "text"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "status",
+          "type": "contact_message_status"
+        },
+        {
+          "name": "handled_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "handled_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "note",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/consent.ts",
+          "line": 52,
+          "end_line": 88
+        }
+      ]
+    },
+    {
+      "id": "data_consents",
+      "label": "data_consents",
+      "pos": [
+        1192,
+        400
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "subject_hash",
+          "type": "text"
+        },
+        {
+          "name": "purpose",
+          "type": "text"
+        },
+        {
+          "name": "granted",
+          "type": "boolean"
+        },
+        {
+          "name": "notice_version",
+          "type": "text"
+        },
+        {
+          "name": "language",
+          "type": "text"
+        },
+        {
+          "name": "source",
+          "type": "text"
+        },
+        {
+          "name": "reference_type",
+          "type": "text"
+        },
+        {
+          "name": "reference_id",
+          "type": "text"
+        },
+        {
+          "name": "user_agent",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/consent.ts",
+          "line": 89,
+          "end_line": 119
+        }
+      ]
+    }
+  ],
+  "relationships": [],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Settings and pricing",
+      "items": [
+        "store_settings is a single row (id = 1) with 30 columns: COD rules, policies, tax and export details, email and USD pricing switches.",
+        "tax_rules, country_pricing and fx_rates drive tax and USD pricing."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Append-only",
+      "items": [
+        "audit_logs, consent_records and data_consents are append-only.",
+        "audit_logs.entity_id is a text reference with no FK."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Standalone",
+      "items": [
+        "No FKs link these tables to each other; most point at users.",
+        "idempotency_keys, ops_checks and app_rate_limits use a text key as primary key."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

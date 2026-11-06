@@ -1,0 +1,284 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Duis shipment status lifecycle",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/lifecycle-shipment.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "mainPath": [
+    "pending",
+    "ready_to_ship",
+    "picked_up",
+    "in_transit",
+    "out_for_delivery",
+    "delivered"
+  ],
+  "states": [
+    {
+      "id": "pending",
+      "type": "start",
+      "label": "Pending",
+      "sublabel": "pending",
+      "sources": [
+        {
+          "path": "src/features/shipping/shipments.ts",
+          "line": 72,
+          "end_line": 139
+        }
+      ]
+    },
+    {
+      "id": "ready_to_ship",
+      "type": "active",
+      "label": "Ready",
+      "sublabel": "ready_to_ship",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 21,
+          "end_line": 30
+        }
+      ]
+    },
+    {
+      "id": "picked_up",
+      "type": "active",
+      "label": "Picked up",
+      "sublabel": "picked_up",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 31
+        }
+      ]
+    },
+    {
+      "id": "in_transit",
+      "type": "active",
+      "label": "In transit",
+      "sublabel": "in_transit",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 32,
+          "end_line": 38
+        }
+      ]
+    },
+    {
+      "id": "out_for_delivery",
+      "type": "active",
+      "label": "Delivering",
+      "sublabel": "out_for_delivery",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "id": "delivered",
+      "type": "success",
+      "label": "Delivered",
+      "sublabel": "delivered",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "id": "undelivered",
+      "type": "waiting",
+      "label": "Undelivered",
+      "sublabel": "undelivered",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 40,
+          "end_line": 41
+        }
+      ]
+    },
+    {
+      "id": "rto_initiated",
+      "type": "waiting",
+      "label": "Returning",
+      "sublabel": "rto_initiated",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 43,
+          "end_line": 46
+        }
+      ]
+    },
+    {
+      "id": "rto_delivered",
+      "type": "neutral",
+      "label": "Returned",
+      "sublabel": "rto_delivered",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 47,
+          "end_line": 48
+        }
+      ]
+    },
+    {
+      "id": "cancelled",
+      "type": "neutral",
+      "label": "Cancelled",
+      "sublabel": "cancelled",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 49,
+          "end_line": 50
+        },
+        {
+          "path": "src/features/shipping/shipments.ts",
+          "line": 424,
+          "end_line": 489
+        }
+      ]
+    },
+    {
+      "id": "lost",
+      "type": "failure",
+      "label": "Lost",
+      "sublabel": "lost",
+      "sources": [
+        {
+          "path": "src/features/shipping/status.ts",
+          "line": 51,
+          "end_line": 53
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "p-r",
+      "from": "pending",
+      "to": "ready_to_ship",
+      "label": "AWB"
+    },
+    {
+      "id": "r-pu",
+      "from": "ready_to_ship",
+      "to": "picked_up",
+      "label": "picked up"
+    },
+    {
+      "id": "pu-it",
+      "from": "picked_up",
+      "to": "in_transit",
+      "label": "shipped"
+    },
+    {
+      "id": "it-ofd",
+      "from": "in_transit",
+      "to": "out_for_delivery",
+      "label": "last mile"
+    },
+    {
+      "id": "ofd-d",
+      "from": "out_for_delivery",
+      "to": "delivered",
+      "label": "delivered",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ofd-u",
+      "from": "out_for_delivery",
+      "to": "undelivered",
+      "label": "attempt failed",
+      "variant": "security"
+    },
+    {
+      "id": "u-ofd",
+      "from": "undelivered",
+      "to": "out_for_delivery",
+      "label": "next attempt"
+    },
+    {
+      "id": "u-rto",
+      "from": "undelivered",
+      "to": "rto_initiated",
+      "label": "give up",
+      "variant": "dashed"
+    },
+    {
+      "id": "it-rto",
+      "from": "in_transit",
+      "to": "rto_initiated",
+      "label": "return started",
+      "variant": "dashed"
+    },
+    {
+      "id": "rto-rtod",
+      "from": "rto_initiated",
+      "to": "rto_delivered",
+      "label": "arrives back"
+    },
+    {
+      "id": "p-c",
+      "from": "pending",
+      "to": "cancelled",
+      "label": "cancel at courier",
+      "variant": "security"
+    },
+    {
+      "id": "r-c",
+      "from": "ready_to_ship",
+      "to": "cancelled",
+      "label": "cancel at courier",
+      "variant": "security"
+    },
+    {
+      "id": "it-l",
+      "from": "in_transit",
+      "to": "lost",
+      "label": "lost or damaged",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Forward only, by rank",
+      "items": [
+        "pending 0, ready_to_ship 1, picked_up 2, in_transit 3, out_for_delivery and undelivered 4, delivered 5, rto_initiated 6, rto_delivered 7, cancelled and lost 8.",
+        "A courier event only moves a shipment to a higher rank, or to an equal rank when it is newer."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Terminal states",
+      "items": [
+        "delivered, rto_delivered, cancelled and lost never change again.",
+        "Events that arrive out of order are stored but change nothing.",
+        "Cancelling at the courier is allowed only from pending or ready_to_ship, and the courier must agree first."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Where events come from",
+      "items": [
+        "The logistics webhook and a 30 minute sync job feed ingestTrackingEvent.",
+        "Courier words such as 'OUT FOR DELIVERY' are mapped to these states in one table."
+      ]
+    }
+  ]
+}

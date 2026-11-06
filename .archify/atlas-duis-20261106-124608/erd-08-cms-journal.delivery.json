@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "79d9a3b4-a61c-44d5-876d-ae83b1abdc54",
+  "status": "current",
+  "command": "deliver",
+  "type": "erd",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-08-cms-journal.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-08-cms-journal.html",
+  "specification": {
+    "sha256": "0ab4d26c22b52e79bfc4c5a0e2135751d3c654b5a9e4ccc9b3c5f71007f6b93d",
+    "bytes": 17032
+  },
+  "artifact": {
+    "sha256": "00d4c56d0daf3341f7de9e035199f06a7351ab74641616cffe32cdca301d852c",
+    "bytes": 904355
+  }
+}

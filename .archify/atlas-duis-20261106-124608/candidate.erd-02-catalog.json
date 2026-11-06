@@ -1,0 +1,1150 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 2/9 · Catalog and media",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-02-catalog.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 84,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "departments",
+      "label": "departments",
+      "pos": [
+        40,
+        40
+      ],
+      "width": 260,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "slug",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "name": "seo_title",
+          "type": "text"
+        },
+        {
+          "name": "seo_description",
+          "type": "text"
+        },
+        {
+          "name": "noindex",
+          "type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 47,
+          "end_line": 55
+        }
+      ]
+    },
+    {
+      "id": "media_assets",
+      "label": "media_assets",
+      "pos": [
+        40,
+        320
+      ],
+      "width": 260,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "storage_key",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "sha256",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "original_filename",
+          "type": "text"
+        },
+        {
+          "name": "mime",
+          "type": "text"
+        },
+        {
+          "name": "bytes",
+          "type": "integer"
+        },
+        {
+          "name": "width",
+          "type": "integer"
+        },
+        {
+          "name": "height",
+          "type": "integer"
+        },
+        {
+          "name": "renditions",
+          "type": "jsonb"
+        },
+        {
+          "name": "alt_text",
+          "type": "text"
+        },
+        {
+          "name": "caption",
+          "type": "text"
+        },
+        {
+          "name": "focal_x",
+          "type": "real"
+        },
+        {
+          "name": "focal_y",
+          "type": "real"
+        },
+        {
+          "name": "uploaded_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/media.ts",
+          "line": 20,
+          "end_line": 52
+        }
+      ]
+    },
+    {
+      "id": "size_charts",
+      "label": "size_charts",
+      "pos": [
+        40,
+        740
+      ],
+      "width": 260,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "unit",
+          "type": "text"
+        },
+        {
+          "name": "chart",
+          "type": "jsonb"
+        },
+        {
+          "name": "how_to_measure",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 57,
+          "end_line": 74
+        }
+      ]
+    },
+    {
+      "id": "categories",
+      "label": "categories",
+      "pos": [
+        384,
+        40
+      ],
+      "width": 250,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "department_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "departments.id"
+        },
+        {
+          "name": "parent_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "categories.id"
+        },
+        {
+          "name": "path",
+          "type": "ltree"
+        },
+        {
+          "name": "slug",
+          "type": "citext"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "description",
+          "type": "text"
+        },
+        {
+          "name": "image_media_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "media_assets.id"
+        },
+        {
+          "name": "size_chart_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "size_charts.id"
+        },
+        {
+          "name": "default_hsn_code",
+          "type": "text"
+        },
+        {
+          "name": "exchange_allowed",
+          "type": "boolean"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "name": "seo_title",
+          "type": "text"
+        },
+        {
+          "name": "seo_description",
+          "type": "text"
+        },
+        {
+          "name": "noindex",
+          "type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 75,
+          "end_line": 113
+        }
+      ],
+      "sublabel": "unique (department_id, parent_id, slug)"
+    },
+    {
+      "id": "attributes",
+      "label": "attributes",
+      "pos": [
+        384,
+        480
+      ],
+      "width": 250,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "code",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "kind",
+          "type": "attribute_kind"
+        },
+        {
+          "name": "is_variant_axis",
+          "type": "boolean"
+        },
+        {
+          "name": "is_filterable",
+          "type": "boolean"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 115,
+          "end_line": 125
+        }
+      ]
+    },
+    {
+      "id": "attribute_values",
+      "label": "attribute_values",
+      "pos": [
+        384,
+        740
+      ],
+      "width": 250,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "attribute_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "attributes.id"
+        },
+        {
+          "name": "slug",
+          "type": "citext"
+        },
+        {
+          "name": "label",
+          "type": "text"
+        },
+        {
+          "name": "swatch_hex",
+          "type": "text"
+        },
+        {
+          "name": "filter_group",
+          "type": "citext"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 127,
+          "end_line": 151
+        }
+      ]
+    },
+    {
+      "id": "product_categories",
+      "label": "product_categories",
+      "pos": [
+        718,
+        40
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "product_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "products.id"
+        },
+        {
+          "name": "category_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "categories.id"
+        },
+        {
+          "name": "is_primary",
+          "type": "boolean"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 215,
+          "end_line": 237
+        }
+      ]
+    },
+    {
+      "id": "product_attributes",
+      "label": "product_attributes",
+      "pos": [
+        718,
+        180
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "product_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "products.id"
+        },
+        {
+          "name": "attribute_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "attributes.id"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 238,
+          "end_line": 252
+        }
+      ]
+    },
+    {
+      "id": "product_attribute_values",
+      "label": "product_attribute_values",
+      "pos": [
+        718,
+        320
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "product_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "products.id"
+        },
+        {
+          "name": "attribute_value_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "attribute_values.id"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 253,
+          "end_line": 267
+        }
+      ]
+    },
+    {
+      "id": "variant_attribute_values",
+      "label": "variant_attribute_values",
+      "pos": [
+        718,
+        440
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "variant_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "product_variants.id"
+        },
+        {
+          "name": "attribute_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "attribute_values.attribute_id"
+        },
+        {
+          "name": "attribute_value_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "attribute_values.id"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 300,
+          "end_line": 321
+        }
+      ]
+    },
+    {
+      "id": "product_media",
+      "label": "product_media",
+      "pos": [
+        718,
+        580
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "product_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "products.id"
+        },
+        {
+          "name": "media_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "media_assets.id"
+        },
+        {
+          "name": "color_value_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "attribute_values.id"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "alt_override",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 323,
+          "end_line": 351
+        }
+      ],
+      "sublabel": "unique (product_id, media_id)"
+    },
+    {
+      "id": "products",
+      "label": "products",
+      "pos": [
+        1092,
+        40
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "department_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "departments.id"
+        },
+        {
+          "name": "slug",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "title",
+          "type": "text"
+        },
+        {
+          "name": "subtitle",
+          "type": "text"
+        },
+        {
+          "name": "description",
+          "type": "jsonb"
+        },
+        {
+          "name": "description_text",
+          "type": "text"
+        },
+        {
+          "name": "specifications",
+          "type": "jsonb"
+        },
+        {
+          "name": "material",
+          "type": "text"
+        },
+        {
+          "name": "care",
+          "type": "text"
+        },
+        {
+          "name": "hsn_code",
+          "type": "text"
+        },
+        {
+          "name": "country_of_origin",
+          "type": "text"
+        },
+        {
+          "name": "manufacturer_details",
+          "type": "text"
+        },
+        {
+          "name": "net_quantity",
+          "type": "text"
+        },
+        {
+          "name": "weight_grams",
+          "type": "integer"
+        },
+        {
+          "name": "length_cm",
+          "type": "integer"
+        },
+        {
+          "name": "breadth_cm",
+          "type": "integer"
+        },
+        {
+          "name": "height_cm",
+          "type": "integer"
+        },
+        {
+          "name": "status",
+          "type": "product_status"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "tags",
+          "type": "text[]"
+        },
+        {
+          "name": "search_keywords",
+          "type": "text"
+        },
+        {
+          "name": "rating_count",
+          "type": "integer"
+        },
+        {
+          "name": "rating_average",
+          "type": "integer"
+        },
+        {
+          "name": "search_vector",
+          "type": "tsvector"
+        },
+        {
+          "name": "og_media_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "media_assets.id"
+        },
+        {
+          "name": "seo_title",
+          "type": "text"
+        },
+        {
+          "name": "seo_description",
+          "type": "text"
+        },
+        {
+          "name": "noindex",
+          "type": "boolean"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 153,
+          "end_line": 213
+        }
+      ]
+    },
+    {
+      "id": "product_variants",
+      "label": "product_variants",
+      "pos": [
+        1092,
+        760
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "product_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "products.id"
+        },
+        {
+          "name": "sku",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "barcode",
+          "type": "text"
+        },
+        {
+          "name": "price_paise",
+          "type": "integer"
+        },
+        {
+          "name": "mrp_paise",
+          "type": "integer"
+        },
+        {
+          "name": "status",
+          "type": "variant_status"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "weight_grams_override",
+          "type": "integer"
+        },
+        {
+          "name": "option_signature",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 269,
+          "end_line": 298
+        }
+      ],
+      "sublabel": "unique (product_id, option_signature)"
+    },
+    {
+      "id": "product_listing_cache",
+      "label": "product_listing_cache",
+      "pos": [
+        1456,
+        40
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "product_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "products.id"
+        },
+        {
+          "name": "min_price_paise",
+          "type": "integer"
+        },
+        {
+          "name": "max_price_paise",
+          "type": "integer"
+        },
+        {
+          "name": "max_discount_percent",
+          "type": "integer"
+        },
+        {
+          "name": "in_stock",
+          "type": "boolean"
+        },
+        {
+          "name": "filter_value_ids",
+          "type": "uuid[]"
+        },
+        {
+          "name": "in_stock_value_ids",
+          "type": "uuid[]"
+        },
+        {
+          "name": "color_value_ids",
+          "type": "uuid[]"
+        },
+        {
+          "name": "primary_media_id",
+          "type": "uuid"
+        },
+        {
+          "name": "hover_media_id",
+          "type": "uuid"
+        },
+        {
+          "name": "refreshed_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 352,
+          "end_line": 396
+        }
+      ]
+    },
+    {
+      "id": "search_index_queue",
+      "label": "search_index_queue",
+      "pos": [
+        1456,
+        340
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "product_id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "queued_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/catalog.ts",
+          "line": 397,
+          "end_line": 400
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "categories__department_id",
+      "from": "categories",
+      "to": "departments",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "categories__image_media_id",
+      "from": "categories",
+      "to": "media_assets",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false
+    },
+    {
+      "id": "categories__size_chart_id",
+      "from": "categories",
+      "to": "size_charts",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false
+    },
+    {
+      "id": "attribute_values__attribute_id",
+      "from": "attribute_values",
+      "to": "attributes",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "product_categories__product_id",
+      "from": "product_categories",
+      "to": "products",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "product_categories__category_id",
+      "from": "product_categories",
+      "to": "categories",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "product_attributes__product_id",
+      "from": "product_attributes",
+      "to": "products",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "product_attributes__attribute_id",
+      "from": "product_attributes",
+      "to": "attributes",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "product_attribute_values__product_id",
+      "from": "product_attribute_values",
+      "to": "products",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "product_attribute_values__attribute_value_id",
+      "from": "product_attribute_values",
+      "to": "attribute_values",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "variant_attribute_values__variant_id",
+      "from": "variant_attribute_values",
+      "to": "product_variants",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "variant_attribute_values__attribute_value_id_attribute_id",
+      "from": "variant_attribute_values",
+      "to": "attribute_values",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "product_media__product_id",
+      "from": "product_media",
+      "to": "products",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "product_media__media_id",
+      "from": "product_media",
+      "to": "media_assets",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "product_media__color_value_id",
+      "from": "product_media",
+      "to": "attribute_values",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false
+    },
+    {
+      "id": "products__department_id",
+      "from": "products",
+      "to": "departments",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "products__og_media_id",
+      "from": "products",
+      "to": "media_assets",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false
+    },
+    {
+      "id": "product_variants__product_id",
+      "from": "product_variants",
+      "to": "products",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "product_listing_cache__product_id",
+      "from": "product_listing_cache",
+      "to": "products",
+      "fromCardinality": "one",
+      "toCardinality": "one",
+      "identifying": true
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Shape of the catalog",
+      "items": [
+        "A product belongs to a department and, through product_categories, to categories.",
+        "Variants (SKU, price) hang off a product; variant_attribute_values picks one attribute value per variant axis.",
+        "variant_attribute_values uses a composite FK (attribute_value_id, attribute_id) into attribute_values."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Not drawn as lines",
+      "items": [
+        "categories.parent_id references categories itself (the path is an ltree); self-references are not drawn.",
+        "product_listing_cache is derived data; primary_media_id and hover_media_id have no FK.",
+        "search_index_queue.product_id has deliberately no FK; database triggers fill it (migration 0018)."
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Self reference",
+      "items": [
+        "categories.parent_id references its own table; self-references are not drawn."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

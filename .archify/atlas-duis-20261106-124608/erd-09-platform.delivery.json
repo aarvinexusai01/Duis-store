@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "bc5553cf-8833-4c70-af98-5aeaaa727e47",
+  "status": "current",
+  "command": "deliver",
+  "type": "erd",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-09-platform.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-09-platform.html",
+  "specification": {
+    "sha256": "a6b219e2599c660f07f5c39bee12b71b66e948a0698e5f824bbd87a2641e511c",
+    "bytes": 16077
+  },
+  "artifact": {
+    "sha256": "9c00c5ddcd0d745e2ceb380ea0cf3183eaef843690e06e1e752c077ba0d3b6cc",
+    "bytes": 904019
+  }
+}

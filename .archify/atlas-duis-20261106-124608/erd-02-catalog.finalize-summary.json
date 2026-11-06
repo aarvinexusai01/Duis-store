@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "erd",
+  "quality": "standard",
+  "specification": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-02-catalog.json",
+    "sha256": "e42b4ccbf10776c277cd9800d1c7ee4f9b7c6ddf526afead032024b2e4312aac",
+    "bytes": 24536
+  },
+  "artifact": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+    "sha256": "bb7fe5cace5f75ee4eaf63913d9ffe7876d404c3196dedb544cd792573070662",
+    "bytes": 938162
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.finalize.json",
+    "summaryReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.finalize-summary.json",
+    "browserCheckReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-06T07:27:51.025Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 12868,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "routesOverSuggestedBends": 3,
+      "routesOverSuggestedStretch": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [],
+      "detours": [
+        {
+          "relationship": {
+            "id": "product_media__media_id",
+            "from": "product_media",
+            "to": "media_assets",
+            "label": "",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "bends": 3,
+          "stretch": 1.085
+        },
+        {
+          "relationship": {
+            "id": "products__department_id",
+            "from": "products",
+            "to": "departments",
+            "label": "",
+            "collectionIndex": 15,
+            "artifactIndex": 16
+          },
+          "bends": 4,
+          "stretch": 1.297
+        },
+        {
+          "relationship": {
+            "id": "products__og_media_id",
+            "from": "products",
+            "to": "media_assets",
+            "label": "",
+            "collectionIndex": 16,
+            "artifactIndex": 17
+          },
+          "bends": 6,
+          "stretch": 2.544
+        }
+      ],
+      "truncated": false
+    },
+    "repair": "Advisory only: this mode places or routes these relationships itself. Report them; do not remove relationships or meaning to reduce crossings."
+  }
+}

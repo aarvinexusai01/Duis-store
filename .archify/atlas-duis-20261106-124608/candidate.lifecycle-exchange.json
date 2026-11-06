@@ -1,0 +1,298 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Duis exchange request lifecycle",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/lifecycle-exchange.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "mainPath": [
+    "requested",
+    "approved",
+    "pickup_scheduled",
+    "picked_up",
+    "received"
+  ],
+  "states": [
+    {
+      "id": "requested",
+      "type": "start",
+      "label": "Requested",
+      "sublabel": "requested",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 281,
+          "end_line": 396
+        }
+      ]
+    },
+    {
+      "id": "approved",
+      "type": "active",
+      "label": "Approved",
+      "sublabel": "approved",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 546,
+          "end_line": 604
+        }
+      ]
+    },
+    {
+      "id": "pickup_scheduled",
+      "type": "active",
+      "label": "Pickup set",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 728,
+          "end_line": 791
+        }
+      ]
+    },
+    {
+      "id": "picked_up",
+      "type": "active",
+      "label": "Picked up",
+      "sublabel": "picked_up",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 728,
+          "end_line": 791
+        }
+      ]
+    },
+    {
+      "id": "received",
+      "type": "decision",
+      "label": "Received",
+      "sublabel": "received",
+      "sources": [
+        {
+          "path": "src/features/exchanges/admin.ts",
+          "line": 276,
+          "end_line": 296
+        }
+      ]
+    },
+    {
+      "id": "qc_passed",
+      "type": "active",
+      "label": "QC passed",
+      "sublabel": "qc_passed",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 605,
+          "end_line": 664
+        }
+      ]
+    },
+    {
+      "id": "replacement_shipped",
+      "type": "active",
+      "label": "Replacing",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 728,
+          "end_line": 791
+        }
+      ]
+    },
+    {
+      "id": "completed",
+      "type": "success",
+      "label": "Completed",
+      "sublabel": "completed",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 728,
+          "end_line": 791
+        }
+      ]
+    },
+    {
+      "id": "awaiting_payment",
+      "type": "waiting",
+      "label": "Awaiting pay",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 456,
+          "end_line": 521
+        }
+      ]
+    },
+    {
+      "id": "rejected",
+      "type": "failure",
+      "label": "Rejected",
+      "sublabel": "rejected",
+      "sources": [
+        {
+          "path": "src/features/exchanges/admin.ts",
+          "line": 254,
+          "end_line": 275
+        }
+      ]
+    },
+    {
+      "id": "cancelled",
+      "type": "neutral",
+      "label": "Cancelled",
+      "sublabel": "cancelled",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 405,
+          "end_line": 455
+        }
+      ]
+    },
+    {
+      "id": "qc_failed",
+      "type": "failure",
+      "label": "QC failed",
+      "sublabel": "qc_failed",
+      "sources": [
+        {
+          "path": "src/features/exchanges/service.ts",
+          "line": 665,
+          "end_line": 727
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "rq-ap",
+      "from": "requested",
+      "to": "approved",
+      "label": "no fee",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ap-ps",
+      "from": "approved",
+      "to": "pickup_scheduled",
+      "label": "parcel"
+    },
+    {
+      "id": "ps-pu",
+      "from": "pickup_scheduled",
+      "to": "picked_up",
+      "label": "picked up"
+    },
+    {
+      "id": "pu-rc",
+      "from": "picked_up",
+      "to": "received",
+      "label": "arrives"
+    },
+    {
+      "id": "rc-qp",
+      "from": "received",
+      "to": "qc_passed",
+      "label": "pass QC",
+      "variant": "emphasis"
+    },
+    {
+      "id": "qp-rs",
+      "from": "qc_passed",
+      "to": "replacement_shipped",
+      "label": "ships"
+    },
+    {
+      "id": "rs-co",
+      "from": "replacement_shipped",
+      "to": "completed",
+      "label": "delivered",
+      "variant": "emphasis"
+    },
+    {
+      "id": "rq-aw",
+      "from": "requested",
+      "to": "awaiting_payment",
+      "label": "difference > 0"
+    },
+    {
+      "id": "aw-ap",
+      "from": "awaiting_payment",
+      "to": "approved",
+      "label": "difference paid"
+    },
+    {
+      "id": "rq-rj",
+      "from": "requested",
+      "to": "rejected",
+      "label": "staff reject",
+      "variant": "security"
+    },
+    {
+      "id": "aw-rj",
+      "from": "awaiting_payment",
+      "to": "rejected",
+      "label": "staff reject",
+      "variant": "security"
+    },
+    {
+      "id": "rq-ca",
+      "from": "requested",
+      "to": "cancelled",
+      "label": "customer cancels",
+      "variant": "dashed"
+    },
+    {
+      "id": "aw-ca",
+      "from": "awaiting_payment",
+      "to": "cancelled",
+      "label": "customer cancels",
+      "variant": "dashed"
+    },
+    {
+      "id": "rc-qf",
+      "from": "received",
+      "to": "qc_failed",
+      "label": "fail QC",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Before a parcel exists",
+      "items": [
+        "requested and awaiting_payment can end as rejected (staff, needs exchange:decide) or cancelled (customer).",
+        "Approval holds the replacement stock for 30 days."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Price difference",
+      "items": [
+        "Replacement costs more: the customer pays the difference through Razorpay (awaiting_payment).",
+        "Replacement costs less: the difference is credited to the wallet after QC.",
+        "QC failed ends the exchange: the hold is released, a paid difference is refunded and the item is sent back."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Follows the code",
+      "items": [
+        "The states are the exchange_status enum; doc/03 shows reverse_pickup_scheduled and omits awaiting_payment.",
+        "Box titles map to enum values: Pickup set = pickup_scheduled, Replacing = replacement_shipped, Awaiting pay = awaiting_payment."
+      ]
+    }
+  ]
+}

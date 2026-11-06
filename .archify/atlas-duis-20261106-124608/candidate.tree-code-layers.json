@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "diagram_type": "tree",
+  "meta": {
+    "title": "Duis source layout and import layers",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/tree-code-layers.html",
+    "quality_profile": "showcase",
+    "repository": { "url": "https://github.com/aarvinexusai01/Duis-store.git", "provider": "github", "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce" }
+  },
+  "layout": { "direction": "right" },
+  "nodes": [
+    { "id": "src", "label": "src/", "sublabel": "Modular monolith, layers enforced by ESLint", "sources": [{ "path": "eslint.config.mjs", "line": 1, "end_line": 126 }] },
+
+    { "id": "app", "label": "app/", "parent": "src", "sublabel": "Routes: no service, repository or db imports", "sources": [{ "path": "eslint.config.mjs", "line": 44, "end_line": 70 }] },
+    { "id": "app_store", "label": "(storefront)/", "parent": "app", "sublabel": "shop, product, cart, journal, account", "sources": [{ "path": "src/app/(storefront)/layout.tsx", "line": 1 }] },
+    { "id": "app_auth", "label": "(auth)/", "parent": "app", "sublabel": "login, register, reset", "sources": [{ "path": "src/app/(auth)/layout.tsx", "line": 1 }] },
+    { "id": "app_checkout", "label": "(checkout)/", "parent": "app", "sublabel": "checkout and success page", "sources": [{ "path": "src/app/(checkout)/layout.tsx", "line": 1 }] },
+    { "id": "app_preview", "label": "(preview)/", "parent": "app", "sublabel": "signed CMS draft preview", "sources": [{ "path": "src/app/(preview)/layout.tsx", "line": 1 }] },
+    { "id": "app_admin", "label": "admin/", "parent": "app", "sublabel": "staff back office, 2FA required", "sources": [{ "path": "src/app/admin/(shell)/layout.tsx", "line": 1 }] },
+    { "id": "app_api", "label": "api/", "parent": "app", "sublabel": "webhooks, health, uploads, internal", "sources": [{ "path": "src/app/api/health/route.ts", "line": 1 }] },
+
+    { "id": "components", "label": "components/", "parent": "src", "sublabel": "UI; same import rules as app/", "sources": [{ "path": "src/components/admin/admin-sidebar.tsx", "line": 1 }] },
+
+    { "id": "features", "label": "features/", "parent": "src", "sublabel": "28 domain modules; reach another only via its index", "sources": [{ "path": "eslint.config.mjs", "line": 18, "end_line": 43 }] },
+    { "id": "f_checkout", "label": "checkout/", "parent": "features", "sublabel": "one module, as an example", "sources": [{ "path": "src/features/checkout/index.ts", "line": 1 }] },
+    { "id": "f_index", "label": "index.ts", "parent": "f_checkout", "sublabel": "public surface other code may import", "sources": [{ "path": "src/features/checkout/index.ts", "line": 1 }] },
+    { "id": "f_actions", "label": "actions.ts", "parent": "f_checkout", "sublabel": "Server Actions: thin, call operations", "sources": [{ "path": "src/features/checkout/actions.ts", "line": 1 }] },
+    { "id": "f_service", "label": "service.ts", "parent": "f_checkout", "sublabel": "rules, transactions, enqueue jobs", "sources": [{ "path": "src/features/checkout/service.ts", "line": 1 }] },
+    { "id": "f_context", "label": "context.ts", "parent": "f_checkout", "sublabel": "loads the inputs to a quote", "sources": [{ "path": "src/features/checkout/context.ts", "line": 1 }] },
+    { "id": "f_others", "label": "27 more modules", "parent": "features", "sublabel": "alerts analytics auth cart catalog cms collections contact customers discounts exchanges inventory marketing media orders payments pricing privacy redirects reports reviews settings shipping staff system wallet wishlist", "sources": [{ "path": "src/features/orders/index.ts", "line": 1 }] },
+
+    { "id": "server", "label": "server/", "parent": "src", "sublabel": "Cross-cutting infrastructure", "sources": [{ "path": "src/server/operation.ts", "line": 1, "end_line": 101 }] },
+    { "id": "s_operation", "label": "operation.ts", "parent": "server", "sublabel": "defineOperation: authorize, Zod, handler", "sources": [{ "path": "src/server/operation.ts", "line": 1, "end_line": 101 }] },
+    { "id": "s_audit", "label": "audit.ts", "parent": "server", "sublabel": "writeAudit inside the transaction", "sources": [{ "path": "src/server/audit.ts", "line": 1, "end_line": 53 }] },
+    { "id": "s_db", "label": "db/", "parent": "server", "sublabel": "client, withTransaction, invariants", "sources": [{ "path": "src/server/db/transaction.ts", "line": 1 }] },
+    { "id": "s_auth", "label": "auth/", "parent": "server", "sublabel": "Better Auth, actors, permissions", "sources": [{ "path": "src/server/auth/actor.ts", "line": 1 }] },
+    { "id": "s_jobs", "label": "jobs/", "parent": "server", "sublabel": "pg-boss queues and enqueue", "sources": [{ "path": "src/server/jobs/queues.ts", "line": 1, "end_line": 283 }] },
+    { "id": "s_cache", "label": "cache/", "parent": "server", "sublabel": "Redis cache, revalidation", "sources": [{ "path": "src/server/cache/revalidate.ts", "line": 18, "end_line": 79 }] },
+    { "id": "s_notifications", "label": "notifications/", "parent": "server", "sublabel": "email, WhatsApp, SMS", "sources": [{ "path": "src/server/notifications/email.ts", "line": 1 }] },
+    { "id": "s_storage", "label": "storage/", "parent": "server", "sublabel": "local disk or ImageKit", "sources": [{ "path": "src/server/storage/local.ts", "line": 13, "end_line": 92 }] },
+    { "id": "s_security", "label": "security/", "parent": "server", "sublabel": "HMAC, rate limits, Turnstile", "sources": [{ "path": "src/server/security/hmac.ts", "line": 1 }] },
+
+    { "id": "db", "label": "db/", "parent": "src", "sublabel": "Schema (88 tables), migrations, seed", "sources": [{ "path": "src/db/schema/index.ts", "line": 1 }] },
+    { "id": "db_migrate", "label": "migrate.ts", "parent": "db", "sublabel": "run by the migrate container", "sources": [{ "path": "src/db/migrate.ts", "line": 1 }] },
+    { "id": "db_seed", "label": "seed/", "parent": "db", "sublabel": "sample catalog and content", "sources": [{ "path": "src/db/seed/index.ts", "line": 1 }] },
+
+    { "id": "lib", "label": "lib/", "parent": "src", "sublabel": "Leaf utilities: no app, db, features, server or next", "sources": [{ "path": "eslint.config.mjs", "line": 70, "end_line": 82 }] },
+    { "id": "lib_money", "label": "money.ts", "parent": "lib", "sublabel": "integer paise helpers", "sources": [{ "path": "src/lib/money.ts", "line": 1 }] },
+
+    { "id": "worker", "label": "worker/", "parent": "src", "sublabel": "Entry for the worker process", "sources": [{ "path": "src/worker/index.ts", "line": 1, "end_line": 81 }] },
+    { "id": "w_handlers", "label": "handlers.ts", "parent": "worker", "sublabel": "queue handlers and cron schedules", "sources": [{ "path": "src/worker/handlers.ts", "line": 1, "end_line": 188 }] },
+    { "id": "w_stock", "label": "stock-listener.ts", "parent": "worker", "sublabel": "clears Redis stock keys", "sources": [{ "path": "src/worker/stock-listener.ts", "line": 17, "end_line": 65 }] },
+    { "id": "w_search", "label": "search-indexer.ts", "parent": "worker", "sublabel": "feeds Elasticsearch", "sources": [{ "path": "src/worker/search-indexer.ts", "line": 27, "end_line": 89 }] },
+
+    { "id": "emails", "label": "emails/", "parent": "src", "sublabel": "React email templates, rendered in the worker only", "sources": [{ "path": "src/emails/layout.tsx", "line": 1 }] },
+    { "id": "cli", "label": "cli/", "parent": "src", "sublabel": "Operator scripts: create admin, reindex, media move", "sources": [{ "path": "src/cli/create-super-admin.ts", "line": 1 }] },
+    { "id": "config", "label": "config/", "parent": "src", "sublabel": "Validated environment, routes, site", "sources": [{ "path": "src/config/env.ts", "line": 1 }] },
+    { "id": "proxy", "label": "proxy.ts", "parent": "src", "sublabel": "Request ids and redirects; not a security boundary", "sources": [{ "path": "src/proxy.ts", "line": 18, "end_line": 54 }] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Import direction", "items": ["app/ and components/ call features through actions, queries or the module's index; never service, repository or db.", "A feature reaches another feature only through that feature's index.", "lib/ imports nothing from the app, features, server or db.", "Inside features/, deep relative imports (../../) are banned; use the @/ alias. sql.raw is banned across src/ (except migrations)."] },
+    { "dot": "emerald", "title": "Business actions", "items": ["Mutations are Server Actions that call a defineOperation: authorize, validate with Zod, then a handler.", "Handlers write the audit row and enqueue jobs inside the same transaction.", "Money is integer paise and prices, tax, stock and permissions are decided on the server only."] },
+    { "dot": "amber", "title": "Process boundaries", "items": ["The worker bundle is built from worker/ and calls feature services.", "Email templates render only in the worker; web code never imports react-dom/server.", "Builds have no database: database-backed pages sit behind connection()."] }
+  ]
+}

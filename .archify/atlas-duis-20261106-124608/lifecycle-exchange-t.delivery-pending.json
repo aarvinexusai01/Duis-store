@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "command": "deliver",
+  "status": "pending",
+  "receiptId": "e0651277-5b4b-4a27-9838-8c3afac54dac",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.lifecycle-exchange-t.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-exchange-t.html"
+}

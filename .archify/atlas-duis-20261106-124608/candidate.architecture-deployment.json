@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Duis deployment, backups and monitoring",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/architecture-deployment.html",
+    "quality_profile": "showcase",
+    "repository": { "url": "https://github.com/aarvinexusai01/Duis-store.git", "provider": "github", "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce" }
+  },
+  "components": [
+    { "id": "gh", "type": "cloud", "label": "GitHub Actions CI", "sublabel": "checks · integration · e2e · docker · ops", "pos": [40, 40], "size": [170, 64],
+      "sources": [{ "path": ".github/workflows/ci.yml", "line": 20, "end_line": 124 }] },
+    { "id": "dev", "type": "external", "label": "Owner", "sublabel": "runs deploys by hand", "pos": [60, 240], "size": [130, 60],
+      "sources": [{ "path": "doc/07-deployment-operations.md", "line": 71, "end_line": 107 }] },
+    { "id": "deploy", "type": "backend", "label": "ops/deploy.sh <ref>", "sublabel": "build · migrate · roll · smoke test", "pos": [250, 40], "size": [150, 470],
+      "sources": [{ "path": "ops/deploy.sh", "line": 1, "end_line": 127 }, { "path": "ops/rollback.sh", "line": 1, "end_line": 39 }, { "path": "ops/smoke-test.sh", "line": 1, "end_line": 122 }] },
+    { "id": "builder", "type": "backend", "label": "duis-builder", "sublabel": "BuildKit, low priority", "pos": [490, 40], "size": [130, 60],
+      "sources": [{ "path": "ops/deploy.sh", "line": 78, "end_line": 91 }] },
+    { "id": "migrate", "type": "backend", "label": "migrate", "sublabel": "one-shot, abort on error", "pos": [490, 140], "size": [130, 60],
+      "sources": [{ "path": "ops/deploy.sh", "line": 112 }, { "path": "compose.yaml", "line": 168, "end_line": 182 }] },
+    { "id": "nginx", "type": "cloud", "label": "nginx", "sublabel": "replica marked down", "pos": [490, 240], "size": [130, 60],
+      "sources": [{ "path": "docker/nginx/nginx.conf", "line": 8, "end_line": 12 }, { "path": "ops/reload-nginx.sh", "line": 1 }] },
+    { "id": "web", "type": "backend", "label": "web_a, web_b", "sublabel": "replaced one at a time", "pos": [490, 340], "size": [130, 60],
+      "sources": [{ "path": "compose.yaml", "line": 101, "end_line": 136 }, { "path": "ops/deploy.sh", "line": 116 }] },
+    { "id": "worker", "type": "backend", "label": "worker", "sublabel": "replaced last", "pos": [490, 450], "size": [130, 60],
+      "sources": [{ "path": "compose.yaml", "line": 137, "end_line": 167 }, { "path": "ops/deploy.sh", "line": 118 }] },
+    { "id": "uptime", "type": "external", "label": "UptimeRobot", "sublabel": "health probes", "pos": [720, 240], "size": [130, 60],
+      "sources": [{ "path": "src/app/api/health/ready/route.ts", "line": 1 }, { "path": "src/app/api/health/ops/route.ts", "line": 1 }] },
+    { "id": "pg", "type": "database", "label": "PostgreSQL 18", "sublabel": "pgdata + pgBackRest + restic", "pos": [720, 340], "size": [150, 170],
+      "sources": [{ "path": "compose.yaml", "line": 183, "end_line": 237 }, { "path": "docker/postgres/conf/crontab", "line": 1, "end_line": 10 }] },
+    { "id": "backup", "type": "backend", "label": "backup", "sublabel": "reads data + media", "pos": [950, 340], "size": [130, 60],
+      "sources": [{ "path": "compose.yaml", "line": 309, "end_line": 336 }] },
+    { "id": "r2", "type": "cloud", "label": "Cloudflare R2", "sublabel": "backup bucket", "pos": [1140, 340], "size": [130, 60],
+      "sources": [{ "path": "docker/postgres/conf/pgbackrest.conf", "line": 1 }, { "path": "docker/postgres/conf/crontab", "line": 4, "end_line": 8 }] },
+    { "id": "drill", "type": "backend", "label": "Restore drill", "sublabel": "monthly, compose.drill.yaml", "pos": [1140, 480], "size": [130, 60],
+      "sources": [{ "path": "ops/restore-drill.sh", "line": 1, "end_line": 137 }, { "path": "compose.drill.yaml", "line": 1, "end_line": 44 }] }
+  ],
+  "connections": [
+    { "id": "dev-gh", "from": "dev", "to": "gh", "label": "push", "fromSide": "top", "toSide": "bottom" },
+    { "id": "dev-deploy", "from": "dev", "to": "deploy", "label": "ssh", "variant": "emphasis" },
+    { "id": "deploy-builder", "from": "deploy", "to": "builder", "label": "build" },
+    { "id": "deploy-migrate", "from": "deploy", "to": "migrate", "label": "migrate" },
+    { "id": "deploy-nginx", "from": "deploy", "to": "nginx", "label": "drain" },
+    { "id": "deploy-web", "from": "deploy", "to": "web", "label": "roll" },
+    { "id": "deploy-worker", "from": "deploy", "to": "worker", "label": "roll" },
+    { "id": "nginx-web", "from": "nginx", "to": "web", "label": "proxy", "fromSide": "bottom", "toSide": "top" },
+    { "id": "web-pg", "from": "web", "to": "pg", "label": "SQL" },
+    { "id": "worker-pg", "from": "worker", "to": "pg", "label": "jobs" },
+    { "id": "uptime-nginx", "from": "uptime", "to": "nginx", "label": "probes", "variant": "dashed" },
+    { "id": "pg-backup", "from": "pg", "to": "backup", "label": "data" },
+    { "id": "backup-r2", "from": "backup", "to": "r2", "label": "upload", "variant": "emphasis" },
+    { "id": "pg-r2", "from": "pg", "to": "r2", "label": "WAL push", "variant": "dashed", "fromSide": "top", "toSide": "top", "via": [[795, 318], [1205, 318]] },
+    { "id": "r2-drill", "from": "r2", "to": "drill", "label": "restore", "variant": "dashed", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Deploy by hand", "items": ["CI runs on every pull request and push to main; nothing deploys automatically.", "The owner runs ops/deploy.sh on the VPS for a commit that passed CI.", "It builds duis-web:<sha> on the server, runs migrate (aborts everything if it fails), then replaces web_a, web_b and the worker one at a time and smoke-tests.", "A failed web replica rolls back to the previous image; ops/rollback.sh redeploys an old SHA without rebuilding."] },
+    { "dot": "emerald", "title": "Backups", "items": ["pgBackRest to Cloudflare R2: weekly full (Sunday 02:30), daily differential, continuous WAL.", "restic to R2: nightly logical dump and the media volume.", "Elasticsearch and Redis are not backed up: they are copies or caches.", "A monthly restore drill proves the backups restore."] },
+    { "dot": "amber", "title": "Monitoring", "items": ["UptimeRobot probes /api/health/ready and /api/health/ops (503 on failure).", "The worker's ops-check job records results in ops_checks and emails OPS_ALERT_EMAIL.", "Sentry (SaaS) receives errors from web and worker; not drawn."] }
+  ]
+}

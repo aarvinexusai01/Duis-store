@@ -1,0 +1,491 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 4/9 · Cart, wishlist and promotions",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-04-cart-promotions.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 84,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "carts",
+      "label": "carts",
+      "pos": [
+        40,
+        40
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "anonymous_token_hash",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "status",
+          "type": "cart_status"
+        },
+        {
+          "name": "last_activity_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "reminder_count",
+          "type": "integer"
+        },
+        {
+          "name": "last_reminded_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cart.ts",
+          "line": 29,
+          "end_line": 52
+        }
+      ]
+    },
+    {
+      "id": "wishlist_items",
+      "label": "wishlist_items",
+      "pos": [
+        40,
+        300
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "user_id",
+          "type": "uuid → users.id",
+          "key": "pk"
+        },
+        {
+          "name": "product_id",
+          "type": "uuid → products.id",
+          "key": "pk"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cart.ts",
+          "line": 72,
+          "end_line": 87
+        }
+      ]
+    },
+    {
+      "id": "stock_alerts",
+      "label": "stock_alerts",
+      "pos": [
+        40,
+        440
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "variant_id",
+          "type": "uuid → product_variants.id"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "email",
+          "type": "citext"
+        },
+        {
+          "name": "whatsapp",
+          "type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "notified_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/alerts.ts",
+          "line": 19,
+          "end_line": 43
+        }
+      ]
+    },
+    {
+      "id": "newsletter_subscribers",
+      "label": "newsletter_subscribers",
+      "pos": [
+        40,
+        660
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "email",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "status",
+          "type": "newsletter_status"
+        },
+        {
+          "name": "confirm_token_hash",
+          "type": "text"
+        },
+        {
+          "name": "consent_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "confirmed_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "unsubscribed_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "source",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/marketing.ts",
+          "line": 12,
+          "end_line": 23
+        }
+      ]
+    },
+    {
+      "id": "cart_items",
+      "label": "cart_items",
+      "pos": [
+        454,
+        80
+      ],
+      "width": 350,
+      "attributes": [
+        {
+          "name": "cart_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "carts.id"
+        },
+        {
+          "name": "variant_id",
+          "type": "uuid → product_variants.id",
+          "key": "pk"
+        },
+        {
+          "name": "quantity",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cart.ts",
+          "line": 54,
+          "end_line": 70
+        }
+      ]
+    },
+    {
+      "id": "discounts",
+      "label": "discounts",
+      "pos": [
+        888,
+        100
+      ],
+      "width": 310,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "kind",
+          "type": "discount_kind"
+        },
+        {
+          "name": "value_type",
+          "type": "discount_value_type"
+        },
+        {
+          "name": "value",
+          "type": "integer"
+        },
+        {
+          "name": "max_discount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "min_order_paise",
+          "type": "integer"
+        },
+        {
+          "name": "applies_to",
+          "type": "discount_applies_to"
+        },
+        {
+          "name": "eligibility",
+          "type": "jsonb"
+        },
+        {
+          "name": "combinable",
+          "type": "boolean"
+        },
+        {
+          "name": "priority",
+          "type": "integer"
+        },
+        {
+          "name": "starts_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "ends_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "usage_limit_total",
+          "type": "integer"
+        },
+        {
+          "name": "usage_limit_per_customer",
+          "type": "integer"
+        },
+        {
+          "name": "status",
+          "type": "discount_status"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/discounts.ts",
+          "line": 45,
+          "end_line": 79
+        }
+      ]
+    },
+    {
+      "id": "discount_targets",
+      "label": "discount_targets",
+      "pos": [
+        1282,
+        40
+      ],
+      "width": 320,
+      "attributes": [
+        {
+          "name": "discount_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "discounts.id"
+        },
+        {
+          "name": "target_type",
+          "type": "discount_target_type",
+          "key": "pk"
+        },
+        {
+          "name": "target_id",
+          "type": "uuid",
+          "key": "pk"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/discounts.ts",
+          "line": 81,
+          "end_line": 94
+        }
+      ]
+    },
+    {
+      "id": "coupons",
+      "label": "coupons",
+      "pos": [
+        1282,
+        180
+      ],
+      "width": 320,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "discount_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "discounts.id"
+        },
+        {
+          "name": "code",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "times_used",
+          "type": "integer"
+        },
+        {
+          "name": "usage_limit",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/discounts.ts",
+          "line": 96,
+          "end_line": 120
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "cart_items__cart_id",
+      "from": "cart_items",
+      "to": "carts",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "discount_targets__discount_id",
+      "from": "discount_targets",
+      "to": "discounts",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "coupons__discount_id",
+      "from": "coupons",
+      "to": "discounts",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Cart",
+      "items": [
+        "A user has at most one active cart (partial unique index).",
+        "A CHECK requires either user_id or anonymous_token_hash, so guests can have a cart.",
+        "cart_items quantity is limited to 1-10 by a CHECK."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Promotions",
+      "items": [
+        "discount_targets.target_id is a polymorphic uuid with no FK (product, variant, category or collection).",
+        "A coupon is a code on a discount; automatic discounts have no coupon."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

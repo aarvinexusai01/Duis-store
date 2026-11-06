@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "6a2bf018-3b70-487f-9672-e53bf671cced",
+  "status": "current",
+  "command": "deliver",
+  "type": "tree",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.tree-code-layers.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\tree-code-layers.html",
+  "specification": {
+    "sha256": "a644b4095652d2fd8e9ce63132bbdb2ef9bcceb0b93ccea9f552e3d19bf0737e",
+    "bytes": 9002
+  },
+  "artifact": {
+    "sha256": "0f65ee63c57227129466cad08b23ff6c948751f6e31cc2da957ec171f01fb546",
+    "bytes": 902498
+  }
+}

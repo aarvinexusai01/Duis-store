@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "4d83dc7d-194d-4b22-b503-f265915084e0",
+  "status": "current",
+  "command": "deliver",
+  "type": "erd",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-07-fulfilment-exchanges-reviews.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-07-fulfilment-exchanges-reviews.html",
+  "specification": {
+    "sha256": "dedee84907c537cb357ea4edcddd71b5fdbb1a6ef232fd918098fa5652dc601a",
+    "bytes": 15668
+  },
+  "artifact": {
+    "sha256": "44874d9d652f52f5b6d64643d98c95c4480c4722bf45f35402940138c7be40e0",
+    "bytes": 899586
+  }
+}

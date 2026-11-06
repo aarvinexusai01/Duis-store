@@ -1,0 +1,732 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 5/9 · Orders",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-05-orders.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 84,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "order_items",
+      "label": "order_items",
+      "pos": [
+        40,
+        40
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "orders.id"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "variant_id",
+          "type": "uuid → product_variants.id"
+        },
+        {
+          "name": "product_id",
+          "type": "uuid → products.id"
+        },
+        {
+          "name": "sku",
+          "type": "text"
+        },
+        {
+          "name": "title",
+          "type": "text"
+        },
+        {
+          "name": "variant_label",
+          "type": "text"
+        },
+        {
+          "name": "image_key",
+          "type": "text"
+        },
+        {
+          "name": "hsn_code",
+          "type": "text"
+        },
+        {
+          "name": "unit_price_paise",
+          "type": "integer"
+        },
+        {
+          "name": "unit_mrp_paise",
+          "type": "integer"
+        },
+        {
+          "name": "quantity",
+          "type": "integer"
+        },
+        {
+          "name": "discount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "line_total_paise",
+          "type": "integer"
+        },
+        {
+          "name": "tax_rate_bp",
+          "type": "integer"
+        },
+        {
+          "name": "taxable_paise",
+          "type": "integer"
+        },
+        {
+          "name": "cgst_paise",
+          "type": "integer"
+        },
+        {
+          "name": "sgst_paise",
+          "type": "integer"
+        },
+        {
+          "name": "igst_paise",
+          "type": "integer"
+        },
+        {
+          "name": "unit_price_minor",
+          "type": "integer"
+        },
+        {
+          "name": "unit_mrp_minor",
+          "type": "integer"
+        },
+        {
+          "name": "discount_minor",
+          "type": "integer"
+        },
+        {
+          "name": "line_total_minor",
+          "type": "integer"
+        },
+        {
+          "name": "exchanged_quantity",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/orders.ts",
+          "line": 199,
+          "end_line": 250
+        }
+      ]
+    },
+    {
+      "id": "order_discounts",
+      "label": "order_discounts",
+      "pos": [
+        40,
+        660
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "orders.id"
+        },
+        {
+          "name": "discount_id",
+          "type": "uuid → discounts.id"
+        },
+        {
+          "name": "coupon_id",
+          "type": "uuid → coupons.id"
+        },
+        {
+          "name": "label",
+          "type": "text"
+        },
+        {
+          "name": "amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "amount_minor",
+          "type": "integer"
+        },
+        {
+          "name": "allocation",
+          "type": "jsonb"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/orders.ts",
+          "line": 252,
+          "end_line": 274
+        }
+      ]
+    },
+    {
+      "id": "coupon_redemptions",
+      "label": "coupon_redemptions",
+      "pos": [
+        40,
+        920
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "coupon_id",
+          "type": "uuid → coupons.id"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid",
+          "key": [
+            "fk",
+            "uk"
+          ],
+          "references": "orders.id"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "status",
+          "type": "coupon_redemption_status"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/orders.ts",
+          "line": 293,
+          "end_line": 310
+        }
+      ]
+    },
+    {
+      "id": "orders",
+      "label": "orders",
+      "pos": [
+        454,
+        40
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "order_number",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "status",
+          "type": "order_status"
+        },
+        {
+          "name": "payment_status",
+          "type": "order_payment_status"
+        },
+        {
+          "name": "fulfillment_status",
+          "type": "fulfillment_status"
+        },
+        {
+          "name": "payment_mode",
+          "type": "payment_mode"
+        },
+        {
+          "name": "currency",
+          "type": "text"
+        },
+        {
+          "name": "destination_country",
+          "type": "text"
+        },
+        {
+          "name": "is_export",
+          "type": "boolean"
+        },
+        {
+          "name": "subtotal_paise",
+          "type": "integer"
+        },
+        {
+          "name": "discount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "shipping_fee_paise",
+          "type": "integer"
+        },
+        {
+          "name": "cod_fee_paise",
+          "type": "integer"
+        },
+        {
+          "name": "tax_total_paise",
+          "type": "integer"
+        },
+        {
+          "name": "total_paise",
+          "type": "integer"
+        },
+        {
+          "name": "wallet_applied_paise",
+          "type": "integer"
+        },
+        {
+          "name": "online_amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "cod_due_paise",
+          "type": "integer"
+        },
+        {
+          "name": "fee_tax_rate_bp",
+          "type": "integer"
+        },
+        {
+          "name": "fee_taxable_paise",
+          "type": "integer"
+        },
+        {
+          "name": "fee_cgst_paise",
+          "type": "integer"
+        },
+        {
+          "name": "fee_sgst_paise",
+          "type": "integer"
+        },
+        {
+          "name": "fee_igst_paise",
+          "type": "integer"
+        },
+        {
+          "name": "coupon_code",
+          "type": "citext"
+        },
+        {
+          "name": "shipping_address",
+          "type": "jsonb"
+        },
+        {
+          "name": "customer_name",
+          "type": "text"
+        },
+        {
+          "name": "customer_email",
+          "type": "text"
+        },
+        {
+          "name": "customer_phone",
+          "type": "text"
+        },
+        {
+          "name": "place_idempotency_key",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "quote",
+          "type": "jsonb"
+        },
+        {
+          "name": "quote_hash",
+          "type": "text"
+        },
+        {
+          "name": "marketing_context",
+          "type": "jsonb"
+        },
+        {
+          "name": "placed_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "reservation_expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "confirmed_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "cancelled_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "cancel_reason",
+          "type": "text"
+        },
+        {
+          "name": "expired_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "cod_collected_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "review_requested_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "fx_rate_micros",
+          "type": "integer"
+        },
+        {
+          "name": "fx_source",
+          "type": "text"
+        },
+        {
+          "name": "fx_as_of",
+          "type": "date"
+        },
+        {
+          "name": "price_uplift_bp",
+          "type": "integer"
+        },
+        {
+          "name": "subtotal_minor",
+          "type": "integer"
+        },
+        {
+          "name": "discount_minor",
+          "type": "integer"
+        },
+        {
+          "name": "shipping_fee_minor",
+          "type": "integer"
+        },
+        {
+          "name": "total_minor",
+          "type": "integer"
+        },
+        {
+          "name": "online_amount_minor",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/orders.ts",
+          "line": 91,
+          "end_line": 197
+        }
+      ]
+    },
+    {
+      "id": "order_status_history",
+      "label": "order_status_history",
+      "pos": [
+        878,
+        160
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "orders.id"
+        },
+        {
+          "name": "field",
+          "type": "order_history_field"
+        },
+        {
+          "name": "from_value",
+          "type": "text"
+        },
+        {
+          "name": "to_value",
+          "type": "text"
+        },
+        {
+          "name": "actor_type",
+          "type": "text"
+        },
+        {
+          "name": "actor_user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "reason",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/orders.ts",
+          "line": 275,
+          "end_line": 291
+        }
+      ]
+    },
+    {
+      "id": "cod_remittances",
+      "label": "cod_remittances",
+      "pos": [
+        878,
+        420
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid",
+          "key": [
+            "fk",
+            "uk"
+          ],
+          "references": "orders.id"
+        },
+        {
+          "name": "shipment_id",
+          "type": "uuid"
+        },
+        {
+          "name": "amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "remitted_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "utr",
+          "type": "text"
+        },
+        {
+          "name": "source",
+          "type": "remittance_source"
+        },
+        {
+          "name": "batch_ref",
+          "type": "text"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/orders.ts",
+          "line": 322,
+          "end_line": 346
+        }
+      ]
+    },
+    {
+      "id": "order_notes",
+      "label": "order_notes",
+      "pos": [
+        878,
+        700
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "orders.id"
+        },
+        {
+          "name": "author_user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "body",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/orders.ts",
+          "line": 347,
+          "end_line": 365
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "order_items__order_id",
+      "from": "order_items",
+      "to": "orders",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "order_discounts__order_id",
+      "from": "order_discounts",
+      "to": "orders",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "coupon_redemptions__order_id",
+      "from": "coupon_redemptions",
+      "to": "orders",
+      "fromCardinality": "one",
+      "toCardinality": "one"
+    },
+    {
+      "id": "order_status_history__order_id",
+      "from": "order_status_history",
+      "to": "orders",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "cod_remittances__order_id",
+      "from": "cod_remittances",
+      "to": "orders",
+      "fromCardinality": "one",
+      "toCardinality": "one"
+    },
+    {
+      "id": "order_notes__order_id",
+      "from": "order_notes",
+      "to": "orders",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "orders is the hub",
+      "items": [
+        "52 columns: money in *_paise, the charged USD amounts in *_minor, and three status fields (status, payment_status, fulfillment_status).",
+        "place_idempotency_key is unique, so placing an order twice returns the same order."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Snapshots",
+      "items": [
+        "order_items copies sku, title, price and tax at purchase time; variant_id and product_id are set null if the product is deleted."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Append-only",
+      "items": [
+        "order_status_history, cod_remittances and order_notes are append-only.",
+        "cod_remittances.shipment_id has no FK: it was dropped to break an import cycle."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

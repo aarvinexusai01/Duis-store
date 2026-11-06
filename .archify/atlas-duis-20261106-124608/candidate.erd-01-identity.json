@@ -1,0 +1,698 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 1/9 · Identity and customers",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-01-identity.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 154,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "sessions",
+      "label": "sessions",
+      "pos": [
+        40,
+        40
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "token",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "ip_address",
+          "type": "text"
+        },
+        {
+          "name": "user_agent",
+          "type": "text"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "impersonated_by",
+          "type": "text"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/auth.ts",
+          "line": 38,
+          "end_line": 60
+        }
+      ]
+    },
+    {
+      "id": "accounts",
+      "label": "accounts",
+      "pos": [
+        40,
+        300
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "account_id",
+          "type": "text"
+        },
+        {
+          "name": "provider_id",
+          "type": "text"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "access_token",
+          "type": "text"
+        },
+        {
+          "name": "refresh_token",
+          "type": "text"
+        },
+        {
+          "name": "id_token",
+          "type": "text"
+        },
+        {
+          "name": "access_token_expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "refresh_token_expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "scope",
+          "type": "text"
+        },
+        {
+          "name": "password",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/auth.ts",
+          "line": 62,
+          "end_line": 92
+        }
+      ]
+    },
+    {
+      "id": "two_factors",
+      "label": "two_factors",
+      "pos": [
+        40,
+        640
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "secret",
+          "type": "text"
+        },
+        {
+          "name": "backup_codes",
+          "type": "text"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "verified",
+          "type": "boolean"
+        },
+        {
+          "name": "failed_verification_count",
+          "type": "integer"
+        },
+        {
+          "name": "locked_until",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/auth.ts",
+          "line": 114,
+          "end_line": 133
+        }
+      ]
+    },
+    {
+      "id": "users",
+      "label": "users",
+      "pos": [
+        524,
+        40
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "email_verified",
+          "type": "boolean"
+        },
+        {
+          "name": "image",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "role",
+          "type": "text"
+        },
+        {
+          "name": "banned",
+          "type": "boolean"
+        },
+        {
+          "name": "ban_reason",
+          "type": "text"
+        },
+        {
+          "name": "ban_expires",
+          "type": "timestamptz"
+        },
+        {
+          "name": "two_factor_enabled",
+          "type": "boolean"
+        },
+        {
+          "name": "phone_number",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "phone_number_verified",
+          "type": "boolean"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/auth.ts",
+          "line": 14,
+          "end_line": 36
+        }
+      ]
+    },
+    {
+      "id": "verifications",
+      "label": "verifications",
+      "pos": [
+        524,
+        440
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "identifier",
+          "type": "text"
+        },
+        {
+          "name": "value",
+          "type": "text"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/auth.ts",
+          "line": 94,
+          "end_line": 112
+        }
+      ]
+    },
+    {
+      "id": "rate_limits",
+      "label": "rate_limits",
+      "pos": [
+        524,
+        640
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "key",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "count",
+          "type": "integer"
+        },
+        {
+          "name": "last_request",
+          "type": "bigint"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/auth.ts",
+          "line": 135,
+          "end_line": 142
+        }
+      ]
+    },
+    {
+      "id": "otp_requests",
+      "label": "otp_requests",
+      "pos": [
+        524,
+        800
+      ],
+      "width": 280,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "phone_hash",
+          "type": "text"
+        },
+        {
+          "name": "ip",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/alerts.ts",
+          "line": 44,
+          "end_line": 56
+        }
+      ]
+    },
+    {
+      "id": "customer_profiles",
+      "label": "customer_profiles",
+      "pos": [
+        958,
+        40
+      ],
+      "width": 370,
+      "attributes": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "users.id"
+        },
+        {
+          "name": "marketing_email_consent_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "marketing_whatsapp_consent_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "whatsapp_updates_consent_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "cod_blocked",
+          "type": "boolean"
+        },
+        {
+          "name": "cod_blocked_reason",
+          "type": "text"
+        },
+        {
+          "name": "deletion_requested_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "erased_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "nominee_name",
+          "type": "text"
+        },
+        {
+          "name": "nominee_contact",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/customers.ts",
+          "line": 15,
+          "end_line": 38
+        }
+      ]
+    },
+    {
+      "id": "addresses",
+      "label": "addresses",
+      "pos": [
+        958,
+        360
+      ],
+      "width": 370,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "full_name",
+          "type": "text"
+        },
+        {
+          "name": "phone",
+          "type": "text"
+        },
+        {
+          "name": "line1",
+          "type": "text"
+        },
+        {
+          "name": "line2",
+          "type": "text"
+        },
+        {
+          "name": "landmark",
+          "type": "text"
+        },
+        {
+          "name": "city",
+          "type": "text"
+        },
+        {
+          "name": "region",
+          "type": "text"
+        },
+        {
+          "name": "state_code",
+          "type": "text"
+        },
+        {
+          "name": "postal_code",
+          "type": "text"
+        },
+        {
+          "name": "country_code",
+          "type": "text"
+        },
+        {
+          "name": "type",
+          "type": "text"
+        },
+        {
+          "name": "is_default",
+          "type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/customers.ts",
+          "line": 39,
+          "end_line": 73
+        }
+      ]
+    },
+    {
+      "id": "staff_invitations",
+      "label": "staff_invitations",
+      "pos": [
+        958,
+        760
+      ],
+      "width": 370,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "email",
+          "type": "citext"
+        },
+        {
+          "name": "roles",
+          "type": "text[]"
+        },
+        {
+          "name": "token_hash",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "invited_by",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "accepted_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "accepted_user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/staff.ts",
+          "line": 11,
+          "end_line": 32
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "sessions__user_id",
+      "from": "sessions",
+      "to": "users",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "accounts__user_id",
+      "from": "accounts",
+      "to": "users",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "two_factors__user_id",
+      "from": "two_factors",
+      "to": "users",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "customer_profiles__user_id",
+      "from": "customer_profiles",
+      "to": "users",
+      "fromCardinality": "one",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "addresses__user_id",
+      "from": "addresses",
+      "to": "users",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "staff_invitations__invited_by",
+      "from": "staff_invitations",
+      "to": "users",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "invited_by"
+    },
+    {
+      "id": "staff_invitations__accepted_user_id",
+      "from": "staff_invitations",
+      "to": "users",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "accepted_user_id"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Identity",
+      "items": [
+        "users is the hub: sessions, accounts, two_factors, customer_profiles, addresses and staff_invitations hang off it.",
+        "customer_profiles is 1:1 with users (its primary key is user_id).",
+        "There are no roles or permissions tables: roles are a text column, users.role, and RBAC lives in code (doc/permissions.md)."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Loose ends",
+      "items": [
+        "sessions.impersonated_by is plain text with no foreign key.",
+        "verifications, rate_limits and otp_requests stand alone; otp_requests stores a phone hash and has no FK."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "dc950667-c171-4493-805f-b25353a0cbbc",
+  "status": "current",
+  "command": "deliver",
+  "type": "lifecycle",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.lifecycle-exchange.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-exchange.html",
+  "specification": {
+    "sha256": "4665e449368bbb13291f1a3bd50c0e017aab4fbdfb0dfa2ec5fdaf9417e49efe",
+    "bytes": 6704
+  },
+  "artifact": {
+    "sha256": "8c4d7f4e38b3d9640ce906c501405c8ed2cbd6b3ec4f3b45859acb38ad0939d3",
+    "bytes": 854189
+  }
+}

@@ -1,0 +1,784 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 8/9 · CMS, page builder and journal",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-08-cms-journal.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 187,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "cms_pages",
+      "label": "cms_pages",
+      "pos": [
+        40,
+        40
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "type",
+          "type": "cms_page_type"
+        },
+        {
+          "name": "slug",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "title",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "publication_status"
+        },
+        {
+          "name": "draft_revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "published_revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 118,
+          "end_line": 129
+        }
+      ]
+    },
+    {
+      "id": "navigation_menus",
+      "label": "navigation_menus",
+      "pos": [
+        40,
+        340
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "key",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "draft_revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "published_revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 131,
+          "end_line": 140
+        }
+      ]
+    },
+    {
+      "id": "site_settings",
+      "label": "site_settings",
+      "pos": [
+        40,
+        560
+      ],
+      "width": 290,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "smallint",
+          "key": "pk"
+        },
+        {
+          "name": "entity_id",
+          "type": "uuid"
+        },
+        {
+          "name": "draft_revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "published_revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 141,
+          "end_line": 159
+        }
+      ]
+    },
+    {
+      "id": "cms_revisions",
+      "label": "cms_revisions",
+      "pos": [
+        517,
+        100
+      ],
+      "width": 320,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "entity_type",
+          "type": "cms_entity_type"
+        },
+        {
+          "name": "entity_id",
+          "type": "uuid"
+        },
+        {
+          "name": "version",
+          "type": "integer"
+        },
+        {
+          "name": "data",
+          "type": "jsonb"
+        },
+        {
+          "name": "workflow_status",
+          "type": "cms_workflow_status"
+        },
+        {
+          "name": "note",
+          "type": "text"
+        },
+        {
+          "name": "review_note",
+          "type": "text"
+        },
+        {
+          "name": "scheduled_for",
+          "type": "timestamptz"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "reviewed_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "published_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 48,
+          "end_line": 83
+        }
+      ],
+      "sublabel": "unique (entity_type, entity_id, version)"
+    },
+    {
+      "id": "cms_revision_refs",
+      "label": "cms_revision_refs",
+      "pos": [
+        517,
+        480
+      ],
+      "width": 320,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "product_id",
+          "type": "uuid → products.id"
+        },
+        {
+          "name": "collection_id",
+          "type": "uuid → collections.id"
+        },
+        {
+          "name": "category_id",
+          "type": "uuid → categories.id"
+        },
+        {
+          "name": "media_id",
+          "type": "uuid → media_assets.id"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 84,
+          "end_line": 116
+        }
+      ]
+    },
+    {
+      "id": "redirects",
+      "label": "redirects",
+      "pos": [
+        517,
+        680
+      ],
+      "width": 320,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "from_path",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "to_path",
+          "type": "text"
+        },
+        {
+          "name": "status_code",
+          "type": "smallint"
+        },
+        {
+          "name": "source",
+          "type": "text"
+        },
+        {
+          "name": "hits",
+          "type": "integer"
+        },
+        {
+          "name": "last_hit_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 160,
+          "end_line": 189
+        }
+      ]
+    },
+    {
+      "id": "blog_posts",
+      "label": "blog_posts",
+      "pos": [
+        1024,
+        100
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "slug",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "status",
+          "type": "publication_status"
+        },
+        {
+          "name": "draft_revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "published_revision_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "cms_revisions.id"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "title",
+          "type": "text"
+        },
+        {
+          "name": "excerpt",
+          "type": "text"
+        },
+        {
+          "name": "cover_media_id",
+          "type": "uuid → media_assets.id"
+        },
+        {
+          "name": "author_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "blog_authors.id"
+        },
+        {
+          "name": "category_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "blog_categories.id"
+        },
+        {
+          "name": "reading_minutes",
+          "type": "integer"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 222,
+          "end_line": 256
+        }
+      ]
+    },
+    {
+      "id": "blog_post_tags",
+      "label": "blog_post_tags",
+      "pos": [
+        1024,
+        480
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "post_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "blog_posts.id"
+        },
+        {
+          "name": "tag_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "blog_tags.id"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 257,
+          "end_line": 271
+        }
+      ]
+    },
+    {
+      "id": "blog_authors",
+      "label": "blog_authors",
+      "pos": [
+        1541,
+        40
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "slug",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "bio",
+          "type": "text"
+        },
+        {
+          "name": "photo_media_id",
+          "type": "uuid → media_assets.id"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 190,
+          "end_line": 200
+        }
+      ]
+    },
+    {
+      "id": "blog_categories",
+      "label": "blog_categories",
+      "pos": [
+        1541,
+        280
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "slug",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "description",
+          "type": "text"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 202,
+          "end_line": 209
+        }
+      ]
+    },
+    {
+      "id": "blog_tags",
+      "label": "blog_tags",
+      "pos": [
+        1541,
+        500
+      ],
+      "width": 330,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "slug",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 211,
+          "end_line": 221
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "cms_pages__draft_revision_id",
+      "from": "cms_pages",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "draft_revision_id"
+    },
+    {
+      "id": "cms_pages__published_revision_id",
+      "from": "cms_pages",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "published_revision_id"
+    },
+    {
+      "id": "navigation_menus__draft_revision_id",
+      "from": "navigation_menus",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "draft_revision_id"
+    },
+    {
+      "id": "navigation_menus__published_revision_id",
+      "from": "navigation_menus",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "published_revision_id"
+    },
+    {
+      "id": "site_settings__draft_revision_id",
+      "from": "site_settings",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "draft_revision_id"
+    },
+    {
+      "id": "site_settings__published_revision_id",
+      "from": "site_settings",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "published_revision_id"
+    },
+    {
+      "id": "cms_revision_refs__revision_id",
+      "from": "cms_revision_refs",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "blog_posts__draft_revision_id",
+      "from": "blog_posts",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "draft_revision_id"
+    },
+    {
+      "id": "blog_posts__published_revision_id",
+      "from": "blog_posts",
+      "to": "cms_revisions",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false,
+      "label": "published_revision_id"
+    },
+    {
+      "id": "blog_posts__author_id",
+      "from": "blog_posts",
+      "to": "blog_authors",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false
+    },
+    {
+      "id": "blog_posts__category_id",
+      "from": "blog_posts",
+      "to": "blog_categories",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false
+    },
+    {
+      "id": "blog_post_tags__post_id",
+      "from": "blog_post_tags",
+      "to": "blog_posts",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "blog_post_tags__tag_id",
+      "from": "blog_post_tags",
+      "to": "blog_tags",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Draft and published",
+      "items": [
+        "cms_pages, navigation_menus, site_settings and blog_posts each point at two cms_revisions rows: draft_revision_id and published_revision_id.",
+        "Publishing swaps which revision is published; old revisions stay for rollback."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Guards",
+      "items": [
+        "cms_revision_refs: a CHECK requires exactly one of product, collection, category or media to be set.",
+        "cms_revisions.entity_id is polymorphic (page, navigation, site_settings or blog_post) with no FK.",
+        "site_settings is a single row (id = 1)."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

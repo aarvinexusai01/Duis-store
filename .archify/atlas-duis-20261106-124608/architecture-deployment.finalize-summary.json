@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.architecture-deployment.json",
+    "sha256": "d78511b39f2618efac95778d9f0bd133fc67a5d54f2334990356675ccc9c774b",
+    "bytes": 6504
+  },
+  "artifact": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-deployment.html",
+    "sha256": "6f844c0762177dc1b3489dd4d45dd5ad7a233c35e640aea7b2ec302949771908",
+    "bytes": 860176
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-deployment.finalize.json",
+    "summaryReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-deployment.finalize-summary.json",
+    "browserCheckReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-deployment.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-06T07:27:51.025Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 9733,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 1,
+      "routesOverSuggestedBends": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "deploy-builder",
+            "from": "deploy",
+            "to": "builder",
+            "label": "build",
+            "collectionIndex": 2,
+            "artifactIndex": 3
+          },
+          "right": {
+            "id": "deploy-migrate",
+            "from": "deploy",
+            "to": "migrate",
+            "label": "migrate",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "point": [
+            466,
+            70
+          ],
+          "sharedNode": "deploy"
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "deploy-migrate",
+            "from": "deploy",
+            "to": "migrate",
+            "label": "migrate",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "bends": 3,
+          "stretch": 1.163
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "deploy → builder and deploy → migrate cross next to deploy: move node builder or migrate so the two reach deploy from different sides (for example one level with it, one directly above or below it).",
+      "deploy → migrate needs 3 bends: move node deploy or migrate so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

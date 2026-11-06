@@ -1,0 +1,392 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Duis operation and background-job execution",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/workflow-operation.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "lanes": [
+    {
+      "id": "ui",
+      "label": "Caller"
+    },
+    {
+      "id": "op",
+      "label": "Operation"
+    },
+    {
+      "id": "db",
+      "label": "Transaction"
+    },
+    {
+      "id": "worker",
+      "label": "Worker"
+    }
+  ],
+  "mainPath": [
+    "form",
+    "action",
+    "auth",
+    "valid",
+    "handler",
+    "tx",
+    "enq",
+    "result"
+  ],
+  "nodes": [
+    {
+      "id": "form",
+      "lane": "ui",
+      "col": 0,
+      "type": "external",
+      "label": "Form or button",
+      "sublabel": "customer or staff",
+      "sources": [
+        {
+          "path": "src/features/checkout/actions.ts",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "lane": "ui",
+      "col": 4,
+      "type": "external",
+      "label": "Result",
+      "sublabel": "ok or ActionError",
+      "sources": [
+        {
+          "path": "src/server/action.ts",
+          "line": 1,
+          "end_line": 30
+        }
+      ]
+    },
+    {
+      "id": "error",
+      "lane": "ui",
+      "col": 1,
+      "type": "security",
+      "label": "ActionError",
+      "sublabel": "typed error to the form",
+      "sources": [
+        {
+          "path": "src/server/errors.ts",
+          "line": 1
+        },
+        {
+          "path": "src/server/action.ts",
+          "line": 1,
+          "end_line": 30
+        }
+      ]
+    },
+    {
+      "id": "action",
+      "lane": "op",
+      "col": 0,
+      "type": "backend",
+      "label": "Server Action",
+      "sublabel": "getActor()",
+      "sources": [
+        {
+          "path": "src/server/auth/actor.ts",
+          "line": 1
+        },
+        {
+          "path": "src/server/action.ts",
+          "line": 1,
+          "end_line": 30
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "lane": "op",
+      "col": 1,
+      "type": "security",
+      "label": "authorize",
+      "sublabel": "access class, staff 2FA",
+      "sources": [
+        {
+          "path": "src/server/operation.ts",
+          "line": 39,
+          "end_line": 56
+        }
+      ]
+    },
+    {
+      "id": "valid",
+      "lane": "op",
+      "col": 2,
+      "type": "backend",
+      "label": "validate",
+      "sublabel": "Zod safeParse",
+      "sources": [
+        {
+          "path": "src/server/operation.ts",
+          "line": 76,
+          "end_line": 85
+        }
+      ]
+    },
+    {
+      "id": "handler",
+      "lane": "op",
+      "col": 3,
+      "type": "backend",
+      "label": "handler",
+      "sublabel": "business rules",
+      "sources": [
+        {
+          "path": "src/server/operation.ts",
+          "line": 87,
+          "end_line": 92
+        }
+      ]
+    },
+    {
+      "id": "replicas",
+      "lane": "op",
+      "col": 5,
+      "type": "backend",
+      "label": "Web replicas",
+      "sublabel": "/api/internal/revalidate",
+      "sources": [
+        {
+          "path": "src/app/api/internal/revalidate/route.ts",
+          "line": 1,
+          "end_line": 55
+        }
+      ]
+    },
+    {
+      "id": "tx",
+      "lane": "db",
+      "col": 3,
+      "type": "database",
+      "label": "Rows + audit",
+      "sublabel": "withTransaction",
+      "sources": [
+        {
+          "path": "src/server/audit.ts",
+          "line": 34,
+          "end_line": 53
+        },
+        {
+          "path": "src/server/db/transaction.ts",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "enq",
+      "lane": "db",
+      "col": 4,
+      "type": "messagebus",
+      "label": "Enqueue",
+      "sublabel": "job + revalidation",
+      "sources": [
+        {
+          "path": "src/server/jobs/enqueue.ts",
+          "line": 42,
+          "end_line": 56
+        },
+        {
+          "path": "src/server/cache/revalidate.ts",
+          "line": 26,
+          "end_line": 45
+        }
+      ]
+    },
+    {
+      "id": "dead",
+      "lane": "worker",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Dead letter",
+      "sublabel": "system.dead-letter",
+      "sources": [
+        {
+          "path": "src/server/jobs/queues.ts",
+          "line": 80,
+          "end_line": 81
+        }
+      ]
+    },
+    {
+      "id": "work",
+      "lane": "worker",
+      "col": 4,
+      "type": "backend",
+      "label": "Job handler",
+      "sublabel": "retries with backoff",
+      "sources": [
+        {
+          "path": "src/worker/handlers.ts",
+          "line": 169,
+          "end_line": 188
+        },
+        {
+          "path": "src/server/jobs/queues.ts",
+          "line": 82,
+          "end_line": 260
+        }
+      ]
+    },
+    {
+      "id": "fan",
+      "lane": "worker",
+      "col": 5,
+      "type": "backend",
+      "label": "Revalidate",
+      "sublabel": "cache.revalidate job",
+      "sources": [
+        {
+          "path": "src/server/cache/revalidate.ts",
+          "line": 46,
+          "end_line": 79
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-form-action",
+      "from": "form",
+      "to": "action",
+      "label": "submit",
+      "role": "main"
+    },
+    {
+      "id": "e-action-auth",
+      "from": "action",
+      "to": "auth",
+      "label": "actor",
+      "role": "main"
+    },
+    {
+      "id": "e-auth-valid",
+      "from": "auth",
+      "to": "valid",
+      "label": "allowed",
+      "role": "main",
+      "variant": "security"
+    },
+    {
+      "id": "e-valid-handler",
+      "from": "valid",
+      "to": "handler",
+      "label": "valid",
+      "role": "main"
+    },
+    {
+      "id": "e-handler-tx",
+      "from": "handler",
+      "to": "tx",
+      "label": "begin",
+      "role": "main",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-tx-enq",
+      "from": "tx",
+      "to": "enq",
+      "label": "same tx",
+      "role": "main",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-enq-result",
+      "from": "enq",
+      "to": "result",
+      "label": "commit, then return",
+      "role": "return"
+    },
+    {
+      "id": "e-auth-error",
+      "from": "auth",
+      "to": "error",
+      "label": "FORBIDDEN, 2FA",
+      "role": "branch",
+      "variant": "security"
+    },
+    {
+      "id": "e-valid-error",
+      "from": "valid",
+      "to": "error",
+      "label": "VALIDATION_FAILED",
+      "role": "branch",
+      "variant": "security"
+    },
+    {
+      "id": "e-enq-work",
+      "from": "enq",
+      "to": "work",
+      "label": "pg-boss job",
+      "role": "async",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-work-dead",
+      "from": "work",
+      "to": "dead",
+      "label": "retries used up",
+      "role": "branch",
+      "variant": "security"
+    },
+    {
+      "id": "e-work-fan",
+      "from": "work",
+      "to": "fan",
+      "label": "cache.revalidate",
+      "role": "async",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-fan-replicas",
+      "from": "fan",
+      "to": "replicas",
+      "label": "HMAC POST",
+      "role": "async",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Order of work",
+      "items": [
+        "authorize runs before validation, so a forbidden caller learns nothing about the expected input.",
+        "System actors (jobs, seed, CLI) pass every check; staff roles also need two-factor enabled.",
+        "Every operation is registered by name and the RBAC matrix test calls each one with every role."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "One transaction",
+      "items": [
+        "defineOperation only authorizes, validates and calls the handler.",
+        "The handler writes the rows, the audit row and the job inside its own transaction.",
+        "pg-boss writes the job row through that transaction, so there is no outbox table and the job exists only if the change commits."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Worker and retries",
+      "items": [
+        "Each queue has its own retry count and backoff, for example payments.process-webhook 8 times and notify.email 5.",
+        "Jobs that run out of retries land in system.dead-letter; a Super Admin can retry, discard or reprocess webhooks.",
+        "cache.revalidate sends an HMAC-signed POST to every web replica; cron jobs run in Asia/Kolkata time."
+      ]
+    }
+  ]
+}

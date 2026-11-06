@@ -1,0 +1,517 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 3/9 · Inventory and collections",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-03-inventory-collections.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 84,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "stock_locations",
+      "label": "stock_locations",
+      "pos": [
+        40,
+        250
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "code",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "name": "address_line1",
+          "type": "text"
+        },
+        {
+          "name": "city",
+          "type": "text"
+        },
+        {
+          "name": "state_code",
+          "type": "text"
+        },
+        {
+          "name": "postal_code",
+          "type": "text"
+        },
+        {
+          "name": "country_code",
+          "type": "text"
+        },
+        {
+          "name": "shiprocket_pickup_code",
+          "type": "text"
+        },
+        {
+          "name": "is_default",
+          "type": "boolean"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/inventory.ts",
+          "line": 40,
+          "end_line": 67
+        }
+      ]
+    },
+    {
+      "id": "collections",
+      "label": "collections",
+      "pos": [
+        40,
+        920
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "slug",
+          "type": "citext",
+          "key": "uk"
+        },
+        {
+          "name": "title",
+          "type": "text"
+        },
+        {
+          "name": "description",
+          "type": "text"
+        },
+        {
+          "name": "image_media_id",
+          "type": "uuid → media_assets.id"
+        },
+        {
+          "name": "banner_media_id",
+          "type": "uuid → media_assets.id"
+        },
+        {
+          "name": "type",
+          "type": "collection_type"
+        },
+        {
+          "name": "status",
+          "type": "publication_status"
+        },
+        {
+          "name": "sort_mode",
+          "type": "collection_sort_mode"
+        },
+        {
+          "name": "rules",
+          "type": "jsonb"
+        },
+        {
+          "name": "rule_match",
+          "type": "text"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "rules_refreshed_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "seo_title",
+          "type": "text"
+        },
+        {
+          "name": "seo_description",
+          "type": "text"
+        },
+        {
+          "name": "noindex",
+          "type": "boolean"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/collections.ts",
+          "line": 53,
+          "end_line": 96
+        }
+      ]
+    },
+    {
+      "id": "inventory_levels",
+      "label": "inventory_levels",
+      "pos": [
+        464,
+        40
+      ],
+      "width": 350,
+      "attributes": [
+        {
+          "name": "variant_id",
+          "type": "uuid → product_variants.id",
+          "key": "pk"
+        },
+        {
+          "name": "location_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "stock_locations.id"
+        },
+        {
+          "name": "on_hand",
+          "type": "integer"
+        },
+        {
+          "name": "reserved",
+          "type": "integer"
+        },
+        {
+          "name": "low_stock_threshold",
+          "type": "integer"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/inventory.ts",
+          "line": 68,
+          "end_line": 94
+        }
+      ]
+    },
+    {
+      "id": "inventory_reservations",
+      "label": "inventory_reservations",
+      "pos": [
+        464,
+        240
+      ],
+      "width": 350,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "variant_id",
+          "type": "uuid → product_variants.id"
+        },
+        {
+          "name": "location_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "stock_locations.id"
+        },
+        {
+          "name": "quantity",
+          "type": "integer"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid → orders.id"
+        },
+        {
+          "name": "exchange_id",
+          "type": "uuid → exchange_requests.id"
+        },
+        {
+          "name": "status",
+          "type": "reservation_status"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/inventory.ts",
+          "line": 96,
+          "end_line": 125
+        }
+      ]
+    },
+    {
+      "id": "inventory_movements",
+      "label": "inventory_movements",
+      "pos": [
+        464,
+        520
+      ],
+      "width": 350,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "variant_id",
+          "type": "uuid → product_variants.id"
+        },
+        {
+          "name": "location_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "stock_locations.id"
+        },
+        {
+          "name": "delta_on_hand",
+          "type": "integer"
+        },
+        {
+          "name": "reason",
+          "type": "inventory_movement_reason"
+        },
+        {
+          "name": "reference_type",
+          "type": "text"
+        },
+        {
+          "name": "reference_id",
+          "type": "uuid"
+        },
+        {
+          "name": "note",
+          "type": "text"
+        },
+        {
+          "name": "actor_user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/inventory.ts",
+          "line": 126,
+          "end_line": 148
+        }
+      ]
+    },
+    {
+      "id": "collection_products",
+      "label": "collection_products",
+      "pos": [
+        464,
+        800
+      ],
+      "width": 350,
+      "attributes": [
+        {
+          "name": "collection_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "collections.id"
+        },
+        {
+          "name": "product_id",
+          "type": "uuid → products.id",
+          "key": "pk"
+        },
+        {
+          "name": "position",
+          "type": "integer"
+        },
+        {
+          "name": "source",
+          "type": "collection_membership_source"
+        },
+        {
+          "name": "added_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/collections.ts",
+          "line": 97,
+          "end_line": 115
+        }
+      ]
+    },
+    {
+      "id": "product_sales_stats",
+      "label": "product_sales_stats",
+      "pos": [
+        464,
+        980
+      ],
+      "width": 350,
+      "attributes": [
+        {
+          "name": "product_id",
+          "type": "uuid → products.id",
+          "key": "pk"
+        },
+        {
+          "name": "units7d",
+          "type": "integer"
+        },
+        {
+          "name": "units30d",
+          "type": "integer"
+        },
+        {
+          "name": "revenue30d_paise",
+          "type": "bigint"
+        },
+        {
+          "name": "rank_best_selling",
+          "type": "integer"
+        },
+        {
+          "name": "rank_trending",
+          "type": "integer"
+        },
+        {
+          "name": "refreshed_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/collections.ts",
+          "line": 117,
+          "end_line": 127
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "inventory_levels__location_id",
+      "from": "inventory_levels",
+      "to": "stock_locations",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "inventory_reservations__location_id",
+      "from": "inventory_reservations",
+      "to": "stock_locations",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "inventory_movements__location_id",
+      "from": "inventory_movements",
+      "to": "stock_locations",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "collection_products__collection_id",
+      "from": "collection_products",
+      "to": "collections",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Stock",
+      "items": [
+        "inventory_levels is keyed by (variant_id, location_id); a CHECK keeps 0 <= reserved <= on_hand.",
+        "inventory_reservations hold stock for an order or an exchange until committed, released or expired."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Append-only",
+      "items": [
+        "inventory_movements is append-only: UPDATE and DELETE are revoked from the app role.",
+        "Its reference_id is a soft reference with no FK."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Collections",
+      "items": [
+        "collection_products.source says whether a product was added by hand or by a rule.",
+        "product_sales_stats is derived: 7 and 30 day units plus best-selling and trending ranks."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

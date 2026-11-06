@@ -1,0 +1,531 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 6/9 · Payments and wallet",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-06-payments-wallet.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 84,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "payments",
+      "label": "payments",
+      "pos": [
+        40,
+        40
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid → orders.id"
+        },
+        {
+          "name": "purpose",
+          "type": "payment_purpose"
+        },
+        {
+          "name": "provider",
+          "type": "text"
+        },
+        {
+          "name": "provider_order_id",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "provider_payment_id",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "refunded_paise",
+          "type": "integer"
+        },
+        {
+          "name": "currency",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "payment_status"
+        },
+        {
+          "name": "method",
+          "type": "text"
+        },
+        {
+          "name": "error_code",
+          "type": "text"
+        },
+        {
+          "name": "error_reason",
+          "type": "text"
+        },
+        {
+          "name": "captured_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "raw",
+          "type": "jsonb"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/payments.ts",
+          "line": 38,
+          "end_line": 70
+        }
+      ]
+    },
+    {
+      "id": "webhook_events",
+      "label": "webhook_events",
+      "pos": [
+        40,
+        460
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "provider",
+          "type": "text"
+        },
+        {
+          "name": "event_id",
+          "type": "text"
+        },
+        {
+          "name": "event_type",
+          "type": "text"
+        },
+        {
+          "name": "payload",
+          "type": "jsonb"
+        },
+        {
+          "name": "status",
+          "type": "webhook_status"
+        },
+        {
+          "name": "attempts",
+          "type": "integer"
+        },
+        {
+          "name": "last_error",
+          "type": "text"
+        },
+        {
+          "name": "received_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "processed_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/payments.ts",
+          "line": 109,
+          "end_line": 134
+        }
+      ],
+      "sublabel": "unique (provider, event_id)"
+    },
+    {
+      "id": "fake_gateway_records",
+      "label": "fake_gateway_records",
+      "pos": [
+        40,
+        740
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "kind",
+          "type": "text"
+        },
+        {
+          "name": "data",
+          "type": "jsonb"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/payments.ts",
+          "line": 135,
+          "end_line": 140
+        }
+      ]
+    },
+    {
+      "id": "refunds",
+      "label": "refunds",
+      "pos": [
+        394,
+        40
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "payment_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "payments.id"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid → orders.id"
+        },
+        {
+          "name": "amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "currency",
+          "type": "text"
+        },
+        {
+          "name": "reason",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "refund_status"
+        },
+        {
+          "name": "provider_refund_id",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "idempotency_key",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "initiated_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/payments.ts",
+          "line": 72,
+          "end_line": 99
+        }
+      ]
+    },
+    {
+      "id": "wallet_accounts",
+      "label": "wallet_accounts",
+      "pos": [
+        394,
+        360
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "user_id",
+          "type": "uuid → users.id",
+          "key": "pk"
+        },
+        {
+          "name": "balance_paise",
+          "type": "integer"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/wallet.ts",
+          "line": 29,
+          "end_line": 41
+        }
+      ]
+    },
+    {
+      "id": "wallet_ledger",
+      "label": "wallet_ledger",
+      "pos": [
+        748,
+        40
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "reason",
+          "type": "wallet_reason"
+        },
+        {
+          "name": "reference_type",
+          "type": "text"
+        },
+        {
+          "name": "reference_id",
+          "type": "uuid"
+        },
+        {
+          "name": "idempotency_key",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "note",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/wallet.ts",
+          "line": 42,
+          "end_line": 70
+        }
+      ]
+    },
+    {
+      "id": "wallet_lot_usages",
+      "label": "wallet_lot_usages",
+      "pos": [
+        748,
+        340
+      ],
+      "width": 270,
+      "attributes": [
+        {
+          "name": "debit_ledger_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "wallet_ledger.id"
+        },
+        {
+          "name": "lot_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "wallet_credit_lots.id"
+        },
+        {
+          "name": "amount_paise",
+          "type": "integer"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/wallet.ts",
+          "line": 98,
+          "end_line": 113
+        }
+      ]
+    },
+    {
+      "id": "wallet_credit_lots",
+      "label": "wallet_credit_lots",
+      "pos": [
+        1102,
+        40
+      ],
+      "width": 240,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "ledger_id",
+          "type": "uuid",
+          "key": [
+            "fk",
+            "uk"
+          ],
+          "references": "wallet_ledger.id"
+        },
+        {
+          "name": "amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "remaining_paise",
+          "type": "integer"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/wallet.ts",
+          "line": 71,
+          "end_line": 96
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "refunds__payment_id",
+      "from": "refunds",
+      "to": "payments",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "wallet_lot_usages__debit_ledger_id",
+      "from": "wallet_lot_usages",
+      "to": "wallet_ledger",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "wallet_lot_usages__lot_id",
+      "from": "wallet_lot_usages",
+      "to": "wallet_credit_lots",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "wallet_credit_lots__ledger_id",
+      "from": "wallet_credit_lots",
+      "to": "wallet_ledger",
+      "fromCardinality": "one",
+      "toCardinality": "one"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Payments",
+      "items": [
+        "payments.provider_order_id and provider_payment_id are unique; purpose is full, advance (partial COD) or exchange_difference.",
+        "refunds carry a unique idempotency_key."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Webhooks",
+      "items": [
+        "webhook_events is unique on (provider, event_id), which makes replays harmless.",
+        "fake_gateway_records backs the fake payment gateway used in dev and tests."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Wallet",
+      "items": [
+        "wallet_ledger is append-only with a unique idempotency_key.",
+        "wallet_accounts.balance_paise has a CHECK >= 0.",
+        "Credits are tracked as lots with an expiry; wallet_lot_usages links a debit to the lots it consumed."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

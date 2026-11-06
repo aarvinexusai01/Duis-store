@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.architecture-system.json",
+    "sha256": "1b320643847567aebc991e497561108361dcd94cd83d1c274eebfbaf72218b42",
+    "bytes": 8417
+  },
+  "artifact": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-system.html",
+    "sha256": "bceac9f91d0c7de50320a154cb7bed5b43b96c7d169a36925afb495b93d2539e",
+    "bytes": 875216
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-system.finalize.json",
+    "summaryReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-system.finalize-summary.json",
+    "browserCheckReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\architecture-system.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-06T07:27:51.025Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 11114,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 6,
+      "routesOverSuggestedBends": 2
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "web-pg",
+            "from": "web",
+            "to": "pg",
+            "label": "SQL",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "right": {
+            "id": "web-shiprocket",
+            "from": "web",
+            "to": "shiprocket",
+            "label": "PIN check",
+            "collectionIndex": 16,
+            "artifactIndex": 17
+          },
+          "point": [
+            794,
+            209
+          ],
+          "sharedNode": "web"
+        },
+        {
+          "left": {
+            "id": "web-redis",
+            "from": "web",
+            "to": "redis",
+            "label": "cache",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "right": {
+            "id": "web-shiprocket",
+            "from": "web",
+            "to": "shiprocket",
+            "label": "PIN check",
+            "collectionIndex": 16,
+            "artifactIndex": 17
+          },
+          "point": [
+            808,
+            209
+          ],
+          "sharedNode": "web"
+        },
+        {
+          "left": {
+            "id": "web-razorpay",
+            "from": "web",
+            "to": "razorpay",
+            "label": "orders",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "right": {
+            "id": "shiprocket-web",
+            "from": "shiprocket",
+            "to": "web",
+            "label": "tracking",
+            "collectionIndex": 17,
+            "artifactIndex": 18
+          },
+          "point": [
+            1014,
+            196
+          ],
+          "sharedNode": "web"
+        },
+        {
+          "left": {
+            "id": "worker-razorpay",
+            "from": "worker",
+            "to": "razorpay",
+            "label": "refunds",
+            "collectionIndex": 15,
+            "artifactIndex": 16
+          },
+          "right": {
+            "id": "worker-shiprocket",
+            "from": "worker",
+            "to": "shiprocket",
+            "label": "book",
+            "collectionIndex": 18,
+            "artifactIndex": 19
+          },
+          "point": [
+            1025,
+            398
+          ],
+          "sharedNode": "worker"
+        },
+        {
+          "left": {
+            "id": "web-shiprocket",
+            "from": "web",
+            "to": "shiprocket",
+            "label": "PIN check",
+            "collectionIndex": 16,
+            "artifactIndex": 17
+          },
+          "right": {
+            "id": "shiprocket-web",
+            "from": "shiprocket",
+            "to": "web",
+            "label": "tracking",
+            "collectionIndex": 17,
+            "artifactIndex": 18
+          },
+          "point": [
+            1014,
+            209
+          ],
+          "sharedNode": "web"
+        },
+        {
+          "left": {
+            "id": "worker-shiprocket",
+            "from": "worker",
+            "to": "shiprocket",
+            "label": "book",
+            "collectionIndex": 18,
+            "artifactIndex": 19
+          },
+          "right": {
+            "id": "worker-messaging",
+            "from": "worker",
+            "to": "messaging",
+            "label": "send",
+            "collectionIndex": 19,
+            "artifactIndex": 20
+          },
+          "point": [
+            1025,
+            484
+          ],
+          "sharedNode": "worker"
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "worker-razorpay",
+            "from": "worker",
+            "to": "razorpay",
+            "label": "refunds",
+            "collectionIndex": 15,
+            "artifactIndex": 16
+          },
+          "bends": 4,
+          "stretch": 1.231
+        },
+        {
+          "relationship": {
+            "id": "web-shiprocket",
+            "from": "web",
+            "to": "shiprocket",
+            "label": "PIN check",
+            "collectionIndex": 16,
+            "artifactIndex": 17
+          },
+          "bends": 3,
+          "stretch": 1
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "web has 5 relationships facing its right side, which fits 3 ports: make that side at least 88px, or move some of those neighbours so they face another side of web.",
+      "worker has 4 relationships facing its right side, which fits 3 ports: make that side at least 74px, or move some of those neighbours so they face another side of worker.",
+      "web → pg and web → shiprocket cross next to web: move node pg or shiprocket so the two reach web from different sides (for example one level with it, one directly above or below it).",
+      "web → redis and web → shiprocket cross next to web: move node redis or shiprocket so the two reach web from different sides (for example one level with it, one directly above or below it).",
+      "web → razorpay and shiprocket → web cross next to web: move node razorpay or shiprocket so the two reach web from different sides (for example one level with it, one directly above or below it).",
+      "worker → razorpay and worker → shiprocket cross next to worker: move node razorpay or shiprocket so the two reach worker from different sides (for example one level with it, one directly above or below it).",
+      "web → shiprocket and shiprocket → web cross next to web: move node shiprocket or shiprocket so the two reach web from different sides (for example one level with it, one directly above or below it).",
+      "worker → shiprocket and worker → messaging cross next to worker: move node shiprocket or messaging so the two reach worker from different sides (for example one level with it, one directly above or below it)."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

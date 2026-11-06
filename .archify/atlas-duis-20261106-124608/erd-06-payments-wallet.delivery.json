@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "6eb06a7a-d0b7-485c-b7c0-7bac2f4454c8",
+  "status": "current",
+  "command": "deliver",
+  "type": "erd",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-06-payments-wallet.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-06-payments-wallet.html",
+  "specification": {
+    "sha256": "3ca0a2c4f334fc15571b924b01c7768c446b382784a5f80332acaa908699e985",
+    "bytes": 11152
+  },
+  "artifact": {
+    "sha256": "b5514471eee73e90c8c0654fbd0dfa4b3765ea1058fed1d9c4f3b8f3eb146e70",
+    "bytes": 877618
+  }
+}

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duis architecture atlas</title>
+<style>
+  :root { --bg:#f6f7f9; --fg:#14181f; --muted:#5b6472; --card:#fff; --line:#dde1e7; --accent:#0e7c86; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1318; --fg:#e8ebf0; --muted:#96a0ae; --card:#171d25; --line:#2a323d; --accent:#4cc2cd; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 32px 0 10px; }
+  p.lead { color: var(--muted); margin: 0 0 8px; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  li a { display: block; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; color: inherit; text-decoration: none; }
+  li a:hover, li a:focus-visible { border-color: var(--accent); outline: none; }
+  li strong { display: block; color: var(--accent); }
+  li span { color: var(--muted); font-size: .92rem; }
+  footer { margin-top: 36px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Duis architecture atlas</h1>
+  <p class="lead">18 linked diagrams of the whole application, drawn from the source at commit cb9aa2d. Where the docs and the code disagree, the diagrams follow the code.</p>
+
+  <h2>System</h2>
+  <ul>
+    <li><a href="architecture-system.html"><strong>System overview</strong><span>Cloudflare, nginx, two web replicas, the worker, PostgreSQL, Redis, Elasticsearch and the third-party services.</span></a></li>
+    <li><a href="architecture-deployment.html"><strong>Deployment, backups and monitoring</strong><span>Hand-run deploy.sh, rolling restart, pgBackRest and restic to R2, restore drill, health probes.</span></a></li>
+    <li><a href="tree-code-layers.html"><strong>Source layout and import layers</strong><span>src/ folders, the 28 feature modules and the ESLint import rules.</span></a></li>
+  </ul>
+
+  <h2>Database (88 tables, every column)</h2>
+  <ul>
+    <li><a href="erd-01-identity.html"><strong>1/9 Identity and customers</strong><span>users, sessions, accounts, profiles, addresses, staff invitations (10 tables).</span></a></li>
+    <li><a href="erd-02-catalog.html"><strong>2/9 Catalog and media</strong><span>departments, categories, attributes, products, variants, media (15 tables).</span></a></li>
+    <li><a href="erd-03-inventory-collections.html"><strong>3/9 Inventory and collections</strong><span>stock locations, levels, reservations, movements, collections (7 tables).</span></a></li>
+    <li><a href="erd-04-cart-promotions.html"><strong>4/9 Cart, wishlist and promotions</strong><span>carts, wishlist, stock alerts, newsletter, discounts, coupons (8 tables).</span></a></li>
+    <li><a href="erd-05-orders.html"><strong>5/9 Orders</strong><span>orders, items, discounts, status history, redemptions, COD remittances, notes (7 tables).</span></a></li>
+    <li><a href="erd-06-payments-wallet.html"><strong>6/9 Payments and wallet</strong><span>payments, refunds, webhook events, wallet ledger and credit lots (8 tables).</span></a></li>
+    <li><a href="erd-07-fulfilment-exchanges-reviews.html"><strong>7/9 Shipping, exchanges and reviews</strong><span>shipments, tracking, exchange requests, customer photos, reviews (10 tables).</span></a></li>
+    <li><a href="erd-08-cms-journal.html"><strong>8/9 CMS, page builder and journal</strong><span>revisions, pages, navigation, redirects, blog (11 tables).</span></a></li>
+    <li><a href="erd-09-platform.html"><strong>9/9 Settings, operations and privacy</strong><span>store settings, tax and FX, audit logs, notifications, consent (12 tables).</span></a></li>
+  </ul>
+
+  <h2>Flows and state machines</h2>
+  <ul>
+    <li><a href="sequence-checkout.html"><strong>Checkout and payment</strong><span>Quote, place order, pay, and the browser, webhook and reconciler paths into one idempotent settle.</span></a></li>
+    <li><a href="lifecycle-order.html"><strong>Order status</strong><span>pending_payment to delivered, expiry, late payment, cancellation and returns to origin.</span></a></li>
+    <li><a href="lifecycle-shipment.html"><strong>Shipment status</strong><span>Forward-only courier states ranked 0 to 8, with terminal states.</span></a></li>
+    <li><a href="lifecycle-exchange.html"><strong>Exchange request</strong><span>Approval, price difference, reverse pickup, QC and replacement.</span></a></li>
+    <li><a href="lifecycle-cms.html"><strong>CMS revision workflow</strong><span>draft, review, schedule, publish and archive.</span></a></li>
+    <li><a href="workflow-operation.html"><strong>Operation and background-job execution</strong><span>authorize, validate, one transaction, pg-boss job, retries, dead letter, cache revalidation.</span></a></li>
+  </ul>
+
+  <footer>Database diagrams were generated from the Drizzle schema (88 tables, 879 columns, checked against the SQL migrations). Foreign keys that point to a table drawn in another diagram appear as "uuid → table.column".</footer>
+</main>
+</body>
+</html>

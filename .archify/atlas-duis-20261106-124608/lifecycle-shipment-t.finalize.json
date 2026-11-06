@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "lifecycle",
+  "quality": "showcase",
+  "startedAt": "2026-11-06T07:49:09.833Z",
+  "specification": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.lifecycle-shipment-t.json",
+    "sha256": "6fefd7e9cf0575baba152f87dd72f1a18d2cf7391aba7b733545006ba0613e4c",
+    "bytes": 6348
+  },
+  "artifact": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-shipment-t.html"
+  },
+  "stages": {
+    "validate": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": null,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\vansh\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "lifecycle",
+        "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.lifecycle-shipment-t.json",
+        "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-shipment-t.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "D:\\Duis-store",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "deliver",
+        "receiptId": "29b1d47d-7fa1-4872-b1ea-3267622750f5",
+        "stage": "render",
+        "type": "lifecycle",
+        "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.lifecycle-shipment-t.json",
+        "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-shipment-t.html",
+        "error": "Lifecycle layout validation failed:\n- The lifecycle is 1433px wide; at 9px text it stays readable on a desktop only up to 1395px.",
+        "diagnostics": [
+          {
+            "code": "lifecycle/too-wide",
+            "severity": "error",
+            "message": "The lifecycle is 1433px wide; at 9px text it stays readable on a desktop only up to 1395px.",
+            "subject": {
+              "diagramType": "lifecycle",
+              "path": "/mainPath"
+            },
+            "evidence": {
+              "viewBoxWidth": 1433,
+              "budgetPx": 1395,
+              "mainPathStates": 6,
+              "lowerRowStates": 5,
+              "wideStepLabels": [],
+              "spacingWideners": []
+            },
+            "supportedFixes": [
+              "shorten state labels and sublabels",
+              "move secondary phases off mainPath or merge adjacent phases",
+              "split the lifecycle into two diagrams"
+            ]
+          }
+        ],
+        "provenance": "absent",
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      },
+      "execution": "embedded-in-deliver"
+    },
+    "deliver": {
+      "status": "not-run",
+      "execution": "blocked-by-validate"
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  },
+  "diagnostics": [
+    {
+      "code": "lifecycle/too-wide",
+      "severity": "error",
+      "message": "The lifecycle is 1433px wide; at 9px text it stays readable on a desktop only up to 1395px.",
+      "subject": {
+        "diagramType": "lifecycle",
+        "path": "/mainPath"
+      },
+      "evidence": {
+        "viewBoxWidth": 1433,
+        "budgetPx": 1395,
+        "mainPathStates": 6,
+        "lowerRowStates": 5,
+        "wideStepLabels": [],
+        "spacingWideners": []
+      },
+      "supportedFixes": [
+        "shorten state labels and sublabels",
+        "move secondary phases off mainPath or merge adjacent phases",
+        "split the lifecycle into two diagrams"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-shipment-t.finalize.json",
+    "summaryReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-shipment-t.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "validate",
+  "finishedAt": "2026-11-06T07:49:11.664Z",
+  "durationMs": 1831,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-06T07:27:51.025Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

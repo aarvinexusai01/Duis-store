@@ -1,0 +1,279 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Duis order status lifecycle",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/lifecycle-order.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "mainPath": [
+    "pending_payment",
+    "confirmed",
+    "processing",
+    "shipped",
+    "out_for_delivery",
+    "delivered"
+  ],
+  "states": [
+    {
+      "id": "pending_payment",
+      "type": "start",
+      "label": "Pending",
+      "sublabel": "pending_payment",
+      "sources": [
+        {
+          "path": "src/db/schema/orders.ts",
+          "line": 21,
+          "end_line": 32
+        },
+        {
+          "path": "src/features/checkout/service.ts",
+          "line": 213,
+          "end_line": 464
+        }
+      ]
+    },
+    {
+      "id": "confirmed",
+      "type": "active",
+      "label": "Confirmed",
+      "sublabel": "confirmed",
+      "sources": [
+        {
+          "path": "src/features/orders/lifecycle.ts",
+          "line": 168,
+          "end_line": 233
+        }
+      ]
+    },
+    {
+      "id": "processing",
+      "type": "active",
+      "label": "Processing",
+      "sublabel": "processing",
+      "sources": [
+        {
+          "path": "src/features/orders/fulfilment.ts",
+          "line": 25,
+          "end_line": 54
+        }
+      ]
+    },
+    {
+      "id": "shipped",
+      "type": "active",
+      "label": "Shipped",
+      "sublabel": "shipped",
+      "sources": [
+        {
+          "path": "src/features/orders/fulfilment.ts",
+          "line": 25,
+          "end_line": 54
+        }
+      ]
+    },
+    {
+      "id": "out_for_delivery",
+      "type": "active",
+      "label": "Delivering",
+      "sublabel": "out_for_delivery",
+      "sources": [
+        {
+          "path": "src/features/orders/fulfilment.ts",
+          "line": 25,
+          "end_line": 54
+        }
+      ]
+    },
+    {
+      "id": "delivered",
+      "type": "success",
+      "label": "Delivered",
+      "sublabel": "delivered",
+      "sources": [
+        {
+          "path": "src/features/orders/fulfilment.ts",
+          "line": 25,
+          "end_line": 54
+        }
+      ]
+    },
+    {
+      "id": "expired",
+      "type": "neutral",
+      "label": "Expired",
+      "sublabel": "expired",
+      "sources": [
+        {
+          "path": "src/features/orders/lifecycle.ts",
+          "line": 484,
+          "end_line": 568
+        }
+      ]
+    },
+    {
+      "id": "cancelled",
+      "type": "failure",
+      "label": "Cancelled",
+      "sublabel": "cancelled",
+      "sources": [
+        {
+          "path": "src/features/orders/lifecycle.ts",
+          "line": 608,
+          "end_line": 710
+        },
+        {
+          "path": "src/features/orders/lifecycle.ts",
+          "line": 345,
+          "end_line": 444
+        }
+      ]
+    },
+    {
+      "id": "rto_initiated",
+      "type": "waiting",
+      "label": "Returning",
+      "sublabel": "rto_initiated",
+      "sources": [
+        {
+          "path": "src/features/orders/fulfilment.ts",
+          "line": 25,
+          "end_line": 54
+        }
+      ]
+    },
+    {
+      "id": "rto_delivered",
+      "type": "failure",
+      "label": "Returned",
+      "sublabel": "rto_delivered",
+      "sources": [
+        {
+          "path": "src/features/orders/fulfilment.ts",
+          "line": 25,
+          "end_line": 54
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "pp-conf",
+      "from": "pending_payment",
+      "to": "confirmed",
+      "label": "paid",
+      "variant": "emphasis"
+    },
+    {
+      "id": "conf-proc",
+      "from": "confirmed",
+      "to": "processing",
+      "label": "ready"
+    },
+    {
+      "id": "proc-ship",
+      "from": "processing",
+      "to": "shipped",
+      "label": "picked up"
+    },
+    {
+      "id": "ship-ofd",
+      "from": "shipped",
+      "to": "out_for_delivery",
+      "label": "last mile"
+    },
+    {
+      "id": "ofd-del",
+      "from": "out_for_delivery",
+      "to": "delivered",
+      "label": "delivered",
+      "variant": "emphasis"
+    },
+    {
+      "id": "pp-exp",
+      "from": "pending_payment",
+      "to": "expired",
+      "label": "hold ends"
+    },
+    {
+      "id": "pp-can",
+      "from": "pending_payment",
+      "to": "cancelled",
+      "label": "paid late, no stock",
+      "variant": "security"
+    },
+    {
+      "id": "exp-pp",
+      "from": "expired",
+      "to": "pending_payment",
+      "label": "paid late, stock back",
+      "variant": "dashed"
+    },
+    {
+      "id": "conf-can",
+      "from": "confirmed",
+      "to": "cancelled",
+      "label": "cancel",
+      "variant": "security"
+    },
+    {
+      "id": "proc-can",
+      "from": "processing",
+      "to": "cancelled",
+      "label": "cancel",
+      "variant": "security"
+    },
+    {
+      "id": "ship-rto",
+      "from": "shipped",
+      "to": "rto_initiated",
+      "label": "return started",
+      "variant": "dashed"
+    },
+    {
+      "id": "ofd-rto",
+      "from": "out_for_delivery",
+      "to": "rto_initiated",
+      "label": "return started",
+      "variant": "dashed"
+    },
+    {
+      "id": "rto-rtod",
+      "from": "rto_initiated",
+      "to": "rto_delivered",
+      "label": "arrives back"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Forward only",
+      "items": [
+        "After confirmation the status follows the parcel and never moves backwards (ORDER_RANK).",
+        "Cancelling needs fulfillment_status = unfulfilled and no live parcel."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Late payment",
+      "items": [
+        "A payment that arrives after the hold ends brings expired or cancelled orders back to pending_payment, then confirmed, if stock can be re-reserved.",
+        "Otherwise it is refunded and the order stays cancelled."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Parallel fields",
+      "items": [
+        "payment_status: unpaid, partially_paid, paid, partially_refunded, refunded.",
+        "fulfillment_status: unfulfilled, partially_fulfilled, fulfilled, partially_returned, returned."
+      ]
+    }
+  ]
+}

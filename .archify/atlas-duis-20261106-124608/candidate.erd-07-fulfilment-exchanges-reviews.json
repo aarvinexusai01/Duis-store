@@ -1,0 +1,734 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Database 7/9 · Shipping, exchanges and reviews",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/erd-07-fulfilment-exchanges-reviews.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 84,
+    "gapY": 44
+  },
+  "entities": [
+    {
+      "id": "shipment_items",
+      "label": "shipment_items",
+      "pos": [
+        40,
+        40
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "shipment_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "shipments.id"
+        },
+        {
+          "name": "order_item_id",
+          "type": "uuid → order_items.id",
+          "key": "pk"
+        },
+        {
+          "name": "quantity",
+          "type": "integer"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/shipping.ts",
+          "line": 154,
+          "end_line": 171
+        }
+      ]
+    },
+    {
+      "id": "shipment_tracking_events",
+      "label": "shipment_tracking_events",
+      "pos": [
+        40,
+        180
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "shipment_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "shipments.id"
+        },
+        {
+          "name": "provider_status",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "shipment_status"
+        },
+        {
+          "name": "location",
+          "type": "text"
+        },
+        {
+          "name": "description",
+          "type": "text"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "raw",
+          "type": "jsonb"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/shipping.ts",
+          "line": 172,
+          "end_line": 201
+        }
+      ],
+      "sublabel": "unique (shipment_id, provider_status, occurred_at)"
+    },
+    {
+      "id": "pincode_serviceability",
+      "label": "pincode_serviceability",
+      "pos": [
+        40,
+        440
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "pincode",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "serviceable",
+          "type": "boolean"
+        },
+        {
+          "name": "prepaid_available",
+          "type": "boolean"
+        },
+        {
+          "name": "cod_available",
+          "type": "boolean"
+        },
+        {
+          "name": "edd_min_days",
+          "type": "integer"
+        },
+        {
+          "name": "edd_max_days",
+          "type": "integer"
+        },
+        {
+          "name": "provider",
+          "type": "text"
+        },
+        {
+          "name": "checked_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/shipping.ts",
+          "line": 25,
+          "end_line": 43
+        }
+      ]
+    },
+    {
+      "id": "provider_tokens",
+      "label": "provider_tokens",
+      "pos": [
+        40,
+        680
+      ],
+      "width": 340,
+      "attributes": [
+        {
+          "name": "provider",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "token",
+          "type": "text"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/shipping.ts",
+          "line": 202,
+          "end_line": 207
+        }
+      ]
+    },
+    {
+      "id": "shipments",
+      "label": "shipments",
+      "pos": [
+        464,
+        180
+      ],
+      "width": 300,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid → orders.id"
+        },
+        {
+          "name": "exchange_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "exchange_requests.id"
+        },
+        {
+          "name": "direction",
+          "type": "shipment_direction"
+        },
+        {
+          "name": "provider",
+          "type": "text"
+        },
+        {
+          "name": "channel_order_id",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "provider_order_id",
+          "type": "text"
+        },
+        {
+          "name": "provider_shipment_id",
+          "type": "text"
+        },
+        {
+          "name": "awb",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "courier_name",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "shipment_status"
+        },
+        {
+          "name": "cod_amount_paise",
+          "type": "integer"
+        },
+        {
+          "name": "weight_grams",
+          "type": "integer"
+        },
+        {
+          "name": "length_cm",
+          "type": "integer"
+        },
+        {
+          "name": "breadth_cm",
+          "type": "integer"
+        },
+        {
+          "name": "height_cm",
+          "type": "integer"
+        },
+        {
+          "name": "label_file_key",
+          "type": "text"
+        },
+        {
+          "name": "invoice_file_key",
+          "type": "text"
+        },
+        {
+          "name": "steps",
+          "type": "jsonb"
+        },
+        {
+          "name": "customs",
+          "type": "jsonb"
+        },
+        {
+          "name": "last_error",
+          "type": "text"
+        },
+        {
+          "name": "attempts",
+          "type": "integer"
+        },
+        {
+          "name": "lease_until",
+          "type": "timestamptz"
+        },
+        {
+          "name": "pickup_scheduled_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "shipped_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "delivered_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "cancelled_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "edd",
+          "type": "timestamptz"
+        },
+        {
+          "name": "last_event_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "last_synced_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/shipping.ts",
+          "line": 94,
+          "end_line": 152
+        }
+      ]
+    },
+    {
+      "id": "exchange_requests",
+      "label": "exchange_requests",
+      "pos": [
+        848,
+        40
+      ],
+      "width": 400,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "exchange_number",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "order_id",
+          "type": "uuid → orders.id"
+        },
+        {
+          "name": "order_item_id",
+          "type": "uuid → order_items.id"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "quantity",
+          "type": "integer"
+        },
+        {
+          "name": "requested_variant_id",
+          "type": "uuid → product_variants.id"
+        },
+        {
+          "name": "reason",
+          "type": "exchange_reason"
+        },
+        {
+          "name": "customer_note",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "exchange_status"
+        },
+        {
+          "name": "price_difference_paise",
+          "type": "integer"
+        },
+        {
+          "name": "difference_payment_id",
+          "type": "uuid → payments.id"
+        },
+        {
+          "name": "decided_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "decided_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "decision_note",
+          "type": "text"
+        },
+        {
+          "name": "qc_note",
+          "type": "text"
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/exchanges.ts",
+          "line": 75,
+          "end_line": 122
+        }
+      ]
+    },
+    {
+      "id": "reviews",
+      "label": "reviews",
+      "pos": [
+        848,
+        500
+      ],
+      "width": 400,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "product_id",
+          "type": "uuid → products.id"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "order_item_id",
+          "type": "uuid → order_items.id",
+          "key": "uk"
+        },
+        {
+          "name": "rating",
+          "type": "integer"
+        },
+        {
+          "name": "title",
+          "type": "text"
+        },
+        {
+          "name": "body",
+          "type": "text"
+        },
+        {
+          "name": "fit",
+          "type": "review_fit"
+        },
+        {
+          "name": "display_name",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "review_status"
+        },
+        {
+          "name": "moderated_by",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "moderated_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "moderation_note",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/reviews.ts",
+          "line": 34,
+          "end_line": 68
+        }
+      ]
+    },
+    {
+      "id": "exchange_request_photos",
+      "label": "exchange_request_photos",
+      "pos": [
+        1332,
+        40
+      ],
+      "width": 240,
+      "attributes": [
+        {
+          "name": "exchange_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "exchange_requests.id"
+        },
+        {
+          "name": "photo_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "customer_photos.id"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/exchanges.ts",
+          "line": 124,
+          "end_line": 135
+        }
+      ]
+    },
+    {
+      "id": "review_photos",
+      "label": "review_photos",
+      "pos": [
+        1332,
+        160
+      ],
+      "width": 240,
+      "attributes": [
+        {
+          "name": "review_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "reviews.id"
+        },
+        {
+          "name": "photo_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "customer_photos.id"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/reviews.ts",
+          "line": 70,
+          "end_line": 81
+        }
+      ]
+    },
+    {
+      "id": "customer_photos",
+      "label": "customer_photos",
+      "pos": [
+        1656,
+        40
+      ],
+      "width": 240,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid → users.id"
+        },
+        {
+          "name": "file_key",
+          "type": "text"
+        },
+        {
+          "name": "width",
+          "type": "integer"
+        },
+        {
+          "name": "height",
+          "type": "integer"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "src/db/schema/exchanges.ts",
+          "line": 26,
+          "end_line": 39
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "shipment_items__shipment_id",
+      "from": "shipment_items",
+      "to": "shipments",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "shipment_tracking_events__shipment_id",
+      "from": "shipment_tracking_events",
+      "to": "shipments",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "shipments__exchange_id",
+      "from": "shipments",
+      "to": "exchange_requests",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "toOptional": true,
+      "identifying": false
+    },
+    {
+      "id": "exchange_request_photos__exchange_id",
+      "from": "exchange_request_photos",
+      "to": "exchange_requests",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "exchange_request_photos__photo_id",
+      "from": "exchange_request_photos",
+      "to": "customer_photos",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "review_photos__review_id",
+      "from": "review_photos",
+      "to": "reviews",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "review_photos__photo_id",
+      "from": "review_photos",
+      "to": "customer_photos",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": true
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Shipping",
+      "items": [
+        "shipments.direction is forward, reverse or replacement, so exchanges reuse the same table.",
+        "Only one live forward shipment per order (partial unique index).",
+        "shipment_tracking_events is unique on (shipment_id, provider_status, occurred_at), so repeated courier events are ignored."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "No returns table",
+      "items": [
+        "Returns are modelled as exchange_requests plus the RTO shipment statuses.",
+        "customer_photos are private uploads shared by exchanges and reviews.",
+        "A review is tied to one order_item (unique)."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this diagram",
+      "items": [
+        "A column typed 'uuid → table.column' is a foreign key into a table drawn in another diagram of this set.",
+        "Dashed lines are optional (nullable) foreign keys."
+      ]
+    }
+  ]
+}

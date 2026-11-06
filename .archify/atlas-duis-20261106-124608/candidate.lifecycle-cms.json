@@ -1,0 +1,195 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Duis CMS revision workflow",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/lifecycle-cms.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "mainPath": [
+    "draft",
+    "in_review",
+    "published",
+    "archived"
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "type": "start",
+      "label": "draft",
+      "sublabel": "editable, autosaved",
+      "step": "01",
+      "sources": [
+        {
+          "path": "src/db/schema/cms.ts",
+          "line": 35,
+          "end_line": 42
+        },
+        {
+          "path": "src/features/cms/workflow.ts",
+          "line": 176,
+          "end_line": 242
+        }
+      ]
+    },
+    {
+      "id": "in_review",
+      "type": "decision",
+      "label": "in_review",
+      "sublabel": "frozen for review",
+      "step": "02",
+      "sources": [
+        {
+          "path": "src/features/cms/workflow.ts",
+          "line": 61,
+          "end_line": 62
+        },
+        {
+          "path": "src/features/cms/workflow.ts",
+          "line": 280,
+          "end_line": 309
+        }
+      ]
+    },
+    {
+      "id": "published",
+      "type": "success",
+      "label": "published",
+      "sublabel": "live on the site",
+      "step": "03",
+      "sources": [
+        {
+          "path": "src/features/cms/service.ts",
+          "line": 304,
+          "end_line": 430
+        }
+      ]
+    },
+    {
+      "id": "archived",
+      "type": "neutral",
+      "label": "archived",
+      "sublabel": "replaced, kept for rollback",
+      "step": "04",
+      "sources": [
+        {
+          "path": "src/features/cms/service.ts",
+          "line": 304,
+          "end_line": 430
+        }
+      ]
+    },
+    {
+      "id": "scheduled",
+      "type": "waiting",
+      "label": "scheduled",
+      "sublabel": "publishes at a set time",
+      "sources": [
+        {
+          "path": "src/features/cms/workflow.ts",
+          "line": 407,
+          "end_line": 447
+        },
+        {
+          "path": "src/features/cms/workflow.ts",
+          "line": 703,
+          "end_line": 722
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "d-ir",
+      "from": "draft",
+      "to": "in_review",
+      "label": "submit (cms:draft)"
+    },
+    {
+      "id": "ir-p",
+      "from": "in_review",
+      "to": "published",
+      "label": "publish (cms:publish)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "p-a",
+      "from": "published",
+      "to": "archived",
+      "label": "newer one published"
+    },
+    {
+      "id": "ir-d",
+      "from": "in_review",
+      "to": "draft",
+      "label": "withdraw or send back"
+    },
+    {
+      "id": "d-s",
+      "from": "draft",
+      "to": "scheduled",
+      "label": "schedule",
+      "variant": "dashed"
+    },
+    {
+      "id": "ir-s",
+      "from": "in_review",
+      "to": "scheduled",
+      "variant": "dashed"
+    },
+    {
+      "id": "s-p",
+      "from": "scheduled",
+      "to": "published",
+      "label": "cron, every minute",
+      "variant": "emphasis"
+    },
+    {
+      "id": "s-d",
+      "from": "scheduled",
+      "to": "draft",
+      "label": "cancel schedule",
+      "variant": "dashed"
+    },
+    {
+      "id": "d-p",
+      "from": "draft",
+      "to": "published",
+      "label": "publish directly",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Who does what",
+      "items": [
+        "An editor submits for review; a manager publishes, schedules or sends back.",
+        "Editing a draft saves in place; editing after publish starts a new draft revision.",
+        "Sending a revision back needs a review note.",
+        "Scheduling accepts 1 minute to 1 year ahead; the cms.publish-scheduled cron publishes due revisions every minute as the cms-scheduler system actor."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Unused state",
+      "items": [
+        "'approved' exists in the cms_workflow_status enum but no operation sets it, so it is not drawn."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Publishing",
+      "items": [
+        "Publishing re-validates the content, points the page, menu, settings or post at the revision and archives the previous one.",
+        "It then requests cache revalidation and writes an audit row in the same transaction."
+      ]
+    }
+  ]
+}

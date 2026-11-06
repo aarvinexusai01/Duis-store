@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "lifecycle",
+  "quality": "showcase",
+  "specification": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.lifecycle-exchange-t.json",
+    "sha256": "0bcf7c1cf51e2f2fd8968b97df6fd55f7343e8e4e71ccddad8e9472a4fb294b0",
+    "bytes": 6718
+  },
+  "artifact": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-exchange-t.html"
+  },
+  "gates": {
+    "validate": "fail",
+    "deliver": "not-run",
+    "check": "not-run",
+    "browser-check": "not-run"
+  },
+  "failedStage": "validate",
+  "diagnostics": [
+    {
+      "code": "lifecycle/too-wide",
+      "severity": "error",
+      "message": "The lifecycle is 2135px wide; at 9px text it stays readable on a desktop only up to 1395px.",
+      "subject": {
+        "diagramType": "lifecycle",
+        "path": "/mainPath"
+      },
+      "evidence": {
+        "viewBoxWidth": 2135,
+        "budgetPx": 1395,
+        "mainPathStates": 8,
+        "lowerRowStates": 4,
+        "wideStepLabels": [],
+        "spacingWideners": []
+      },
+      "supportedFixes": [
+        "shorten state labels and sublabels",
+        "move secondary phases off mainPath or merge adjacent phases",
+        "split the lifecycle into two diagrams"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-exchange-t.finalize.json",
+    "summaryReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\lifecycle-exchange-t.finalize-summary.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-06T07:27:51.025Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1808,
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  },
+  "nextAction": {
+    "action": "edit-in-place",
+    "candidate": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.lifecycle-exchange-t.json",
+    "constraint": "Preserve unaffected semantics and geometry; apply each diagnostic's supportedFixes, or the fix its message names, and do not replace the whole candidate.",
+    "then": "finalize-once"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "5ddc696c-5d9f-4a4b-bb4a-ff688c99ac50",
+  "status": "current",
+  "command": "deliver",
+  "type": "erd",
+  "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-04-cart-promotions.json",
+  "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-04-cart-promotions.html",
+  "specification": {
+    "sha256": "76a728dea1e886371ddd3be25ca212af8ee966aea1b33e840c18d651ddf6d4ca",
+    "bytes": 10229
+  },
+  "artifact": {
+    "sha256": "d79f50f5d2181c6b295d86988e86857d03ed19dd3314e7d43502023b111d0f4c",
+    "bytes": 874335
+  }
+}

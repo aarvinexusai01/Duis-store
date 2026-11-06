@@ -1,0 +1,1544 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "erd",
+  "quality": "standard",
+  "startedAt": "2026-11-06T07:29:01.060Z",
+  "specification": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-02-catalog.json",
+    "sha256": "e42b4ccbf10776c277cd9800d1c7ee4f9b7c6ddf526afead032024b2e4312aac",
+    "bytes": 24536
+  },
+  "artifact": {
+    "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+    "sha256": "bb7fe5cace5f75ee4eaf63913d9ffe7876d404c3196dedb544cd792573070662",
+    "bytes": 938162
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\vansh\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "erd",
+        "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-02-catalog.json",
+        "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+        "--quality",
+        "standard",
+        "--repo-root",
+        "D:\\Duis-store",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "e42b4ccbf10776c277cd9800d1c7ee4f9b7c6ddf526afead032024b2e4312aac",
+          "bytes": 24536
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "standard",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 7,
+          "compositionIssues": [
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "categories__size_chart_id",
+                "from": "categories",
+                "to": "size_charts",
+                "label": "",
+                "collectionIndex": 2,
+                "artifactIndex": 3
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                342,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "attribute_values__attribute_id",
+                "from": "attribute_values",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                509,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attributes__attribute_id",
+                "from": "product_attributes",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "product_attribute_values__attribute_value_id",
+                "from": "product_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                694,
+                358
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attributes__attribute_id",
+                "from": "product_attributes",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "variant_attribute_values__attribute_value_id_attribute_id",
+                "from": "variant_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "point": [
+                694,
+                488
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attribute_values__attribute_value_id",
+                "from": "product_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                658,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "variant_attribute_values__variant_id",
+                "from": "variant_attribute_values",
+                "to": "product_variants",
+                "label": "",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "otherRelationship": {
+                "id": "product_media__product_id",
+                "from": "product_media",
+                "to": "products",
+                "label": "",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "point": [
+                1068,
+                678
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "variant_attribute_values__attribute_value_id_attribute_id",
+                "from": "variant_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                658,
+                720
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 2205,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\vansh\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "erd",
+        "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-02-catalog.json",
+        "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+        "--quality",
+        "standard",
+        "--repo-root",
+        "D:\\Duis-store",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "415c29e7-ac51-4647-b2e9-ad969ff5feaa",
+        "ok": true,
+        "command": "deliver",
+        "type": "erd",
+        "input": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\candidate.erd-02-catalog.json",
+        "output": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+        "specification": {
+          "sha256": "e42b4ccbf10776c277cd9800d1c7ee4f9b7c6ddf526afead032024b2e4312aac",
+          "bytes": 24536
+        },
+        "artifact": {
+          "sha256": "bb7fe5cace5f75ee4eaf63913d9ffe7876d404c3196dedb544cd792573070662",
+          "bytes": 938162
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "standard",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 7,
+          "compositionIssues": [
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "categories__size_chart_id",
+                "from": "categories",
+                "to": "size_charts",
+                "label": "",
+                "collectionIndex": 2,
+                "artifactIndex": 3
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                342,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "attribute_values__attribute_id",
+                "from": "attribute_values",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                509,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attributes__attribute_id",
+                "from": "product_attributes",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "product_attribute_values__attribute_value_id",
+                "from": "product_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                694,
+                358
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attributes__attribute_id",
+                "from": "product_attributes",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "variant_attribute_values__attribute_value_id_attribute_id",
+                "from": "variant_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "point": [
+                694,
+                488
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attribute_values__attribute_value_id",
+                "from": "product_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                658,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "variant_attribute_values__variant_id",
+                "from": "variant_attribute_values",
+                "to": "product_variants",
+                "label": "",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "otherRelationship": {
+                "id": "product_media__product_id",
+                "from": "product_media",
+                "to": "products",
+                "label": "",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "point": [
+                1068,
+                678
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "variant_attribute_values__attribute_value_id_attribute_id",
+                "from": "variant_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                658,
+                720
+              ]
+            }
+          ]
+        },
+        "evidence": {
+          "verified": true,
+          "repository": "https://github.com/aarvinexusai01/Duis-store",
+          "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce",
+          "references": 15
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 697,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\vansh\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "check",
+        "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+        "artifact": {
+          "sha256": "bb7fe5cace5f75ee4eaf63913d9ffe7876d404c3196dedb544cd792573070662",
+          "bytes": 938162
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": [
+              "[composition/proper-crossing] standard relationship id \"categories__size_chart_id\" (\"categories\" -> \"size_charts\") crosses relationship id \"product_media__media_id\" (\"product_media\" -> \"media_assets\") at [342, 720]",
+              "[composition/proper-crossing] standard relationship id \"attribute_values__attribute_id\" (\"attribute_values\" -> \"attributes\") crosses relationship id \"product_media__media_id\" (\"product_media\" -> \"media_assets\") at [509, 720]",
+              "[composition/proper-crossing] standard relationship id \"product_attributes__attribute_id\" (\"product_attributes\" -> \"attributes\") crosses relationship id \"product_attribute_values__attribute_value_id\" (\"product_attribute_values\" -> \"attribute_values\") at [694, 358]",
+              "[composition/proper-crossing] standard relationship id \"product_attributes__attribute_id\" (\"product_attributes\" -> \"attributes\") crosses relationship id \"variant_attribute_values__attribute_value_id_attribute_id\" (\"variant_attribute_values\" -> \"attribute_values\") at [694, 488]",
+              "[composition/proper-crossing] standard relationship id \"product_attribute_values__attribute_value_id\" (\"product_attribute_values\" -> \"attribute_values\") crosses relationship id \"product_media__media_id\" (\"product_media\" -> \"media_assets\") at [658, 720]",
+              "[composition/proper-crossing] standard relationship id \"variant_attribute_values__variant_id\" (\"variant_attribute_values\" -> \"product_variants\") crosses relationship id \"product_media__product_id\" (\"product_media\" -> \"products\") at [1068, 678]",
+              "[composition/proper-crossing] standard relationship id \"variant_attribute_values__attribute_value_id_attribute_id\" (\"variant_attribute_values\" -> \"attribute_values\") crosses relationship id \"product_media__media_id\" (\"product_media\" -> \"media_assets\") at [658, 720]"
+            ]
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "standard",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 7
+          },
+          "metrics": {
+            "properCrossings": 7,
+            "resolvedCrossovers": 0,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 0,
+            "labelCanvasOverflowIssues": 0,
+            "minLabelRouteClearance": null,
+            "desktopReadabilityIssues": 0,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 6.882954545454545,
+            "maxBends": 6,
+            "routesOverSuggestedBends": 3,
+            "maxStretch": 2.544,
+            "routesOverSuggestedStretch": 1,
+            "minSegmentPx": 16,
+            "minInteriorSegmentPx": 42,
+            "shortSegmentCount": 0,
+            "shortEndpointSegmentCount": 0,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [],
+            "detours": [
+              {
+                "relationship": {
+                  "id": "product_media__media_id",
+                  "from": "product_media",
+                  "to": "media_assets",
+                  "label": "",
+                  "collectionIndex": 13,
+                  "artifactIndex": 14
+                },
+                "bends": 3,
+                "stretch": 1.085
+              },
+              {
+                "relationship": {
+                  "id": "products__department_id",
+                  "from": "products",
+                  "to": "departments",
+                  "label": "",
+                  "collectionIndex": 15,
+                  "artifactIndex": 16
+                },
+                "bends": 4,
+                "stretch": 1.297
+              },
+              {
+                "relationship": {
+                  "id": "products__og_media_id",
+                  "from": "products",
+                  "to": "media_assets",
+                  "label": "",
+                  "collectionIndex": 16,
+                  "artifactIndex": 17
+                },
+                "bends": 6,
+                "stretch": 2.544
+              }
+            ]
+          },
+          "leadingSpace": {
+            "measured": false,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "recognized-declared-wide",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 1346,
+            "actualBudgetPx": 1346,
+            "actualReaderWidth": 1376,
+            "desiredReaderWidth": 1496.6666666666667,
+            "viewportCap": 1376,
+            "limit": "viewport-cap",
+            "requestedTargetPx": 7.5,
+            "requestedTargetMet": false,
+            "hardFloorPx": 6,
+            "hardFloorMet": true,
+            "minimumOwner": {
+              "kind": "node",
+              "id": "departments"
+            },
+            "minimumSourceTextPx": 9,
+            "minimumProjectedTextPx": 6.882954545454545,
+            "semanticTextCount": 353
+          },
+          "issues": [
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "categories__size_chart_id",
+                "from": "categories",
+                "to": "size_charts",
+                "label": "",
+                "collectionIndex": 2,
+                "artifactIndex": 3
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                342,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "attribute_values__attribute_id",
+                "from": "attribute_values",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                509,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attributes__attribute_id",
+                "from": "product_attributes",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "product_attribute_values__attribute_value_id",
+                "from": "product_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                694,
+                358
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attributes__attribute_id",
+                "from": "product_attributes",
+                "to": "attributes",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "variant_attribute_values__attribute_value_id_attribute_id",
+                "from": "variant_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "point": [
+                694,
+                488
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "product_attribute_values__attribute_value_id",
+                "from": "product_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                658,
+                720
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "variant_attribute_values__variant_id",
+                "from": "variant_attribute_values",
+                "to": "product_variants",
+                "label": "",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "otherRelationship": {
+                "id": "product_media__product_id",
+                "from": "product_media",
+                "to": "products",
+                "label": "",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "point": [
+                1068,
+                678
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "variant_attribute_values__attribute_value_id_attribute_id",
+                "from": "variant_attribute_values",
+                "to": "attribute_values",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "product_media__media_id",
+                "from": "product_media",
+                "to": "media_assets",
+                "label": "",
+                "collectionIndex": 13,
+                "artifactIndex": 14
+              },
+              "point": [
+                658,
+                720
+              ]
+            }
+          ]
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "415c29e7-ac51-4647-b2e9-ad969ff5feaa"
+      }
+    },
+    "browser-check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 8290,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\vansh\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "browser-check",
+        "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+        "--json",
+        "--require-provenance"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "pass",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "415c29e7-ac51-4647-b2e9-ad969ff5feaa",
+        "artifact": {
+          "path": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.html",
+          "sha256": "bb7fe5cace5f75ee4eaf63913d9ffe7876d404c3196dedb544cd792573070662",
+          "bytes": 938162
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "available",
+          "executable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+        },
+        "diagnostics": [],
+        "containment": {
+          "status": "pass",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 980,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 837,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 6.882954545454545,
+              "minimumProjectedNonEdgeTextPx": 6.882954545454545,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1120,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1497,
+              "diagramWidth": 1467,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 912,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 7.501704545454546,
+              "minimumProjectedNonEdgeTextPx": 7.501704545454546,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1120,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1497,
+              "diagramWidth": 1467,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 912,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 7.501704545454546,
+              "minimumProjectedNonEdgeTextPx": 7.501704545454546,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1791,
+              "diagramWidth": 1741,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1082,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 8.902840909090909,
+              "minimumProjectedNonEdgeTextPx": 8.902840909090909,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "themeStates": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            }
+          ]
+        },
+        "readability": {
+          "status": "pass",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 980,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 837,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 6.882954545454545,
+              "minimumProjectedNonEdgeTextPx": 6.882954545454545,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1120,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1497,
+              "diagramWidth": 1467,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 912,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 7.501704545454546,
+              "minimumProjectedNonEdgeTextPx": 7.501704545454546,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1120,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1497,
+              "diagramWidth": 1467,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 912,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 7.501704545454546,
+              "minimumProjectedNonEdgeTextPx": 7.501704545454546,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1791,
+              "diagramWidth": 1741,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1082,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 8.902840909090909,
+              "minimumProjectedNonEdgeTextPx": 8.902840909090909,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "viewerChrome": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 980,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 837,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 6.882954545454545,
+              "minimumProjectedNonEdgeTextPx": 6.882954545454545,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1120,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1497,
+              "diagramWidth": 1467,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 912,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 7.501704545454546,
+              "minimumProjectedNonEdgeTextPx": 7.501704545454546,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1120,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1497,
+              "diagramWidth": 1467,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 912,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 7.501704545454546,
+              "minimumProjectedNonEdgeTextPx": 7.501704545454546,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1791,
+              "diagramWidth": 1741,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1082,
+                "cardsPx": 0,
+                "viewBoxHeight": 1094
+              },
+              "viewBoxWidth": 1760,
+              "minimumProjectedNodeTextPx": 8.902840909090909,
+              "minimumProjectedNonEdgeTextPx": 8.902840909090909,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "departments"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "receipt": "erd-02-catalog.browser-check.json",
+          "files": []
+        }
+      }
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.finalize.json",
+    "summaryReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.finalize-summary.json",
+    "browserCheckReceipt": "D:\\Duis-store\\.archify\\atlas-duis-20261106-124608\\erd-02-catalog.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-11-06T07:29:13.929Z",
+  "durationMs": 12868,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-06T07:27:51.025Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

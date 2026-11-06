@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Duis checkout and payment (prepaid)",
+    "locale": "en",
+    "output": ".archify/atlas-duis-20261106-124608/sequence-checkout.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/aarvinexusai01/Duis-store.git",
+      "provider": "github",
+      "revision": "cb9aa2ddae663db1d1cf66d54dfb0375a5f568ce"
+    }
+  },
+  "participants": [
+    {
+      "id": "customer",
+      "type": "external",
+      "label": "Customer",
+      "sublabel": "browser + Razorpay Checkout",
+      "sources": [
+        {
+          "path": "src/features/checkout/actions.ts",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "web",
+      "type": "backend",
+      "label": "Web",
+      "sublabel": "checkout operations",
+      "sources": [
+        {
+          "path": "src/features/checkout/service.ts",
+          "line": 81,
+          "end_line": 212
+        },
+        {
+          "path": "src/features/checkout/service.ts",
+          "line": 213,
+          "end_line": 464
+        },
+        {
+          "path": "src/features/checkout/service.ts",
+          "line": 480,
+          "end_line": 533
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "orders, stock, jobs",
+      "sources": [
+        {
+          "path": "src/features/orders/lifecycle.ts",
+          "line": 168,
+          "end_line": 233
+        },
+        {
+          "path": "src/features/orders/lifecycle.ts",
+          "line": 234,
+          "end_line": 287
+        }
+      ]
+    },
+    {
+      "id": "razorpay",
+      "type": "external",
+      "label": "Razorpay",
+      "sublabel": "payment gateway",
+      "sources": [
+        {
+          "path": "src/features/payments/gateway.ts",
+          "line": 39,
+          "end_line": 75
+        },
+        {
+          "path": "src/app/api/webhooks/razorpay/route.ts",
+          "line": 13,
+          "end_line": 43
+        }
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Worker",
+      "sublabel": "pg-boss handlers",
+      "sources": [
+        {
+          "path": "src/worker/handlers.ts",
+          "line": 72,
+          "end_line": 82
+        },
+        {
+          "path": "src/features/orders/events.ts",
+          "line": 42,
+          "end_line": 120
+        }
+      ]
+    },
+    {
+      "id": "notify",
+      "type": "external",
+      "label": "Email, WhatsApp, Meta",
+      "sublabel": "customer + analytics",
+      "sources": [
+        {
+          "path": "src/server/notifications/delivery.ts",
+          "line": 20,
+          "end_line": 122
+        },
+        {
+          "path": "src/features/analytics/service.ts",
+          "line": 42,
+          "end_line": 66
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 296,
+      "label": "Quote"
+    },
+    {
+      "from": 316,
+      "to": 634,
+      "label": "Place order"
+    },
+    {
+      "from": 654,
+      "to": 964,
+      "label": "Pay and confirm: browser path"
+    },
+    {
+      "from": 984,
+      "to": 1276,
+      "label": "Webhook path"
+    },
+    {
+      "from": 1296,
+      "to": 1514,
+      "label": "After confirmation"
+    }
+  ],
+  "messages": [
+    {
+      "from": "customer",
+      "to": "web",
+      "y": 190,
+      "label": "quote(address, wallet)",
+      "variant": "emphasis"
+    },
+    {
+      "from": "web",
+      "to": "pg",
+      "y": 230,
+      "label": "load address, bag, rates"
+    },
+    {
+      "from": "web",
+      "to": "customer",
+      "y": 270,
+      "label": "priced quote + hash",
+      "variant": "return",
+      "note": "Prices, tax and discounts are computed on the server; the client never sends amounts."
+    },
+    {
+      "from": "customer",
+      "to": "web",
+      "y": 346,
+      "label": "placeOrder(quoteHash)",
+      "variant": "emphasis"
+    },
+    {
+      "from": "web",
+      "to": "pg",
+      "y": 386,
+      "label": "TX: order + stock + wallet",
+      "variant": "emphasis",
+      "note": "One transaction: insert order (pending_payment, 15 min hold), reserve stock, debit wallet, redeem coupon. A changed quote hash is rejected."
+    },
+    {
+      "from": "web",
+      "to": "razorpay",
+      "y": 484,
+      "label": "create order (receipt = order no.)"
+    },
+    {
+      "from": "razorpay",
+      "to": "web",
+      "y": 524,
+      "label": "provider order id",
+      "variant": "return"
+    },
+    {
+      "from": "web",
+      "to": "pg",
+      "y": 564,
+      "label": "save payments row"
+    },
+    {
+      "from": "web",
+      "to": "customer",
+      "y": 604,
+      "label": "checkout options",
+      "variant": "return"
+    },
+    {
+      "from": "customer",
+      "to": "razorpay",
+      "y": 680,
+      "label": "pay: UPI, card, netbanking",
+      "variant": "emphasis"
+    },
+    {
+      "from": "razorpay",
+      "to": "customer",
+      "y": 720,
+      "label": "payment id + signature",
+      "variant": "return"
+    },
+    {
+      "from": "customer",
+      "to": "web",
+      "y": 760,
+      "label": "verifyPayment",
+      "variant": "emphasis"
+    },
+    {
+      "from": "web",
+      "to": "razorpay",
+      "y": 800,
+      "label": "fetch payment"
+    },
+    {
+      "from": "razorpay",
+      "to": "web",
+      "y": 840,
+      "label": "amount, currency, status",
+      "variant": "return"
+    },
+    {
+      "from": "web",
+      "to": "pg",
+      "y": 880,
+      "label": "settle + confirm order",
+      "variant": "emphasis",
+      "note": "settleCapturedPayment is idempotent: the callback, the webhook and the reconciler all end here."
+    },
+    {
+      "from": "web",
+      "to": "customer",
+      "y": 934,
+      "label": "success page",
+      "variant": "return"
+    },
+    {
+      "from": "razorpay",
+      "to": "web",
+      "y": 1010,
+      "label": "webhook: payment.captured",
+      "variant": "security"
+    },
+    {
+      "from": "web",
+      "to": "pg",
+      "y": 1050,
+      "label": "record webhook event",
+      "note": "Signature is checked on the raw body; a unique event id makes replays harmless."
+    },
+    {
+      "from": "web",
+      "to": "razorpay",
+      "y": 1124,
+      "label": "200 OK",
+      "variant": "return"
+    },
+    {
+      "from": "pg",
+      "to": "worker",
+      "y": 1164,
+      "label": "process-webhook job",
+      "variant": "dashed"
+    },
+    {
+      "from": "worker",
+      "to": "pg",
+      "y": 1204,
+      "label": "settle (idempotent)",
+      "note": "Whichever of callback and webhook arrives second finds the work done."
+    },
+    {
+      "from": "pg",
+      "to": "worker",
+      "y": 1320,
+      "label": "email, WhatsApp, Meta jobs",
+      "variant": "dashed",
+      "note": "Queued in the same transaction that confirmed the order."
+    },
+    {
+      "from": "worker",
+      "to": "notify",
+      "y": 1390,
+      "label": "send",
+      "variant": "dashed"
+    },
+    {
+      "from": "worker",
+      "to": "razorpay",
+      "y": 1430,
+      "label": "reconcile every 5 min",
+      "variant": "dashed",
+      "note": "Safety net if both the callback and the webhook are lost."
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Two paths, one outcome",
+      "items": [
+        "The browser callback and the webhook both end in settleCapturedPayment().",
+        "It locks the payment and order, checks amount and currency, commits the reserved stock and confirms the order, once.",
+        "A reconciler runs every 5 minutes for payments that neither path settled."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Other cases",
+      "items": [
+        "Partial COD takes only an advance online (purpose = advance); the order becomes partially_paid with a COD balance.",
+        "Unpaid orders expire after the 15 minute hold; a late payment re-reserves stock or is refunded automatically.",
+        "A wallet-only order confirms immediately with no gateway call."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Money rules",
+      "items": [
+        "Amounts are integer paise; USD orders also carry the charged amount in minor units.",
+        "Prices, tax, stock and coupon limits are decided on the server inside the transaction."
+      ]
+    }
+  ]
+}
