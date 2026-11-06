@@ -9,6 +9,7 @@ import {
   addOrderNote,
   cancelShipment,
   createShipments,
+  recordManualShipment,
   getShipmentInvoice,
   refundOrder,
   retryShipment,
@@ -71,6 +72,12 @@ export async function bulkShipAction(form: FormData): Promise<void> {
 
 export async function retryShipmentAction(shipmentId: string) {
   return run(async () => retryShipment(await getActor(), { shipmentId }))
+}
+
+export async function recordManualShipmentAction(
+  input: Parameters<typeof recordManualShipment>[1],
+) {
+  return run(async () => recordManualShipment(await getActor(), input))
 }
 
 /** Asks the courier for the invoice now, so the page can offer it. */

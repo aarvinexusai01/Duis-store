@@ -132,6 +132,7 @@ Payment settlement, expiry, reconciliation and refunds run as the system (jobs a
 | `orders.adminList` | ✓ | ✓ | · | · | ✓ | ✓ | · |
 | `orders.cancelShipment` | ✓ | ✓ | · | · | ✓ | · | · |
 | `orders.createShipments` | ✓ | ✓ | · | · | ✓ | · | · |
+| `orders.recordManualShipment` | ✓ | ✓ | · | · | ✓ | · | · |
 | `orders.getShipmentInvoice` | ✓ | ✓ | · | · | ✓ | ✓ | · |
 | `orders.getShipmentLabel` | ✓ | ✓ | · | · | ✓ | · | · |
 | `orders.importCodRemittances` | ✓ | ✓ | · | · | · | · | · |

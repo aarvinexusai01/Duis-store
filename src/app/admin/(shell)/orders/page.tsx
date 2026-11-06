@@ -18,6 +18,7 @@ import {
 import { bulkShipAction } from "@/features/orders/admin-actions"
 import { can, requireStaff } from "@/features/staff"
 import { choice, one, pageOf, withParams } from "@/lib/admin-query"
+import { formatMoney } from "@/lib/fx"
 import { formatPaise } from "@/lib/money"
 import {
   ORDER_STATUS_LABEL,
@@ -166,7 +167,11 @@ async function Orders({
             header: "Total",
             className: "text-right whitespace-nowrap",
             cell: (row: AdminOrderRow) =>
-              row.totalPaise === null ? "—" : formatPaise(row.totalPaise),
+              row.totalPaise === null
+                ? "—"
+                : row.charged
+                  ? `${formatMoney(row.charged.amountMinor, row.charged.currency)} · ${formatPaise(row.totalPaise)}`
+                  : formatPaise(row.totalPaise),
           },
         ]
       : []),

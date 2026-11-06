@@ -91,10 +91,13 @@ export const salesReport = defineOperation({
         where ${SOLD} and ${IN_RANGE(from, to)}
         group by 1 order by revenue desc`),
       db.execute<{ refunded: number }>(sql`
-        select coalesce(sum(amount_paise), 0)::int as refunded from refunds
-        where status = 'processed'
-          and updated_at >= (${from}::date)::timestamp at time zone 'Asia/Kolkata'
-          and updated_at < (${to}::date + 1)::timestamp at time zone 'Asia/Kolkata'`),
+        select coalesce(sum(case when r.currency = 'INR' then r.amount_paise
+          -- Dollar refunds at their order's own rate, like its books (ADR-0034).
+          else round(r.amount_paise::numeric * o.fx_rate_micros / 1000000) end), 0)::int as refunded
+        from refunds r join orders o on o.id = r.order_id
+        where r.status = 'processed'
+          and r.updated_at >= (${from}::date)::timestamp at time zone 'Asia/Kolkata'
+          and r.updated_at < (${to}::date + 1)::timestamp at time zone 'Asia/Kolkata'`),
     ])
     const sum = (key: keyof (typeof days.rows)[number]) =>
       days.rows.reduce((s, r) => s + Number(r[key]), 0)
@@ -163,6 +166,9 @@ export const exportGstCsv = defineOperation({
       sgst: number
       igst: number
       line_total: number
+      currency: string
+      foreign_total: number | null
+      fx_rate_micros: number | null
     }>(sql`
       with sold as (
         select o.*, to_char(o.confirmed_at at time zone 'Asia/Kolkata', 'YYYY-MM-DD') as day,
@@ -177,13 +183,15 @@ export const exportGstCsv = defineOperation({
              oi.quantity, oi.unit_price_paise as unit_price, oi.discount_paise as discount,
              oi.taxable_paise as taxable, oi.tax_rate_bp as rate_bp, oi.cgst_paise as cgst,
              oi.sgst_paise as sgst, oi.igst_paise as igst, oi.line_total_paise as line_total,
+             sold.currency, oi.line_total_minor as foreign_total, sold.fx_rate_micros,
              sold.confirmed_at, oi.position
       from sold join order_items oi on oi.order_id = sold.id
       union all
       select order_number, day, status, customer_name, place, is_export, intra, 'charges',
              null, 'Shipping and COD charges', '9968', null, null, 0,
              fee_taxable_paise, fee_tax_rate_bp, fee_cgst_paise, fee_sgst_paise, fee_igst_paise,
-             shipping_fee_paise + cod_fee_paise, confirmed_at, 10000
+             shipping_fee_paise + cod_fee_paise, currency, shipping_fee_minor, fx_rate_micros,
+             confirmed_at, 10000
       from sold where shipping_fee_paise + cod_fee_paise > 0
       order by confirmed_at, order_number, position`)
     const csv = toCsv(
@@ -207,6 +215,11 @@ export const exportGstCsv = defineOperation({
         "sgst",
         "igst",
         "line_total",
+        // Exports charged in dollars: the foreign value and the rate the
+        // rupee amounts were taken at, so an invoice can use another rate.
+        "foreign_currency",
+        "foreign_value",
+        "fx_rate_inr_per_unit",
       ],
       rows.rows.map((r) => [
         r.order_number,
@@ -228,6 +241,11 @@ export const exportGstCsv = defineOperation({
         rupees(r.sgst),
         rupees(r.igst),
         rupees(r.line_total),
+        r.currency === "INR" ? null : r.currency,
+        r.foreign_total === null ? null : (r.foreign_total / 100).toFixed(2),
+        r.fx_rate_micros === null
+          ? null
+          : (r.fx_rate_micros / 1_000_000).toFixed(6),
       ]),
     )
     return {

@@ -67,6 +67,9 @@ export const exportOrdersCsv = defineOperation({
           "total",
           "parcel_status",
           "awb",
+          // USD orders (ADR-0034): "total" stays the rupee books.
+          "charged_currency",
+          "charged_total",
         ],
         rows.map((r) => [
           r.orderNumber,
@@ -80,6 +83,8 @@ export const exportOrdersCsv = defineOperation({
           rupees(r.totalPaise),
           r.shipmentStatus,
           r.awb,
+          r.charged?.currency ?? "INR",
+          r.charged ? (r.charged.amountMinor / 100).toFixed(2) : null,
         ]),
       ),
     }

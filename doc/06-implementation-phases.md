@@ -1550,6 +1550,14 @@ The owner asked for a full SEO list (technical, quick wins, on-page, content) pl
 - **The switch:** `settings.setUsdPricing` checks the rate, a priced shipping country, and a $1 Razorpay USD order.
 - **Customer pages:** the checkout and success pages show the charged currency; the rest of the account pages and the emails come with 13c.
 
+**13c built 2026-11-06.** After purchase:
+- **Emails:** confirmation, cancellation, refund and WhatsApp in the order's currency.
+- **My orders:** amounts are what was charged.
+- **Admin:** the order list shows "$ · ₹"; the order page has a Charged panel with the rate, source and increase; payments, refunds and the refund form are in the order's currency, with no wallet refund on USD orders. The Refund button now also shows when only a refund to the payment is possible.
+- **Exports are entered by hand** (`orders.recordManualShipment`, provider `manual`) and moved on with "Mark picked up … delivered", which sends the usual shipped email.
+- **Reports:** the sales report's refunded total converts dollar refunds at their order's rate; the GST CSV gets foreign currency, value and rate columns, and the orders CSV the charged total.
+- **Change from the plan:** the Meta server purchase event stays in INR until 13d, so it keeps matching the browser pixel, which sends INR until then.
+
 **Before switching on (owner):**
 - Razorpay international + USD;
 - countries ticked under Shipping, each with a fee and %;

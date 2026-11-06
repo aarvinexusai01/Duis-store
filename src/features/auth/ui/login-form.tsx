@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -37,10 +37,17 @@ export function LoginForm({
   // A mobile number or Google profile creates an account if there's none
   // yet, so both wait for the DPDP boxes (doc/06 Phase 12).
   const [consented, setConsented] = useState(false)
+  // The consent cookie's save, awaited before Better Auth takes any data.
+  const consentSaved = useRef<Promise<void>>(Promise.resolve())
   const [googleError, setGoogleError] = useState("")
   return (
     <div className="flex flex-col gap-6">
-      <AccountConsentFields onChange={setConsented} />
+      <AccountConsentFields
+        onChange={(ticked, saved) => {
+          setConsented(ticked)
+          consentSaved.current = saved
+        }}
+      />
       <Tabs defaultValue="phone">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="phone">Mobile number</TabsTrigger>
@@ -51,6 +58,7 @@ export function LoginForm({
             onDone={done}
             turnstileSiteKey={turnstileSiteKey}
             consented={consented}
+            consentSaved={consentSaved}
           />
         </TabsContent>
         <TabsContent value="email" className="pt-4">
@@ -67,12 +75,13 @@ export function LoginForm({
           <Button
             variant="outline"
             className="h-12 rounded-none border-ink font-semibold"
-            onClick={() => {
+            onClick={async () => {
               if (!consented) {
                 setGoogleError("Please tick both boxes above to continue.")
                 return
               }
               setGoogleError("")
+              await consentSaved.current
               void authClient.signIn.social({
                 provider: "google",
                 callbackURL: completeSignInUrl(next),
@@ -92,10 +101,12 @@ function PhoneLogin({
   onDone,
   turnstileSiteKey,
   consented,
+  consentSaved,
 }: {
   onDone: () => void
   turnstileSiteKey: string | null
   consented: boolean
+  consentSaved: React.RefObject<Promise<void>>
 }) {
   const captcha = useTurnstile(turnstileSiteKey)
   const [digits, setDigits] = useState("")
@@ -116,6 +127,7 @@ function PhoneLogin({
       return
     }
     setPending(true)
+    await consentSaved.current
     const phoneNumber = `+91${digits}`
     if (!captcha.ready) {
       setPending(false)

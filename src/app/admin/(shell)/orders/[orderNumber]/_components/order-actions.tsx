@@ -13,11 +13,19 @@ import {
 } from "@/components/ui/dialog"
 import {
   createShipmentsAction,
+  recordManualShipmentAction,
   refundOrderAction,
   staffCancelOrderAction,
   startProcessingAction,
 } from "@/features/orders/admin-actions"
+import { formatMoney, type Currency } from "@/lib/fx"
 import { formatPaise } from "@/lib/money"
+
+type Refundable = {
+  toSourcePaise: number
+  toWalletPaise: number
+  currency: Currency
+}
 
 const field =
   "h-9 w-full rounded-sm border border-input bg-card px-2 text-sm tabular-nums"
@@ -36,12 +44,15 @@ export function OrderActions({
   refundable,
   defaultWeightGrams,
   hasLiveParcel,
+  isExport,
 }: {
   orderNumber: string
   can: Can
-  refundable: { toSourcePaise: number; toWalletPaise: number } | null
+  refundable: Refundable | null
   defaultWeightGrams: number
   hasLiveParcel: boolean
+  /** Exports are booked with a courier by hand (doc/06 Phase 13). */
+  isExport: boolean
 }) {
   const [open, setOpen] = useState<"ship" | "cancel" | "refund" | null>(null)
   const [pending, startTransition] = useTransition()
@@ -68,7 +79,7 @@ export function OrderActions({
       )}
       {can.ship && (
         <Button className="rounded-sm" onClick={() => setOpen("ship")}>
-          Book parcel
+          {isExport ? "Enter parcel" : "Book parcel"}
         </Button>
       )}
       {can.refund && (
@@ -93,14 +104,22 @@ export function OrderActions({
       <Modal
         open={open === "ship"}
         onClose={close}
-        title="Book parcel"
-        description="Books the courier, gets the AWB and label, and asks for pickup."
+        title={isExport ? "Enter the parcel" : "Book parcel"}
+        description={
+          isExport
+            ? "Book the parcel with your courier first, then enter it here. Update its progress from the parcel when the courier scans it."
+            : "Books the courier, gets the AWB and label, and asks for pickup."
+        }
       >
-        <ShipForm
-          orderNumber={orderNumber}
-          defaultWeightGrams={defaultWeightGrams}
-          onDone={close}
-        />
+        {isExport ? (
+          <ManualShipForm orderNumber={orderNumber} onDone={close} />
+        ) : (
+          <ShipForm
+            orderNumber={orderNumber}
+            defaultWeightGrams={defaultWeightGrams}
+            onDone={close}
+          />
+        )}
       </Modal>
       <Modal
         open={open === "cancel"}
@@ -119,7 +138,11 @@ export function OrderActions({
           open={open === "refund"}
           onClose={close}
           title="Refund"
-          description={`Up to ${formatPaise(refundable.toSourcePaise)} back to the original payment, or up to ${formatPaise(refundable.toWalletPaise)} to the wallet.`}
+          description={
+            refundable.currency === "INR"
+              ? `Up to ${formatPaise(refundable.toSourcePaise)} back to the original payment, or up to ${formatPaise(refundable.toWalletPaise)} to the wallet.`
+              : `Up to ${formatMoney(refundable.toSourcePaise, refundable.currency)} back to the original payment, in ${refundable.currency}.`
+          }
         >
           <RefundForm
             orderNumber={orderNumber}
@@ -155,6 +178,51 @@ function Modal({
         {children}
       </DialogContent>
     </Dialog>
+  )
+}
+
+function ManualShipForm({
+  orderNumber,
+  onDone,
+}: {
+  orderNumber: string
+  onDone: () => void
+}) {
+  const [pending, startTransition] = useTransition()
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    startTransition(async () => {
+      const result = await recordManualShipmentAction({
+        orderNumber,
+        carrier: String(form.get("carrier") ?? ""),
+        awb: String(form.get("awb") ?? ""),
+      })
+      if (!result.ok) return void toast.error(result.message)
+      toast.success("Parcel entered")
+      onDone()
+    })
+  }
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-3">
+      <label className="flex flex-col gap-1 text-sm">
+        Courier
+        <input
+          name="carrier"
+          required
+          maxLength={60}
+          placeholder="e.g. DHL Express"
+          className={field}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        Tracking number (AWB)
+        <input name="awb" required maxLength={40} className={field} />
+      </label>
+      <Button type="submit" disabled={pending} className="rounded-sm">
+        {pending ? "Saving…" : "Save parcel"}
+      </Button>
+    </form>
   )
 }
 
@@ -287,9 +355,10 @@ function RefundForm({
   onDone,
 }: {
   orderNumber: string
-  refundable: { toSourcePaise: number; toWalletPaise: number }
+  refundable: Refundable
   onDone: () => void
 }) {
+  const money = (minor: number) => formatMoney(minor, refundable.currency)
   const [destination, setDestination] = useState<"source" | "wallet">(
     refundable.toSourcePaise > 0 ? "source" : "wallet",
   )
@@ -333,21 +402,22 @@ function RefundForm({
             disabled={refundable.toSourcePaise === 0}
             onChange={() => setDestination("source")}
           />
-          Original payment (up to {formatPaise(refundable.toSourcePaise)})
+          Original payment (up to {money(refundable.toSourcePaise)})
         </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="destination"
-            checked={destination === "wallet"}
-            onChange={() => setDestination("wallet")}
-          />
-          Duis wallet, never expires (up to{" "}
-          {formatPaise(refundable.toWalletPaise)})
-        </label>
+        {refundable.currency === "INR" && (
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="destination"
+              checked={destination === "wallet"}
+              onChange={() => setDestination("wallet")}
+            />
+            Duis wallet, never expires (up to {money(refundable.toWalletPaise)})
+          </label>
+        )}
       </fieldset>
       <label className="flex flex-col gap-1 text-sm">
-        Amount (₹)
+        Amount ({refundable.currency === "INR" ? "₹" : "US$"})
         <input
           name="amount"
           type="number"

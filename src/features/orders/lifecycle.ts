@@ -21,6 +21,7 @@ import {
   type GatewayPayment,
 } from "@/features/payments"
 import { debitWallet, reverseDebit } from "@/features/wallet"
+import { formatMoney, type Currency } from "@/lib/fx"
 import { formatPaise } from "@/lib/money"
 import { systemActor, type Actor } from "@/server/auth/actor"
 import { getDb } from "@/server/db/client"
@@ -53,11 +54,21 @@ export type OrderRow = {
   customer_email: string | null
   customer_phone: string | null
   reservation_expires_at: Date | null
+  /** What the customer is charged in (ADR-0034); amounts below in its units. */
+  currency: Currency
+  total_minor: number | null
 }
 
 const ORDER_COLUMNS = sql`id, order_number, user_id, status, payment_status, payment_mode, total_paise,
   online_amount_paise, wallet_applied_paise, cod_due_paise, customer_name, customer_email, customer_phone,
-  reservation_expires_at`
+  reservation_expires_at, currency, total_minor`
+
+/**
+ * An amount for the customer, in the order's own currency: payments and
+ * refunds are in it, and USD orders keep their charged total in total_minor.
+ */
+const charged = (order: OrderRow, minor: number) =>
+  formatMoney(minor, order.currency)
 
 export async function lockOrder(
   tx: Transaction,
@@ -108,9 +119,10 @@ async function emailConfirmation(tx: Transaction, order: OrderRow) {
     title: string
     variant_label: string
     quantity: number
-    line_total_paise: number
+    line_total: number
   }>(sql`
-    select title, variant_label, quantity, line_total_paise from order_items where order_id = ${order.id} order by position`)
+    select title, variant_label, quantity, coalesce(line_total_minor, line_total_paise) as line_total
+    from order_items where order_id = ${order.id} order by position`)
   await queueEmail(
     {
       template: "order-confirmed",
@@ -121,14 +133,14 @@ async function emailConfirmation(tx: Transaction, order: OrderRow) {
         name: order.customer_name,
         orderNumber: order.order_number,
         url: orderUrl(order.order_number),
-        total: formatPaise(order.total_paise),
+        total: charged(order, order.total_minor ?? order.total_paise),
         ...(order.cod_due_paise > 0
           ? { codDue: formatPaise(order.cod_due_paise) }
           : {}),
         lines: lines.rows.map((l) => ({
           title: `${l.title} (${l.variant_label})`,
           quantity: l.quantity,
-          amount: formatPaise(l.line_total_paise),
+          amount: charged(order, l.line_total),
         })),
       },
     },
@@ -154,7 +166,7 @@ async function emailCancellation(
         orderNumber: order.order_number,
         url: orderUrl(order.order_number),
         reason,
-        ...(refundPaise > 0 ? { refund: formatPaise(refundPaise) } : {}),
+        ...(refundPaise > 0 ? { refund: charged(order, refundPaise) } : {}),
       },
     },
     { tx },
@@ -210,7 +222,7 @@ export async function confirmInTransaction(
     params: {
       name: order.customer_name,
       orderNumber: order.order_number,
-      total: formatPaise(order.total_paise),
+      total: charged(order, order.total_minor ?? order.total_paise),
     },
     reference: { type: "order", id: order.id },
   })
@@ -758,7 +770,7 @@ onRefundProcessed(async (tx, orderId, amountPaise) => {
           name: order.customer_name,
           orderNumber: order.order_number,
           url: orderUrl(order.order_number),
-          amount: formatPaise(amountPaise),
+          amount: charged(order, amountPaise),
         },
       },
       { tx },

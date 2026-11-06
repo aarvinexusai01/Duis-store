@@ -66,6 +66,10 @@ test("checkout outside India: priced and paid in US dollars", async ({
   test.skip(!slug, "no seeded catalogue")
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
   await client.connect()
+  const { rows } = await client.query(`
+    select international_country_codes, usd_pricing_enabled, usd_rate_mode, usd_manual_rate_micros
+    from store_settings where id = 1`)
+  const original = rows[0]
   await client.query(`
     update store_settings set international_country_codes = array['US'], usd_pricing_enabled = true,
       usd_rate_mode = 'manual', usd_manual_rate_micros = 84500000 where id = 1`)
@@ -111,9 +115,17 @@ test("checkout outside India: priced and paid in US dollars", async ({
     // The success page shows what was charged, in dollars.
     await expect(page.getByText(charged).first()).toBeVisible()
   } finally {
-    await client.query(`
-      update store_settings set international_country_codes = '{}', usd_pricing_enabled = false,
-        usd_rate_mode = 'auto', usd_manual_rate_micros = null where id = 1`)
+    // Put back what was there, for the other tests.
+    await client.query(
+      `update store_settings set international_country_codes = $1, usd_pricing_enabled = $2,
+        usd_rate_mode = $3, usd_manual_rate_micros = $4 where id = 1`,
+      [
+        original.international_country_codes,
+        original.usd_pricing_enabled,
+        original.usd_rate_mode,
+        original.usd_manual_rate_micros,
+      ],
+    )
     await client.query(`delete from country_pricing where country_code = 'US'`)
     await client.end()
   }

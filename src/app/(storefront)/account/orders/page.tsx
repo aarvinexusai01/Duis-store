@@ -6,7 +6,7 @@ import { MediaThumb } from "@/components/media-thumb"
 import { PageSkeleton } from "@/components/page-skeleton"
 import { requireUser } from "@/features/auth/session-guard"
 import { listMyOrders } from "@/features/orders"
-import { formatPaise } from "@/lib/money"
+import { formatMoney } from "@/lib/fx"
 import { ORDER_STATUS_LABEL } from "@/lib/order-status"
 
 export const metadata: Metadata = { title: "Orders" }
@@ -55,7 +55,7 @@ async function Orders() {
                 </span>
                 <span className="text-right text-sm">
                   <span className="block font-semibold">
-                    {formatPaise(order.totalPaise)}
+                    {formatMoney(order.totalCharged, order.currency)}
                   </span>
                   <span className="text-muted-foreground">
                     {ORDER_STATUS_LABEL[order.status] ?? order.status}

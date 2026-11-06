@@ -14,6 +14,7 @@ export {
   customsFor,
   ensureShipmentInvoice,
   ingestTrackingEvent,
+  markManuallyBooked,
   onShipmentStatusChanged,
   processTrackingWebhook,
   readShipmentLabel,
