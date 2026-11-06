@@ -3,6 +3,7 @@ import Link from "next/link"
 import type { ReactNode } from "react"
 
 import { ColumnToggle } from "@/components/admin/column-toggle"
+import { SearchInput } from "@/components/admin/search-input"
 import { withParams } from "@/lib/admin-query"
 import { cn } from "@/lib/utils"
 
@@ -27,7 +28,8 @@ type BulkAction = {
 /**
  * Server-rendered admin table (doc/06 Phase 4 §1): search, filters and
  * pagination are a GET form and links; bulk actions post the checked row
- * ids to a Server Action. No client state, so it works without JavaScript.
+ * ids to a Server Action. It works without JavaScript; with it, the search
+ * box also searches as you type.
  */
 export function DataTable<T>({
   rows,
@@ -155,8 +157,7 @@ export function DataTable<T>({
             {search && (
               <label className="flex flex-col gap-1 text-xs text-muted-foreground">
                 Search
-                <input
-                  type="search"
+                <SearchInput
                   name="q"
                   defaultValue={params.q ?? ""}
                   placeholder={search.placeholder}
@@ -247,7 +248,8 @@ export function DataTable<T>({
         aria-label="Pagination"
         className="flex items-center justify-between text-sm text-muted-foreground"
       >
-        <span>
+        {/* Announces the new count when search-as-you-type updates the rows. */}
+        <span aria-live="polite">
           {from}–{to} of {total}
         </span>
         <span className="flex gap-2">

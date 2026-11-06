@@ -7,6 +7,7 @@ import {
   NoAccess,
   StatusBadge,
 } from "@/components/admin/page-header"
+import { SearchInput } from "@/components/admin/search-input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { adminListRedirects, REDIRECTS_PAGE_SIZE } from "@/features/redirects"
 import { can, requireStaff } from "@/features/staff"
@@ -48,10 +49,9 @@ async function Redirects({
         <label htmlFor="redirects-q" className="sr-only">
           Search redirects
         </label>
-        <input
+        <SearchInput
           id="redirects-q"
           name="q"
-          type="search"
           defaultValue={q}
           placeholder="Search addresses"
           className="h-9 w-64 rounded-sm border bg-card px-3 text-sm"

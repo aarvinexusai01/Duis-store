@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { AdminPageHeader, NoAccess } from "@/components/admin/page-header"
+import { SearchInput } from "@/components/admin/search-input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { adminListMedia, MEDIA_PAGE_SIZE } from "@/features/media"
 import { can, requireStaff } from "@/features/staff"
@@ -96,10 +97,9 @@ async function Media({
           <label htmlFor="media-q" className="sr-only">
             Search images
           </label>
-          <input
+          <SearchInput
             id="media-q"
             name="q"
-            type="search"
             defaultValue={q}
             placeholder="Alt text or file name"
             className="h-9 w-56 rounded-sm border bg-card px-3 text-sm"
@@ -113,7 +113,9 @@ async function Media({
         canDelete={can(actor, { media: ["delete"] })}
       />
       <p className="mt-4 flex gap-3 text-sm text-muted-foreground">
-        {total} image{total === 1 ? "" : "s"}
+        <span aria-live="polite">
+          {total} image{total === 1 ? "" : "s"}
+        </span>
         {page > 1 && (
           <Link href={href({ page: page - 1 })} className="underline">
             Previous

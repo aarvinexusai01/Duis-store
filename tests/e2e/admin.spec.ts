@@ -130,6 +130,35 @@ test("product editor: saves twice in a row, and refuses a save from a stale tab"
   await stale.close()
 })
 
+test("admin lists search as you type, keeping the cursor in the box", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "admin flows are covered on desktop")
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
+  await client.connect()
+  const { rows } = await client.query<{ title: string }>(
+    "select title from products where status = 'active' order by created_at limit 1",
+  )
+  await client.end()
+  test.skip(!rows[0], "no seeded catalogue")
+  const { title } = rows[0]!
+
+  await page.goto("/")
+  const admin = await createStaff(page, "store_admin")
+  await signInAndSetUpTwoFactor(page, admin)
+  await page.goto("/admin/products")
+  await page.waitForLoadState("networkidle")
+
+  // No Enter: the list follows once typing pauses.
+  const box = page.getByRole("searchbox", { name: "Search" })
+  await box.fill(title)
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === title)
+  await expect(page.getByRole("link", { name: title }).first()).toBeVisible()
+  await expect(box).toBeFocused()
+  await expect(box).toHaveValue(title)
+})
+
 test("leaving the admin for the store hides the scrollbars again", async ({
   page,
   isMobile,

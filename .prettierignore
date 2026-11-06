@@ -3,6 +3,7 @@ dist
 coverage
 playwright-report
 test-results
+.archify
 node_modules
 package-lock.json
 next-env.d.ts

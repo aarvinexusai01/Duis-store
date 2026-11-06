@@ -7,6 +7,7 @@ import {
   NoAccess,
   StatusBadge,
 } from "@/components/admin/page-header"
+import { SearchInput } from "@/components/admin/search-input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { adminListMessages, CONTACT_TOPICS } from "@/features/contact"
 import { can, requireStaff } from "@/features/staff"
@@ -83,10 +84,9 @@ async function Messages({
           <label htmlFor="messages-q" className="sr-only">
             Search messages
           </label>
-          <input
+          <SearchInput
             id="messages-q"
             name="q"
-            type="search"
             defaultValue={q}
             placeholder="Name, email or order"
             className="h-9 w-56 rounded-sm border bg-card px-3 text-sm"

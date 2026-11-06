@@ -1,7 +1,7 @@
 "use client"
 
 import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from "lucide-react"
-import { useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -25,10 +25,20 @@ export function CollectionProducts({
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<Item[]>([])
   const [pending, startTransition] = useTransition()
+  // Separate, so searching as you type never disables "Save products".
+  const [searching, startSearch] = useTransition()
+  const searchForm = useRef<HTMLFormElement>(null)
+
+  // Search as you type once typing pauses, like the CMS product picker.
+  useEffect(() => {
+    if (query.trim().length < 2) return
+    const timer = setTimeout(() => searchForm.current?.requestSubmit(), 250)
+    return () => clearTimeout(timer)
+  }, [query])
 
   const search = (event: React.FormEvent) => {
     event.preventDefault()
-    startTransition(async () => {
+    startSearch(async () => {
       const result = await searchProductsAction(query)
       if (result.ok)
         setResults(
@@ -116,7 +126,7 @@ export function CollectionProducts({
       </section>
       {canEdit && (
         <section className="rounded-sm border bg-card p-4">
-          <form onSubmit={search} className="mb-3 flex gap-2">
+          <form ref={searchForm} onSubmit={search} className="mb-3 flex gap-2">
             <label htmlFor="pick-search" className="sr-only">
               Find products
             </label>
@@ -127,7 +137,7 @@ export function CollectionProducts({
               placeholder="Search products to add"
               className="h-9 flex-1 rounded-sm border border-input bg-card px-2 text-sm"
             />
-            <Button type="submit" variant="outline" disabled={pending}>
+            <Button type="submit" variant="outline" disabled={searching}>
               Search
             </Button>
           </form>

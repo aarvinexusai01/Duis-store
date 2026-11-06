@@ -46,6 +46,8 @@ Slice 4a is the part of Phase 4 that runs the catalogue: the admin shell, staff 
 - The browser's back button works.
 - It works before JavaScript loads.
 
+**Update (2026-11-06).** The search box also searches as you type (`SearchInput`): 400 ms after typing stops, it replaces the URL in place, with no history entry per pause. The GET form, shared links, Back and use without JavaScript are unchanged.
+
 ### Rich text
 
 **Decision.**
