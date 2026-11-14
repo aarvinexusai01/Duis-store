@@ -12,6 +12,8 @@ import {
 } from "@/features/catalog/admin-actions"
 import { cn } from "@/lib/utils"
 
+import { NewOptionValue } from "./new-option-value"
+
 type Variant = AdminProduct["variants"][number]
 
 const rupees = (paise: number) =>
@@ -30,11 +32,14 @@ export function VariantsPanel({
   options,
   canEdit,
   canAdjust,
+  canAddValues,
 }: {
   product: AdminProduct
   options: CatalogOptions
   canEdit: boolean
   canAdjust: boolean
+  /** May add a colour or size here (catalog create), as on Attributes. */
+  canAddValues: boolean
 }) {
   const axes = product.axisAttributeIds
     .map((id) => options.attributes.find((a) => a.id === id))
@@ -81,7 +86,9 @@ export function VariantsPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      {canEdit && <Generator product={product} axes={axes} />}
+      {canEdit && (
+        <Generator product={product} axes={axes} canAddValues={canAddValues} />
+      )}
 
       {rows.length > 0 && (
         <section className="flex flex-col gap-3">
@@ -264,9 +271,11 @@ function BulkFill({ onFill }: { onFill: (patch: Partial<Variant>) => void }) {
 function Generator({
   product,
   axes,
+  canAddValues,
 }: {
   product: AdminProduct
   axes: CatalogOptions["attributes"]
+  canAddValues: boolean
 }) {
   const [selected, setSelected] = useState<Record<string, string[]>>(() => {
     const initial: Record<string, string[]> = {}
@@ -356,6 +365,19 @@ function Generator({
                 {value.label}
               </label>
             ))}
+            {canAddValues && (
+              <NewOptionValue
+                axis={axis}
+                onAdded={(valueId) =>
+                  setSelected((current) => {
+                    const list = current[axis.id] ?? []
+                    return list.includes(valueId)
+                      ? current
+                      : { ...current, [axis.id]: [...list, valueId] }
+                  })
+                }
+              />
+            )}
           </div>
         </fieldset>
       ))}

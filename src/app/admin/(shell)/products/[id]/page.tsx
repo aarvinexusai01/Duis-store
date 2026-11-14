@@ -105,6 +105,7 @@ async function EditProduct({ params }: Pick<Props, "params">) {
             options={options}
             canEdit={canEdit}
             canAdjust={can(actor, { inventory: ["adjust"] })}
+            canAddValues={can(actor, { catalog: ["create"] })}
           />
         </TabsContent>
       </Tabs>

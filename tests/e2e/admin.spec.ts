@@ -37,16 +37,29 @@ test("store admin: 2FA, create a product, generate variants, receive stock", asy
 
   await page.getByRole("tab", { name: "Variants & stock" }).click()
   const generator = page.locator("form:has(h3:text('Generate variants'))")
-  await generator
-    .getByRole("group", { name: "Colour" })
-    .getByRole("checkbox")
-    .first()
-    .check()
-  await generator
-    .getByRole("group", { name: "Size" })
-    .getByRole("checkbox")
-    .nth(1)
-    .check()
+  // A colour and a size the shop doesn't have yet, added right here.
+  const run = String(Date.now() % 1_000_000)
+  const colourName = `E2E Olive ${run}`
+  const colours = generator.getByRole("group", { name: "Colour", exact: true })
+  await colours.getByRole("button", { name: "New colour" }).click()
+  const newColour = generator.getByRole("group", { name: "New colour" })
+  await newColour.getByLabel("Name").fill(colourName)
+  await newColour
+    .getByLabel("Shop filter")
+    .selectOption({ label: "Under Green" })
+  await newColour.getByRole("button", { name: "Add" }).click()
+  await expect(
+    colours.getByRole("checkbox", { name: colourName }),
+  ).toBeChecked()
+
+  const sizeName = `E${run}`
+  const sizes = generator.getByRole("group", { name: "Size", exact: true })
+  await sizes.getByRole("button", { name: "New size" }).click()
+  const newSize = generator.getByRole("group", { name: "New size" })
+  await newSize.getByLabel("Name").fill(sizeName)
+  // Enter adds the size; it doesn't submit the generator.
+  await newSize.getByLabel("Name").press("Enter")
+  await expect(sizes.getByRole("checkbox", { name: sizeName })).toBeChecked()
   await generator.getByLabel("Price ₹").fill("799")
   await generator.getByLabel("MRP ₹").fill("999")
   await generator.getByLabel("Starting stock each").fill("5")
@@ -56,6 +69,23 @@ test("store admin: 2FA, create a product, generate variants, receive stock", asy
   await expect(
     page.getByRole("button", { name: "Stock" }).first(),
   ).toBeVisible()
+  await expect(page.getByText(colourName).first()).toBeVisible()
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
+  await client.connect()
+  const saved = await client.query<{
+    filter_group: string
+    swatch_hex: string
+  }>(
+    `select filter_group::text, swatch_hex from attribute_values where label = $1`,
+    [colourName],
+  )
+  await client.end()
+  expect(saved.rows).toEqual([
+    {
+      filter_group: "green",
+      swatch_hex: expect.stringMatching(/^#[0-9a-f]{6}$/),
+    },
+  ])
 
   await page.getByRole("button", { name: "Stock" }).first().click()
   await page.getByRole("dialog").getByLabel("Quantity").fill("3")
