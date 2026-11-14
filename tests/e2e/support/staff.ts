@@ -7,7 +7,11 @@ import pg from "pg"
 
 import { totp } from "../../helpers/totp"
 
-/** A fresh staff account per run, so two-factor setup always starts clean. */
+/**
+ * A fresh staff account per run, so two-factor setup always starts clean.
+ * The helper's first-visit tour is marked as seen, so it doesn't cover the
+ * page; pass `{ tour: true }` to test the tour itself.
+ */
 export async function createStaff(
   page: Page,
   role:
@@ -17,6 +21,7 @@ export async function createStaff(
     | "content_editor"
     | "fulfilment_staff"
     | "support_agent",
+  options: { tour?: boolean } = {},
 ) {
   const email = `e2e-${role}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@duis.test`
   const password = "E2e-Staff-Passw0rd!"
@@ -46,6 +51,13 @@ export async function createStaff(
     "update users set role = $1, email_verified = true where email = $2",
     [role, email],
   )
+  if (!options.tour) {
+    await client.query(
+      `insert into staff_preferences (user_id, tour_completed_at)
+       select id, now() from users where email = $1`,
+      [email],
+    )
+  }
   await client.end()
   return { email, password }
 }

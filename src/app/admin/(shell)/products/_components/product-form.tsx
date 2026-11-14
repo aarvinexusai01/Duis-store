@@ -529,7 +529,7 @@ export function ProductForm({
         </p>
       )}
       {canEdit && (
-        <div className="sticky bottom-0 -mx-4 flex justify-end gap-2 border-t bg-background/95 px-4 py-3 md:-mx-6 md:px-6">
+        <div className="sticky bottom-0 -mx-4 flex justify-end gap-2 border-t bg-background/95 py-3 pr-20 pl-4 md:-mx-6 md:pr-28 md:pl-6">
           <Button type="submit" disabled={pending} className="rounded-sm">
             {pending ? "Saving…" : creating ? "Create product" : "Save changes"}
           </Button>

@@ -162,6 +162,13 @@
       "when": 1793864980403,
       "tag": "0022_usd_pricing",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794658925684,
+      "tag": "0023_staff_preferences",
+      "breakpoints": true
     }
   ]
 }

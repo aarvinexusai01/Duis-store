@@ -7,6 +7,8 @@ import { AdminNavLinks } from "@/components/admin/admin-sidebar"
 import { AdminSignOut } from "@/components/admin/sign-out-button"
 import { Emblem } from "@/components/brand/wordmark"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getHelperState } from "@/features/helper"
+import { AdminHelper } from "@/features/helper/ui/admin-helper"
 import { ADMIN_NAV, can, requireStaff } from "@/features/staff"
 
 /** The admin shell: the session is read inside Suspense (Cache Components). */
@@ -30,10 +32,14 @@ async function Shell({ children }: { children: React.ReactNode }) {
       (item) => !item.permission || can(actor, item.permission),
     ),
   })).filter((group) => group.items.length > 0)
+  const helper = await getHelperState(actor, {})
 
   return (
     <div className="flex min-h-dvh">
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto bg-ink p-4 text-paper lg:flex">
+      <aside
+        data-tour="nav"
+        className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto bg-ink p-4 text-paper lg:flex"
+      >
         <Link
           href="/admin"
           className="flex items-center gap-2 font-display text-2xl tracking-wide uppercase"
@@ -63,6 +69,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
             />
             <Link
               href="/"
+              data-tour="view-store"
               className="text-sm whitespace-nowrap underline underline-offset-4"
             >
               View store
@@ -70,10 +77,11 @@ async function Shell({ children }: { children: React.ReactNode }) {
             <AdminSignOut />
           </div>
         </header>
-        <main id="main" className="min-w-0 flex-1 p-4 md:p-6">
+        <main id="main" className="min-w-0 flex-1 p-4 pb-24 md:p-6 md:pb-28">
           {children}
         </main>
       </div>
+      <AdminHelper initial={helper} />
     </div>
   )
 }

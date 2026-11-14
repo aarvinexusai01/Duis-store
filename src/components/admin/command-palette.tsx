@@ -81,6 +81,7 @@ export function CommandPalette({ pages }: { pages: Page[] }) {
     <>
       <button
         type="button"
+        data-tour="search"
         onClick={() => setOpen(true)}
         className="flex h-8 items-center gap-2 rounded-sm border bg-paper px-2 text-sm text-muted-foreground hover:bg-secondary"
       >

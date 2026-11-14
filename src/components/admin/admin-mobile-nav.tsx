@@ -20,7 +20,14 @@ export function AdminMobileNav({ groups }: { groups: AdminNavGroup[] }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
-        render={<Button variant="ghost" size="icon" className="lg:hidden" />}
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            data-tour="nav-mobile"
+          />
+        }
       >
         <MenuIcon />
         <span className="sr-only">Open admin menu</span>

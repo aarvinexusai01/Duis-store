@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { check, index, pgTable, text, uuid } from "drizzle-orm/pg-core"
+import { boolean, check, index, pgTable, text, uuid } from "drizzle-orm/pg-core"
 
 import { users } from "./auth"
 import { citext, primaryId, timestamptz } from "./columns"
@@ -30,3 +30,20 @@ export const staffInvitations = pgTable(
     ),
   ],
 )
+
+/**
+ * Per-person admin helper settings (the corner cat): whether it is hidden and
+ * whether the first-visit tour is done. One row per staff member, created on
+ * first change; a missing row means the defaults.
+ */
+export const staffPreferences = pgTable("staff_preferences", {
+  userId: uuid()
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  helperHidden: boolean().notNull().default(false),
+  tourCompletedAt: timestamptz(),
+  updatedAt: timestamptz()
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+})

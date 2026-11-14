@@ -319,4 +319,12 @@ How these are limited:
 - **Content Editors** write stories and add tags while writing. Managers publish, change addresses, and manage authors and categories (ADR-0030).
 - **Authors, categories and tags** can't be deleted while any story, draft or live, uses them.
 
+## Operations (admin helper)
+
+The corner cat in the admin (ADR-0035). Both operations are open to anyone signed in at the wrapper, and the handler refuses anyone without a staff role (`FORBIDDEN`), so the matrix shows ✓ for Customer.
+
+| Operation | Who | Limited to |
+|---|---|---|
+| `helper.getState`, `helper.updatePrefs` | Signed-in staff | Own settings only. The checklist lists only steps the person's role can do. |
+
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.
