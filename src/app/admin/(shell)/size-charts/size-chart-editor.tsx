@@ -63,7 +63,10 @@ export function SizeChartEditor({
     })
 
   return (
-    <section className="flex flex-col gap-3 rounded-sm border bg-card p-4">
+    <section
+      data-tour="size-chart"
+      className="flex flex-col gap-3 rounded-sm border bg-card p-4"
+    >
       <div className="flex flex-wrap items-end gap-3 text-sm">
         <label className="flex flex-col gap-1">
           {chart ? "Name" : "New size chart"}

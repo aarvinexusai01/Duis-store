@@ -96,6 +96,7 @@ export function MediaManager({
         {items.map((item, index) => (
           <li
             key={item.mediaId}
+            data-tour="media-item"
             className="flex gap-3 rounded-sm border bg-card p-3"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- stored rendition */}
@@ -210,6 +211,7 @@ export function MediaManager({
             variant="outline"
             className="rounded-sm"
             disabled={uploading}
+            data-tour="media-upload"
             onClick={() => fileInput.current?.click()}
           >
             <UploadIcon /> {uploading ? "Uploading…" : "Upload photos"}
@@ -218,6 +220,7 @@ export function MediaManager({
             type="button"
             className="rounded-sm"
             disabled={!dirty || pending}
+            data-tour="media-save"
             onClick={save}
           >
             {pending ? "Saving…" : "Save photos"}

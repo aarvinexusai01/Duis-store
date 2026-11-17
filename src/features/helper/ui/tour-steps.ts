@@ -56,7 +56,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     targets: ['[data-tour="helper"]'],
     title: "I'm always here",
-    body: "Click me for tips about the page you're on and a getting-started list. You can hide me anytime.",
+    body: "Click me for tips, today's to-do list and a tour of any page. You can hide me anytime.",
     mood: "heart",
   },
 ]
@@ -66,17 +66,23 @@ function visible(element: Element): boolean {
   return box.width > 0 && box.height > 0
 }
 
-export function findTarget(step: TourStep): Element | null {
-  for (const selector of step.targets) {
-    const element = document.querySelector(selector)
-    if (element && visible(element)) return element
+/** The first visible element matching any selector, in order. */
+export function findFirst(selectors: readonly string[]): Element | null {
+  for (const selector of selectors) {
+    for (const element of document.querySelectorAll(selector)) {
+      if (visible(element)) return element
+    }
   }
   return null
 }
 
+export function findTarget(step: TourStep): Element | null {
+  return findFirst(step.targets)
+}
+
 /** The steps that make sense on this screen for this person. */
-export function availableSteps(): TourStep[] {
-  return TOUR_STEPS.filter(
+export function availableSteps(steps: TourStep[] = TOUR_STEPS): TourStep[] {
+  return steps.filter(
     (step) => step.targets.length === 0 || findTarget(step) !== null,
   )
 }

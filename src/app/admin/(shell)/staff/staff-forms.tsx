@@ -90,7 +90,7 @@ export function InviteForm() {
   const [email, setEmail] = useState("")
   const { pending, act } = useAct()
   return (
-    <section className="rounded-sm border bg-card p-4">
+    <section data-tour="staff-invite" className="rounded-sm border bg-card p-4">
       <h2 className="font-semibold">Invite someone</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         They get an email link (valid 72 hours), choose a password and set up

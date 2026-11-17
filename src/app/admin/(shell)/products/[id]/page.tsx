@@ -10,6 +10,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { adminCatalogOptions, adminGetProduct } from "@/features/catalog"
+import { productHealth } from "@/features/helper"
+import { ProductHealth } from "@/features/helper/ui/product-health"
 import { can, requireStaff } from "@/features/staff"
 import { isDomainError } from "@/server/errors"
 
@@ -76,11 +78,23 @@ async function EditProduct({ params }: Pick<Props, "params">) {
           />
         }
       />
+      {canEdit && (
+        <ProductHealth
+          items={productHealth(product, options)}
+          status={product.status}
+        />
+      )}
       <Tabs defaultValue="details">
         <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="media">Photos</TabsTrigger>
-          <TabsTrigger value="variants">Variants &amp; stock</TabsTrigger>
+          <TabsTrigger value="details" data-tour="tab-details">
+            Details
+          </TabsTrigger>
+          <TabsTrigger value="media" data-tour="tab-media">
+            Photos
+          </TabsTrigger>
+          <TabsTrigger value="variants" data-tour="tab-variants">
+            Variants &amp; stock
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="pt-4">
           <ProductForm

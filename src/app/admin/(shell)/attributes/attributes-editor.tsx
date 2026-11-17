@@ -50,7 +50,7 @@ export function AttributesEditor({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-tour="attributes" className="flex flex-col gap-6">
       {attributes.map((attribute) => (
         <section key={attribute.id} className="rounded-sm border bg-card">
           <header className="flex flex-wrap items-center gap-2 border-b px-4 py-2">

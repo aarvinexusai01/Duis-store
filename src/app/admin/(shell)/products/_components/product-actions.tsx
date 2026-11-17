@@ -64,6 +64,7 @@ export function ProductActions({
         <Button
           className="rounded-sm"
           disabled={pending}
+          data-tour="publish"
           onClick={() => act(() => publishProductAction(id), "Published")}
         >
           Publish

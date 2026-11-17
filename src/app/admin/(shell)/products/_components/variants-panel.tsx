@@ -115,6 +115,7 @@ export function VariantsPanel({
                 {rows.map((row) => (
                   <tr
                     key={row.id}
+                    data-tour="variant-row"
                     className={cn(changed.includes(row) && "bg-amber-50")}
                   >
                     <td className="px-2 py-1.5 whitespace-nowrap">
@@ -189,6 +190,7 @@ export function VariantsPanel({
                           type="button"
                           size="sm"
                           variant="ghost"
+                          data-tour="adjust-stock"
                           onClick={() => setStockFor(live.get(row.id) ?? row)}
                         >
                           Stock
@@ -322,6 +324,7 @@ function Generator({
   return (
     <form
       onSubmit={generate}
+      data-tour="generate-variants"
       className="flex flex-col gap-4 rounded-sm border bg-card p-4"
     >
       <div>

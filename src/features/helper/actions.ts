@@ -35,3 +35,10 @@ export async function completeTourAction() {
     updateHelperPrefs(await getActor(), { tourDone: true }),
   )
 }
+
+/** A guide (the product walkthrough or a page tour) finished or dismissed. */
+export async function markGuideSeenAction(guide: string) {
+  return run(async () =>
+    updateHelperPrefs(await getActor(), { seenGuide: guide }),
+  )
+}

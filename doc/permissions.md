@@ -321,10 +321,11 @@ How these are limited:
 
 ## Operations (admin helper)
 
-The corner cat in the admin (ADR-0035). Both operations are open to anyone signed in at the wrapper, and the handler refuses anyone without a staff role (`FORBIDDEN`), so the matrix shows ✓ for Customer.
+The corner cat in the admin (ADR-0035). These operations are open to anyone signed in at the wrapper, and the handler refuses anyone without a staff role (`FORBIDDEN`), so the matrix shows ✓ for Customer.
 
 | Operation | Who | Limited to |
 |---|---|---|
-| `helper.getState`, `helper.updatePrefs` | Signed-in staff | Own settings only. The checklist lists only steps the person's role can do. |
+| `helper.getState`, `helper.updatePrefs` | Signed-in staff | Own settings only (hidden, tour done, guides seen). The checklist and to-do list show only what the person's role can do. |
+| `helper.getTodos` | Signed-in staff | Counts only, each line only for roles that can act on it: orders to ship (`order:read`), exchanges to decide (`exchange:decide`), new messages and privacy requests (`customer:read`), reviews (`review:moderate`), sold-out and low sizes (`inventory:read`), drafts and colours without photos (`catalog:update`), empty published collections (`collection:update`), pages in review (`cms:publish`). |
 
 To regenerate after changing permissions, run `npx vitest run --project integration tests/integration/rbac.test.ts -u`, review the snapshot diff, and update this table.

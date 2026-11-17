@@ -339,16 +339,22 @@ function score(pattern: string, path: string[]): number {
   return points * 10 + (parts.length === path.length ? 5 : 0)
 }
 
-export function tipsFor(pathname: string): PageTips {
+/** The PAGE_TIPS pattern for a path, or null when none fits. */
+export function patternFor(pathname: string): string | null {
   const path = segments(pathname.split(/[?#]/)[0] ?? "")
-  let best: PageTips = FALLBACK
+  let best: string | null = null
   let bestScore = -1
-  for (const [pattern, tips] of Object.entries(PAGE_TIPS)) {
+  for (const pattern of Object.keys(PAGE_TIPS)) {
     const points = score(pattern, path)
     if (points > bestScore) {
-      best = tips
+      best = pattern
       bestScore = points
     }
   }
   return best
+}
+
+export function tipsFor(pathname: string): PageTips {
+  const pattern = patternFor(pathname)
+  return pattern ? PAGE_TIPS[pattern]! : FALLBACK
 }

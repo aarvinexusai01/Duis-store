@@ -37,7 +37,7 @@ export function RemittanceImport() {
     })
   }
   return (
-    <section className="rounded-sm border bg-card p-4">
+    <section data-tour="cod-import" className="rounded-sm border bg-card p-4">
       <h2 className="font-semibold">Import a remittance file</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         A CSV with columns for the <strong>AWB</strong> or{" "}

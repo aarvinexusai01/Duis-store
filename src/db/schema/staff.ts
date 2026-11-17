@@ -42,6 +42,12 @@ export const staffPreferences = pgTable("staff_preferences", {
     .references(() => users.id, { onDelete: "cascade" }),
   helperHidden: boolean().notNull().default(false),
   tourCompletedAt: timestamptz(),
+  // Guides this person finished or dismissed: "product-walkthrough" and
+  // "page:<pattern>" for each page tour (ADR-035).
+  seenGuides: text()
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   updatedAt: timestamptz()
     .notNull()
     .defaultNow()

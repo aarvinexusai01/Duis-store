@@ -5,6 +5,8 @@ import { Suspense } from "react"
 import { RevenueChart } from "@/components/admin/bar-chart"
 import { AdminPageHeader, StatusBadge } from "@/components/admin/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getHelperTodos } from "@/features/helper"
+import { TodayCard } from "@/features/helper/ui/today-card"
 import { adminListStock } from "@/features/inventory"
 import { operationsSummary, salesSummary } from "@/features/reports"
 import { can, requireStaff } from "@/features/staff"
@@ -56,23 +58,31 @@ async function Dashboard() {
   const showSales = can(actor, { order: ["read_financials"] })
   const showOps = can(actor, { order: ["read"] })
   const showStock = can(actor, { inventory: ["read"] })
-  const [sales, ops, low] = await Promise.all([
+  const [sales, ops, low, todos] = await Promise.all([
     showSales ? salesSummary(actor, { days: 30 }) : null,
     showOps ? operationsSummary(actor, {}) : null,
     showStock ? adminListStock(actor, { lowOnly: true, page: 1 }) : null,
+    getHelperTodos(actor, {}),
   ])
 
   if (!sales && !ops && !low) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Welcome. Use the menu to get to your tools.
-      </p>
+      <div className="flex flex-col gap-6">
+        <TodayCard todos={todos} />
+        <p className="text-sm text-muted-foreground">
+          Welcome. Use the menu to get to your tools.
+        </p>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <TodayCard todos={todos} />
+      <div
+        data-tour="dashboard-cards"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
         {sales && (
           <Card label="Revenue" value={formatPaise(sales.revenuePaise)} />
         )}

@@ -199,7 +199,7 @@ export function ProductForm({
               className={input}
             />
           </Field>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1" data-tour="description">
             <span className="text-sm font-medium">Description</span>
             <RichTextEditor
               value={description}
@@ -419,7 +419,7 @@ export function ProductForm({
                 ))}
               </select>
             </Field>
-            <fieldset>
+            <fieldset data-tour="categories">
               <legend className="mb-1 text-sm font-medium">Categories</legend>
               <p className="mb-2 text-xs text-muted-foreground">
                 The first one ticked is the main category (breadcrumbs, size
@@ -453,7 +453,7 @@ export function ProductForm({
           </div>
 
           <div className="flex flex-col gap-3 rounded-sm border bg-card p-4">
-            <fieldset disabled={!creating}>
+            <fieldset disabled={!creating} data-tour="variant-options">
               <legend className="mb-1 text-sm font-medium">
                 Variant options
               </legend>
@@ -530,7 +530,12 @@ export function ProductForm({
       )}
       {canEdit && (
         <div className="sticky bottom-0 -mx-4 flex justify-end gap-2 border-t bg-background/95 py-3 pr-20 pl-4 md:-mx-6 md:pr-28 md:pl-6">
-          <Button type="submit" disabled={pending} className="rounded-sm">
+          <Button
+            type="submit"
+            disabled={pending}
+            className="rounded-sm"
+            data-tour="save-product"
+          >
             {pending ? "Saving…" : creating ? "Create product" : "Save changes"}
           </Button>
         </div>

@@ -24,12 +24,21 @@ export function AdminPageHeader({
             ← {back.label}
           </Link>
         )}
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1
+          data-tour="page-title"
+          className="mt-1 text-2xl font-semibold tracking-tight"
+        >
+          {title}
+        </h1>
         {description && (
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         )}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && (
+        <div data-tour="page-actions" className="flex flex-wrap gap-2">
+          {actions}
+        </div>
+      )}
     </div>
   )
 }

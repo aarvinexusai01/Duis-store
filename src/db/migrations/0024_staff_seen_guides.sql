@@ -1,0 +1,1 @@
+ALTER TABLE "staff_preferences" ADD COLUMN "seen_guides" text[] DEFAULT '{}'::text[] NOT NULL;

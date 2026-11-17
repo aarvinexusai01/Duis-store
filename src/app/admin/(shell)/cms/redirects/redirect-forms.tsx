@@ -14,6 +14,7 @@ export function NewRedirectForm() {
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   return (
     <form
+      data-tour="redirect-form"
       className="grid gap-3 rounded-sm border bg-card p-4 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-end"
       onSubmit={(event) => {
         event.preventDefault()

@@ -169,6 +169,13 @@
       "when": 1794658925684,
       "tag": "0023_staff_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794909293137,
+      "tag": "0024_staff_seen_guides",
+      "breakpoints": true
     }
   ]
 }

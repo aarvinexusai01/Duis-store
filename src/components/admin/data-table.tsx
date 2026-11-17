@@ -75,7 +75,11 @@ export function DataTable<T>({
   const to = Math.min(total, page * pageSize)
 
   const table = (
-    <div data-table={id} className="overflow-x-auto rounded-sm border bg-card">
+    <div
+      data-table={id}
+      data-tour="list-table"
+      className="overflow-x-auto rounded-sm border bg-card"
+    >
       <table className="w-full text-sm">
         <thead className="border-b bg-secondary/50 text-left text-xs text-muted-foreground uppercase">
           <tr>
@@ -152,6 +156,7 @@ export function DataTable<T>({
           <form
             method="get"
             action={basePath}
+            data-tour="list-filters"
             className="flex flex-wrap items-end gap-2"
           >
             {search && (
@@ -194,7 +199,7 @@ export function DataTable<T>({
             </button>
           </form>
           {(toolbar || id || exportHref) && (
-            <div className="ml-auto flex gap-2">
+            <div data-tour="list-tools" className="ml-auto flex gap-2">
               {toolbar}
               {exportHref && (
                 <a

@@ -1,3 +1,5 @@
+import { PAGE_TIPS } from "../../../src/features/helper/tips"
+import { WALKTHROUGH_KEY } from "../../../src/features/helper/ui/walkthrough"
 import {
   ACCOUNT_CONSENT_COOKIE,
   NOTICE_VERSION,
@@ -9,8 +11,9 @@ import { totp } from "../../helpers/totp"
 
 /**
  * A fresh staff account per run, so two-factor setup always starts clean.
- * The helper's first-visit tour is marked as seen, so it doesn't cover the
- * page; pass `{ tour: true }` to test the tour itself.
+ * The helper's first-visit tour, page-tour offers and product walkthrough
+ * offer are marked as seen, so they don't cover the page; pass
+ * `{ tour: true }` or `{ guides: true }` to test them.
  */
 export async function createStaff(
   page: Page,
@@ -21,7 +24,7 @@ export async function createStaff(
     | "content_editor"
     | "fulfilment_staff"
     | "support_agent",
-  options: { tour?: boolean } = {},
+  options: { tour?: boolean; guides?: boolean } = {},
 ) {
   const email = `e2e-${role}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@duis.test`
   const password = "E2e-Staff-Passw0rd!"
@@ -51,11 +54,18 @@ export async function createStaff(
     "update users set role = $1, email_verified = true where email = $2",
     [role, email],
   )
-  if (!options.tour) {
+  if (!options.tour || !options.guides) {
+    const seen = options.guides
+      ? []
+      : [
+          WALKTHROUGH_KEY,
+          ...Object.keys(PAGE_TIPS).map((pattern) => `page:${pattern}`),
+        ]
     await client.query(
-      `insert into staff_preferences (user_id, tour_completed_at)
-       select id, now() from users where email = $1`,
-      [email],
+      `insert into staff_preferences (user_id, tour_completed_at, seen_guides)
+       select id, case when $2 then null else now() end, $3::text[]
+       from users where email = $1`,
+      [email, !!options.tour, seen],
     )
   }
   await client.end()

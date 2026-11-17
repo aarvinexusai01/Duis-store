@@ -10,13 +10,24 @@ import { getDb } from "@/server/db/client"
 import { DomainError } from "@/server/errors"
 import { defineOperation } from "@/server/operation"
 
+import { GUIDE_KEY_PATTERN } from "./guide-key"
+import { readTodos } from "./todos"
+
 /**
  * The admin helper (the corner cat): personal settings and a store-wide
  * getting-started checklist. Preferences are personal UI settings, not store
  * data, so changes are not written to the audit log (ADR-035).
  */
 
-export type HelperPrefs = { hidden: boolean; tourDone: boolean }
+export type HelperPrefs = {
+  hidden: boolean
+  tourDone: boolean
+  /** Guides finished or dismissed: see {@link GUIDE_KEY_PATTERN}. */
+  seenGuides: string[]
+}
+
+/** At most this many guides are remembered per person. */
+const MAX_SEEN_GUIDES = 200
 
 export type ChecklistItem = {
   key: string
@@ -26,7 +37,18 @@ export type ChecklistItem = {
   done: boolean
 }
 
-export type HelperState = HelperPrefs & { checklist: ChecklistItem[] }
+export type TodoItem = {
+  key: string
+  count: number
+  /** Already includes the count, e.g. "3 orders to ship". */
+  label: string
+  href: string
+}
+
+export type HelperState = HelperPrefs & {
+  checklist: ChecklistItem[]
+  todos: TodoItem[]
+}
 
 /** Each step, who may do it, and the SQL that says it's been done. */
 const STEPS: {
@@ -115,10 +137,15 @@ async function readPrefs(userId: string): Promise<HelperPrefs> {
     .select({
       hidden: staffPreferences.helperHidden,
       tourCompletedAt: staffPreferences.tourCompletedAt,
+      seenGuides: staffPreferences.seenGuides,
     })
     .from(staffPreferences)
     .where(eq(staffPreferences.userId, userId))
-  return { hidden: row?.hidden ?? false, tourDone: !!row?.tourCompletedAt }
+  return {
+    hidden: row?.hidden ?? false,
+    tourDone: !!row?.tourCompletedAt,
+    seenGuides: row?.seenGuides ?? [],
+  }
 }
 
 /** The steps this person can do, each marked done from store data. */
@@ -148,11 +175,22 @@ export const getHelperState = defineOperation({
   input: z.object({}),
   async handler({ actor }): Promise<HelperState> {
     const staff = staffActor(actor)
-    const [prefs, checklist] = await Promise.all([
+    const [prefs, checklist, todos] = await Promise.all([
       readPrefs(staff.userId),
       readChecklist(staff),
+      readTodos(staff),
     ])
-    return { ...prefs, checklist }
+    return { ...prefs, checklist, todos }
+  },
+})
+
+/** The dashboard's "Today" card: the same list without the rest. */
+export const getHelperTodos = defineOperation({
+  name: "helper.getTodos",
+  access: "authenticated",
+  input: z.object({}),
+  async handler({ actor }): Promise<TodoItem[]> {
+    return readTodos(staffActor(actor))
   },
 })
 
@@ -163,8 +201,9 @@ export const updateHelperPrefs = defineOperation({
     .object({
       hidden: z.boolean().optional(),
       tourDone: z.literal(true).optional(),
+      seenGuide: z.string().regex(GUIDE_KEY_PATTERN).optional(),
     })
-    .refine((v) => v.hidden !== undefined || v.tourDone, {
+    .refine((v) => v.hidden !== undefined || v.tourDone || v.seenGuide, {
       message: "Nothing to change.",
     }),
   async handler({ actor }, input): Promise<HelperPrefs> {
@@ -173,10 +212,23 @@ export const updateHelperPrefs = defineOperation({
       ...(input.hidden !== undefined && { helperHidden: input.hidden }),
       ...(input.tourDone && { tourCompletedAt: new Date() }),
     }
+    const seen = input.seenGuide ? [input.seenGuide] : []
     await getDb()
       .insert(staffPreferences)
-      .values({ userId: staff.userId, ...set })
-      .onConflictDoUpdate({ target: staffPreferences.userId, set })
+      .values({ userId: staff.userId, ...set, seenGuides: seen })
+      .onConflictDoUpdate({
+        target: staffPreferences.userId,
+        set: {
+          ...set,
+          // Added once, oldest dropped past the cap.
+          ...(input.seenGuide && {
+            seenGuides: sql`(case
+              when ${input.seenGuide} = any(${staffPreferences.seenGuides}) then ${staffPreferences.seenGuides}
+              else (${staffPreferences.seenGuides} || array[${input.seenGuide}]::text[])[greatest(1, cardinality(${staffPreferences.seenGuides}) + 2 - ${MAX_SEEN_GUIDES}):]
+            end)`,
+          }),
+        },
+      })
     return readPrefs(staff.userId)
   },
 })

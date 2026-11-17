@@ -72,7 +72,7 @@ export function CategoryTree({
     })
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-tour="category-tree" className="flex flex-col gap-6">
       {departments.map((department) => {
         const rows = categories.filter((c) => c.departmentId === department.id)
         return (

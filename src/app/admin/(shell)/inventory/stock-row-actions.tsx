@@ -47,7 +47,12 @@ export function StockRowActions({
           className="h-7 w-14 rounded-sm border border-input bg-card px-1 text-sm"
         />
       </label>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+      <Button
+        size="sm"
+        variant="outline"
+        data-tour="adjust-stock"
+        onClick={() => setOpen(true)}
+      >
         Adjust
       </Button>
       <StockDialog
