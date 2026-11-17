@@ -27,10 +27,9 @@ async function save(id, { width, height, position }) {
   console.log(`${id}.jpg ${Math.round(out.length / 1024)} KB`)
 }
 
-for (const [pair, ids] of Object.entries(manifest.products)) {
-  // Keep the legs in frame for trousers and shorts.
-  const position = /^(pants|shorts):/.test(pair) ? "bottom" : "centre"
-  for (const id of ids) await save(id, { width: 1200, height: 1500, position })
+for (const ids of Object.values(manifest.products)) {
+  for (const id of ids)
+    await save(id, { width: 1200, height: 1500, position: "centre" })
 }
 for (const id of manifest.banners)
   await save(id, { width: 1920, height: 900, position: "attention" })

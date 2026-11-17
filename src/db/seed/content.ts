@@ -48,9 +48,8 @@ export function homepage(ids: Ids): PageData {
           "oversized-t-shirts",
           "graphic-t-shirts",
           "polo-t-shirts",
-          "shirts",
-          "hoodies-and-sweatshirts",
-          "jeans",
+          "hoodies",
+          "sweatshirts",
         ].map((slug) => ids.categories[slug]!),
       },
       {
@@ -94,8 +93,8 @@ export function homepage(ids: Ids): PageData {
           },
           {
             mediaId: ids.promoMedia[1]!,
-            heading: "The Denim Edit",
-            href: "/collections/denim-edit",
+            heading: "Winter layers",
+            href: "/collections/winter-layers",
           },
         ],
       },
@@ -130,7 +129,7 @@ export function homepage(ids: Ids): PageData {
     seo: {
       title: "Duis — Oversized Tees, Graphic Tees & Streetwear for Men",
       description:
-        "Shop oversized and graphic t-shirts, shirts, hoodies and denim for men. Free shipping above ₹999.",
+        "Shop oversized and graphic t-shirts, hoodies and sweatshirts for men. Free shipping above ₹999.",
     },
   }
 }
@@ -165,20 +164,9 @@ export function headerNavigation(ids: Ids): NavigationData {
             cat("graphic-t-shirts", "Graphic"),
             cat("polo-t-shirts", "Polos"),
           ]),
-          cat("shirts", "Shirts", [
-            cat("casual-shirts", "Casual"),
-            cat("linen-shirts", "Linen"),
-            cat("overshirts", "Overshirts"),
-          ]),
           cat("hoodies-and-sweatshirts", "Hoodies & Sweatshirts", [
             cat("hoodies", "Hoodies"),
             cat("sweatshirts", "Sweatshirts"),
-          ]),
-          cat("bottomwear", "Bottomwear", [
-            cat("jeans", "Jeans"),
-            cat("trousers", "Trousers"),
-            cat("shorts", "Shorts"),
-            cat("joggers", "Joggers"),
           ]),
         ],
       },
@@ -275,7 +263,7 @@ export function siteSettings(): SiteSettingsData {
     defaultSeo: {
       title: "Duis — Men's Streetwear",
       description:
-        "Oversized tees, graphic tees, shirts, hoodies and denim for men. Shipping across India and worldwide.",
+        "Oversized tees, graphic tees, hoodies and sweatshirts for men. Shipping across India and worldwide.",
     },
   }
 }

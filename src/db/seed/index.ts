@@ -53,7 +53,6 @@ import {
   DESCRIPTIVE,
   PRODUCT_GROUPS,
   SIZE_CHARTS,
-  WAIST_SIZES,
 } from "./data"
 import { bannerImage, garmentImage } from "./images"
 import { bannerPhoto, productPhotos } from "./photos"
@@ -70,15 +69,8 @@ const SKU_CODES: Record<string, string> = {
   "regular-fit-t-shirts": "RFT",
   "graphic-t-shirts": "GRT",
   "polo-t-shirts": "POL",
-  "casual-shirts": "CSH",
-  "linen-shirts": "LSH",
-  overshirts: "OSH",
   hoodies: "HOD",
   sweatshirts: "SWT",
-  jeans: "JNS",
-  trousers: "TRS",
-  shorts: "SHO",
-  joggers: "JOG",
 }
 
 /** Small seeded PRNG (mulberry32) so every run produces the same data. */
@@ -183,7 +175,7 @@ async function main() {
         })
       ).id
     }
-    for (const [position, slug] of [...ALPHA_SIZES, ...WAIST_SIZES].entries()) {
+    for (const [position, slug] of ALPHA_SIZES.entries()) {
       values.size![slug] = (
         await createAttributeValue(actor, {
           attributeId: attributeIds.size!,
@@ -203,13 +195,6 @@ async function main() {
         await createSizeChart(actor, {
           ...SIZE_CHARTS.tops,
           chart: SIZE_CHARTS.tops,
-          unit: "in",
-        })
-      ).id,
-      bottoms: (
-        await createSizeChart(actor, {
-          ...SIZE_CHARTS.bottoms,
-          chart: SIZE_CHARTS.bottoms,
           unit: "in",
         })
       ).id,
@@ -256,16 +241,12 @@ async function main() {
   await step("products, variants, images and stock", async () => {
     let index = 0
     for (const group of PRODUCT_GROUPS) {
-      const sizes =
-        group.sizes === "waist"
-          ? WAIST_SIZES
-          : ALPHA_SIZES.slice(
-              0,
-              group.category === "oversized-t-shirts" ||
-                group.category === "hoodies"
-                ? 6
-                : 5,
-            )
+      const sizes = ALPHA_SIZES.slice(
+        0,
+        group.category === "oversized-t-shirts" || group.category === "hoodies"
+          ? 6
+          : 5,
+      )
       for (const [groupIndex, seed] of group.products.entries()) {
         index++
         const slug = seed.name
@@ -276,9 +257,8 @@ async function main() {
         const descriptive = [
           values.fit![seed.fit]!,
           values.pattern![seed.pattern ?? "solid"]!,
+          values.sleeve![seed.sleeve ?? "half-sleeve"]!,
         ]
-        if (group.garment !== "pants" && group.garment !== "shorts")
-          descriptive.push(values.sleeve![seed.sleeve ?? "half-sleeve"]!)
 
         const product = await createProduct(actor, {
           departmentId: categoryIds.men!,
@@ -488,14 +468,6 @@ async function main() {
         title: "Summer Essentials",
         type: "automatic" as const,
         rules: [{ field: "tag" as const, tags: ["summer"] }],
-      },
-      {
-        slug: "denim-edit",
-        title: "The Denim Edit",
-        type: "automatic" as const,
-        rules: [
-          { field: "category" as const, categoryIds: [categoryIds.jeans!] },
-        ],
       },
     ]
     for (const [i, definition] of definitions.entries()) {

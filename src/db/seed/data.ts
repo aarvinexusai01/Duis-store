@@ -1,11 +1,11 @@
 /**
  * Demo catalogue for development (doc/01 decision 12): realistic menswear
  * without real brands or imagery. Prices are in rupees here and converted to
- * paise by the seed.
+ * paise by the seed. The shop sells only T-shirts and hoodies & sweatshirts
+ * (owner decision 2026-11-17), so that is all the demo catalogue holds.
  */
 
-export type Garment =
-  "tee" | "polo" | "shirt" | "hoodie" | "sweatshirt" | "pants" | "shorts"
+export type Garment = "tee" | "polo" | "hoodie" | "sweatshirt"
 
 export const COLOURS = [
   { slug: "black", label: "Black", hex: "#111111", group: "black" },
@@ -35,7 +35,6 @@ export const COLOURS = [
 export type ColourSlug = (typeof COLOURS)[number]["slug"]
 
 export const ALPHA_SIZES = ["s", "m", "l", "xl", "xxl", "3xl"] as const
-export const WAIST_SIZES = ["28", "30", "32", "34", "36", "38"] as const
 
 export const DESCRIPTIVE = {
   fit: ["oversized", "regular", "slim", "relaxed", "boxy"],
@@ -55,14 +54,6 @@ export const SIZE_CHARTS = {
       { size: "2XL", values: ["48", "31", "21"] },
       { size: "3XL", values: ["50", "32", "22"] },
     ],
-  },
-  bottoms: {
-    name: "Bottoms (inches)",
-    columns: ["Waist", "Hip", "Inseam"],
-    rows: WAIST_SIZES.map((waist) => ({
-      size: waist,
-      values: [waist, String(Number(waist) + 10), "31"],
-    })),
   },
 }
 
@@ -107,17 +98,6 @@ export const CATEGORY_TREE: CategorySeed[] = [
     ],
   },
   {
-    slug: "shirts",
-    name: "Shirts",
-    hsn: "6205",
-    chart: "tops",
-    children: [
-      { slug: "casual-shirts", name: "Casual Shirts" },
-      { slug: "linen-shirts", name: "Linen Shirts" },
-      { slug: "overshirts", name: "Overshirts" },
-    ],
-  },
-  {
     slug: "hoodies-and-sweatshirts",
     name: "Hoodies & Sweatshirts",
     hsn: "6110",
@@ -129,18 +109,6 @@ export const CATEGORY_TREE: CategorySeed[] = [
         name: "Sweatshirts",
         ownerChart: "Oversized Sweatshirt",
       },
-    ],
-  },
-  {
-    slug: "bottomwear",
-    name: "Bottomwear",
-    hsn: "6203",
-    chart: "bottoms",
-    children: [
-      { slug: "jeans", name: "Jeans" },
-      { slug: "trousers", name: "Trousers" },
-      { slug: "shorts", name: "Shorts" },
-      { slug: "joggers", name: "Joggers", hsn: "6103" },
     ],
   },
 ]
@@ -161,7 +129,6 @@ type Group = {
   category: string
   garment: Garment
   weightGrams: number
-  sizes: "alpha" | "waist"
   fabric: string
   products: Omit<ProductSeed, "category">[]
 }
@@ -189,7 +156,6 @@ export const PRODUCT_GROUPS: Group[] = [
     category: "oversized-t-shirts",
     garment: "tee",
     weightGrams: 260,
-    sizes: "alpha",
     fabric: "100% cotton, 240 GSM single jersey",
     products: [
       tee("Midnight Oversized Tee", ["black", "off-white"], 799, 1099),
@@ -212,7 +178,6 @@ export const PRODUCT_GROUPS: Group[] = [
     category: "regular-fit-t-shirts",
     garment: "tee",
     weightGrams: 220,
-    sizes: "alpha",
     fabric: "100% combed cotton, 180 GSM",
     products: [
       tee(
@@ -244,7 +209,6 @@ export const PRODUCT_GROUPS: Group[] = [
     category: "graphic-t-shirts",
     garment: "tee",
     weightGrams: 260,
-    sizes: "alpha",
     fabric: "100% cotton, 220 GSM with puff print",
     products: [
       tee("Glitch Graphic Tee", ["black", "white"], 899, 1299, {
@@ -295,7 +259,6 @@ export const PRODUCT_GROUPS: Group[] = [
     category: "polo-t-shirts",
     garment: "polo",
     weightGrams: 280,
-    sizes: "alpha",
     fabric: "Cotton piqué, 220 GSM",
     products: [
       tee("Piqué Polo", ["navy", "white", "maroon"], 899, 1199, {
@@ -317,83 +280,9 @@ export const PRODUCT_GROUPS: Group[] = [
     ],
   },
   {
-    category: "casual-shirts",
-    garment: "shirt",
-    weightGrams: 300,
-    sizes: "alpha",
-    fabric: "100% cotton",
-    products: [
-      tee("Oxford Button-Down Shirt", ["white", "sky-blue"], 1299, 1799, {
-        fit: "regular",
-        sleeve: "full-sleeve",
-      }),
-      tee("Corduroy Shirt", ["rust", "olive"], 1599, 2199, {
-        fit: "relaxed",
-        sleeve: "full-sleeve",
-        pattern: "textured",
-      }),
-      tee("Denim Shirt", ["indigo", "light-blue"], 1499, 1999, {
-        fit: "regular",
-        sleeve: "full-sleeve",
-      }),
-      tee("Check Flannel Shirt", ["maroon", "navy"], 1399, 1899, {
-        fit: "relaxed",
-        sleeve: "full-sleeve",
-        pattern: "striped",
-      }),
-      tee("Cuban Collar Shirt", ["black", "beige"], 1199, 1599, {
-        fit: "boxy",
-        tags: ["summer"],
-      }),
-    ],
-  },
-  {
-    category: "linen-shirts",
-    garment: "shirt",
-    weightGrams: 260,
-    sizes: "alpha",
-    fabric: "100% linen",
-    products: [
-      tee("Linen Camp Shirt", ["off-white", "sky-blue"], 1799, 2499, {
-        fit: "relaxed",
-        tags: ["summer"],
-      }),
-      tee("Linen Mandarin Shirt", ["beige", "olive"], 1899, 2599, {
-        fit: "regular",
-        sleeve: "full-sleeve",
-        tags: ["summer"],
-      }),
-      tee("Linen Relaxed Shirt", ["white", "lavender"], 1799, 2399, {
-        fit: "relaxed",
-        sleeve: "full-sleeve",
-        tags: ["summer"],
-      }),
-    ],
-  },
-  {
-    category: "overshirts",
-    garment: "shirt",
-    weightGrams: 450,
-    sizes: "alpha",
-    fabric: "Cotton twill, 300 GSM",
-    products: [
-      tee("Utility Overshirt", ["olive", "khaki"], 1999, 2799, {
-        fit: "relaxed",
-        sleeve: "full-sleeve",
-        tags: ["winter"],
-      }),
-      tee("Twill Overshirt", ["black", "rust"], 1899, 2599, {
-        fit: "boxy",
-        sleeve: "full-sleeve",
-        tags: ["winter"],
-      }),
-    ],
-  },
-  {
     category: "hoodies",
     garment: "hoodie",
     weightGrams: 620,
-    sizes: "alpha",
     fabric: "Cotton fleece, 380 GSM brushed back",
     products: [
       tee("Core Hoodie", ["black", "grey-melange", "navy"], 1499, 1999, {
@@ -426,7 +315,6 @@ export const PRODUCT_GROUPS: Group[] = [
     category: "sweatshirts",
     garment: "sweatshirt",
     weightGrams: 520,
-    sizes: "alpha",
     fabric: "French terry, 340 GSM",
     products: [
       tee("Crewneck Sweatshirt", ["grey-melange", "navy"], 1299, 1699, {
@@ -449,87 +337,6 @@ export const PRODUCT_GROUPS: Group[] = [
         sleeve: "full-sleeve",
         tags: ["winter"],
       }),
-    ],
-  },
-  {
-    category: "jeans",
-    garment: "pants",
-    weightGrams: 720,
-    sizes: "waist",
-    fabric: "Cotton denim with 1% elastane, 12 oz",
-    products: [
-      tee("Straight Fit Jeans", ["indigo", "black"], 1799, 2499, {
-        fit: "regular",
-      }),
-      tee("Relaxed Fit Jeans", ["light-blue", "indigo"], 1899, 2599, {
-        fit: "relaxed",
-      }),
-      tee("Slim Taper Jeans", ["black", "charcoal"], 1799, 2399, {
-        fit: "slim",
-      }),
-      tee("Baggy Jeans", ["acid-wash", "light-blue"], 1999, 2799, {
-        fit: "relaxed",
-        pattern: "washed",
-      }),
-      tee("Carpenter Jeans", ["indigo", "khaki"], 2099, 2899, {
-        fit: "relaxed",
-      }),
-    ],
-  },
-  {
-    category: "trousers",
-    garment: "pants",
-    weightGrams: 520,
-    sizes: "waist",
-    fabric: "Cotton twill",
-    products: [
-      tee("Pleated Trousers", ["beige", "black"], 1599, 2199, {
-        fit: "relaxed",
-      }),
-      tee("Cargo Pants", ["olive", "khaki", "black"], 1699, 2299, {
-        fit: "relaxed",
-      }),
-      tee("Slim Chinos", ["khaki", "navy"], 1399, 1899, { fit: "slim" }),
-      tee("Parachute Pants", ["black", "olive"], 1599, 2199, {
-        fit: "relaxed",
-      }),
-    ],
-  },
-  {
-    category: "shorts",
-    garment: "shorts",
-    weightGrams: 320,
-    sizes: "waist",
-    fabric: "Cotton twill",
-    products: [
-      tee("Cargo Shorts", ["olive", "khaki"], 899, 1199, {
-        fit: "relaxed",
-        tags: ["summer"],
-      }),
-      tee("Denim Shorts", ["light-blue", "indigo"], 999, 1299, {
-        fit: "regular",
-        tags: ["summer"],
-      }),
-      tee("Terry Shorts", ["grey-melange", "black"], 799, 1099, {
-        fit: "relaxed",
-        tags: ["summer"],
-      }),
-    ],
-  },
-  {
-    category: "joggers",
-    garment: "pants",
-    weightGrams: 460,
-    sizes: "alpha",
-    fabric: "Cotton fleece, 320 GSM",
-    products: [
-      tee("Core Joggers", ["black", "grey-melange"], 1099, 1499, {
-        fit: "relaxed",
-      }),
-      tee("Cargo Joggers", ["olive", "charcoal"], 1299, 1799, {
-        fit: "relaxed",
-      }),
-      tee("Track Joggers", ["navy", "maroon"], 1199, 1599, { fit: "regular" }),
     ],
   },
 ]

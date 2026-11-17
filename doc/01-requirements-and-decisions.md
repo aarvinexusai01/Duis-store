@@ -4,7 +4,7 @@
 
 A production-ready, self-hosted e-commerce platform for **Duis**, a single-merchant men's fashion brand selling online in India.
 
-- **Catalogue at launch:** Oversized, regular, polo and graphic T-shirts, shirts, hoodies, sweatshirts, jeans, trousers, shorts and other menswear.
+- **Catalogue at launch:** T-shirts (oversized, regular fit, graphic, polo) and hoodies & sweatshirts only (owner decision 2026-11-17, replacing the earlier plan that also had shirts, jeans, trousers and shorts). The demo seed holds only these two category trees.
 - **Future-proofing:** The data model supports a Women department and further departments without restructuring.
 - **Three interfaces in one application:**
   1. **Storefront**: the public shopping site. This is the top priority.
