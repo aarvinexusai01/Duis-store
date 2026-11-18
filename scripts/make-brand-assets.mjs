@@ -1,44 +1,55 @@
-// Builds the Duis emblem files in public/brand from the master artwork:
-//   node scripts/make-brand-assets.mjs path/to/emblem.jpg
+// Builds the Duis logo files in public/brand from the master artwork:
+//   node scripts/make-brand-assets.mjs [brand/logo-master.png]
 //
-// The artwork is a round emblem on a solid black square. The black that
-// surrounds it (everything dark that touches the image's edge) becomes
-// transparent, so the emblem sits cleanly on light and dark surfaces; the
-// emblem's own blacks, inside the ring, are kept. The result is cropped to
-// the emblem and written at the sizes the app uses.
-import { mkdir } from "node:fs/promises"
+// The artwork is the hooded skull in black on white (owner decision
+// 2026-11-18). It's traced into vector shapes (imagetracerjs, public domain):
+//   - ink: the black shapes;
+//   - face: the outline of the whole logo, so the white inside it (the face,
+//     the gaps between lines) stays solid instead of showing what's behind.
+// Two colourings are written: black on light backgrounds, and the reverse
+// (light hood, dark face) for dark ones (header, footer, admin, emails,
+// app icons). Square PNGs are rendered from the SVGs for icons and emails.
+import { mkdir, writeFile } from "node:fs/promises"
+import { createRequire } from "node:module"
 import path from "node:path"
 
 import sharp from "sharp"
 
-const source = process.argv[2]
-if (!source) {
-  console.error("usage: node scripts/make-brand-assets.mjs <emblem.jpg>")
-  process.exit(1)
-}
-const OUT = "public/brand"
-// Pixels at most this bright, reachable from the edge, are background (the
-// faint glow around the ring included).
-const BACKGROUND_MAX = 60
+const tracer = createRequire(import.meta.url)("imagetracerjs")
 
+const source = process.argv[2] ?? "brand/logo-master.png"
+const OUT = "public/brand"
+/** Traced at this size: big enough for detail, small enough for smooth curves. */
+const TRACE = 1024
+const INK = "#111111"
+const PAPER = "#f4f1ea"
+const WHITE = "#ffffff"
+
+// ── Masks ──────────────────────────────────────────────────────────────────
 const { data, info } = await sharp(source)
-  .removeAlpha()
+  .flatten({ background: WHITE })
+  .greyscale()
+  .resize(TRACE, TRACE, {
+    fit: "contain",
+    background: WHITE,
+    kernel: "lanczos3",
+  })
   .raw()
   .toBuffer({ resolveWithObject: true })
 const { width: w, height: h } = info
-const brightness = (i) =>
-  Math.max(data[i * 3], data[i * 3 + 1], data[i * 3 + 2])
+const ink = new Uint8Array(w * h)
+for (let i = 0; i < w * h; i++) ink[i] = data[i] < 128 ? 1 : 0
 
-// Flood fill the background from every edge pixel.
-const background = new Uint8Array(w * h)
+// Everything white that can be reached from the image's edge is outside.
+const outside = new Uint8Array(w * h)
 const queue = new Int32Array(w * h)
 let head = 0
 let tail = 0
 const visit = (x, y) => {
   if (x < 0 || y < 0 || x >= w || y >= h) return
   const i = y * w + x
-  if (background[i] || brightness(i) > BACKGROUND_MAX) return
-  background[i] = 1
+  if (outside[i] || ink[i]) return
+  outside[i] = 1
   queue[tail++] = i
 }
 for (let x = 0; x < w; x++) {
@@ -59,104 +70,130 @@ while (head < tail) {
   visit(x, y - 1)
 }
 
-// The rings have small openings, so the fill can creep inside the emblem.
-// Only the area around the ring may become transparent: an ellipse fitted to
-// the emblem's bounds, shrunk a little, protects everything inside it.
+// The logo's bounds, for a tight viewBox.
 let minX = w
 let minY = h
 let maxX = 0
 let maxY = 0
 for (let i = 0; i < w * h; i++) {
-  if (background[i]) continue
+  if (outside[i]) continue
   const x = i % w
   const y = (i - x) / w
-  if (x < minX) minX = x
-  if (x > maxX) maxX = x
-  if (y < minY) minY = y
-  if (y > maxY) maxY = y
-}
-const cx = (minX + maxX) / 2
-const cy = (minY + maxY) / 2
-const rx = (maxX - minX) / 2
-const ry = (maxY - minY) / 2
-const INSIDE = 0.975
-
-// Alpha: background outside the ring transparent, everything else opaque,
-// then softened by a pixel so the edge isn't jagged.
-const alpha = Buffer.alloc(w * h)
-for (let i = 0; i < w * h; i++) {
-  const x = i % w
-  const y = (i - x) / w
-  const d = Math.hypot((x - cx) / rx, (y - cy) / ry)
-  alpha[i] = background[i] && d > INSIDE ? 0 : d > 1.01 ? 0 : 255
-}
-const softAlpha = await sharp(alpha, {
-  raw: { width: w, height: h, channels: 1 },
-})
-  .blur(1.2)
-  .extractChannel(0) // sharp would otherwise hand back three channels
-  .raw()
-  .toBuffer()
-if (softAlpha.length !== w * h) throw new Error("unexpected alpha size")
-
-const rgba = Buffer.alloc(w * h * 4)
-for (let i = 0; i < w * h; i++) {
-  rgba[i * 4] = data[i * 3]
-  rgba[i * 4 + 1] = data[i * 3 + 1]
-  rgba[i * 4 + 2] = data[i * 3 + 2]
-  rgba[i * 4 + 3] = softAlpha[i]
+  minX = Math.min(minX, x)
+  maxX = Math.max(maxX, x)
+  minY = Math.min(minY, y)
+  maxY = Math.max(maxY, y)
 }
 
-// A square crop around the emblem with a little breathing room.
-const side = Math.max(maxX - minX, maxY - minY) + 8
-const left = Math.max(0, Math.round((minX + maxX - side) / 2))
-const top = Math.max(0, Math.round((minY + maxY - side) / 2))
-const square = Math.min(side, w - left, h - top)
-const master = await sharp(rgba, { raw: { width: w, height: h, channels: 4 } })
-  .extract({ left, top, width: square, height: square })
-  .png()
-  .toBuffer()
+// ── Tracing ────────────────────────────────────────────────────────────────
+const options = {
+  ltres: 0.5,
+  qtres: 0.5,
+  pathomit: 16,
+  colorsampling: 0,
+  numberofcolors: 2,
+  pal: [
+    { r: 0, g: 0, b: 0, a: 255 },
+    { r: 255, g: 255, b: 255, a: 255 },
+  ],
+  roundcoords: 1,
+  linefilter: false,
+  rightangleenhance: false,
+  blurradius: 0,
+  scale: 1,
+}
 
-await mkdir(OUT, { recursive: true })
-const write = async (name, size, options = {}) => {
-  let image = sharp(master).resize(size, size, { kernel: "lanczos3" })
-  if (options.background) {
-    // Home-screen icons get the store's ink behind the emblem (iOS and
-    // Android would otherwise fill transparency with their own colour).
-    const padding = Math.round(size * 0.08)
-    image = sharp({
-      create: {
-        width: size,
-        height: size,
-        channels: 4,
-        background: options.background,
-      },
-    }).composite([
-      {
-        input: await sharp(master)
-          .resize(size - padding * 2, size - padding * 2)
-          .png()
-          .toBuffer(),
-        left: padding,
-        top: padding,
-      },
-    ])
+/** One evenodd path for the black pixels of a mask. */
+function trace(isBlack) {
+  const pixels = new Uint8ClampedArray(w * h * 4)
+  for (let i = 0; i < w * h; i++) {
+    const v = isBlack(i) ? 0 : 255
+    pixels.fill(v, i * 4, i * 4 + 3)
+    pixels[i * 4 + 3] = 255
   }
-  const file = path.join(OUT, name)
-  if (name.endsWith(".webp"))
-    await image.webp({ quality: 88, alphaQuality: 100 }).toFile(file)
-  else await image.png({ compressionLevel: 9 }).toFile(file)
-  console.log(`wrote ${file}`)
+  const traced = tracer.imagedataToTracedata(
+    { width: w, height: h, data: pixels },
+    options,
+  )
+  const layer = traced.palette.findIndex((c) => c.r === 0)
+  let d = ""
+  traced.layers[layer].forEach((shape, index) => {
+    if (shape.isholepath) return // drawn as part of its parent
+    const match = /d="([^"]*)"/.exec(
+      tracer.svgpathstring(traced, layer, index, options),
+    )
+    if (match) d += match[1]
+  })
+  return d.trim().replace(/\s+/g, " ")
 }
 
-const INK = "#111111"
-await write("emblem-96.webp", 96) // header, footer, sign-in and checkout headers (2x)
-await write("emblem-256.webp", 256) // larger placements, share card source
-await write("emblem-512.png", 512) // share card
-await write("emblem-128.png", 128) // emails (PNG: some mail apps lack WebP)
-await write("favicon-32.png", 32)
-await write("favicon-64.png", 64)
-await write("apple-touch-icon.png", 180, { background: INK })
-await write("icon-192.png", 192, { background: INK })
-await write("icon-512.png", 512, { background: INK })
-console.log(`emblem box in source: x ${minX}-${maxX}, y ${minY}-${maxY}`)
+const inkPath = trace((i) => ink[i] === 1)
+const facePath = trace((i) => outside[i] === 0)
+const pad = 4
+const viewBox = [
+  minX - pad,
+  minY - pad,
+  maxX - minX + pad * 2,
+  maxY - minY + pad * 2,
+]
+
+const svg = (hood, face, extra = "") =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox.join(" ")}">${extra}` +
+  `<path class="face" fill="${face}" fill-rule="evenodd" d="${facePath}"/>` +
+  `<path class="hood" fill="${hood}" fill-rule="evenodd" d="${inkPath}"/></svg>\n`
+
+// ── Files ──────────────────────────────────────────────────────────────────
+await mkdir(OUT, { recursive: true })
+const onLight = svg(INK, WHITE)
+const onDark = svg(PAPER, INK)
+await writeFile(path.join(OUT, "logo.svg"), onLight)
+await writeFile(path.join(OUT, "logo-on-dark.svg"), onDark)
+// Browser tab: follows the browser's light or dark tab bar.
+await writeFile(
+  path.join(OUT, "icon.svg"),
+  svg(
+    INK,
+    WHITE,
+    `<style>@media (prefers-color-scheme: dark){.hood{fill:${PAPER}}.face{fill:${INK}}}</style>`,
+  ),
+)
+
+/** A square PNG with the logo centred; `fill` is the square's background. */
+async function png(name, svgText, size, { margin = 0.06, fill } = {}) {
+  const inner = Math.round(size * (1 - margin * 2))
+  const logo = await sharp(Buffer.from(svgText), { density: 300 })
+    .resize(inner, inner, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer()
+  await sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 4,
+      background: fill ?? { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([{ input: logo, gravity: "center" }])
+    .png({ compressionLevel: 9 })
+    .toFile(path.join(OUT, name))
+}
+
+// Browsers without SVG icons, and Google's logo (on white).
+await png("favicon-32.png", onLight, 32, { margin: 0 })
+await png("favicon-64.png", onLight, 64, { margin: 0 })
+await png("emblem-512.png", onLight, 512)
+// Emails (the header is ink) and the link-preview card (ink).
+await png("emblem-128.png", onDark, 128)
+await png("logo-on-dark-512.png", onDark, 512)
+// Home-screen icons on the store's ink: iOS and Android would otherwise fill
+// transparency with their own colour. The margin keeps clear of the corners.
+await png("apple-touch-icon.png", onDark, 180, { margin: 0.14, fill: INK })
+await png("icon-192.png", onDark, 192, { margin: 0.14, fill: INK })
+await png("icon-512.png", onDark, 512, { margin: 0.14, fill: INK })
+
+console.log(
+  `logo traced: viewBox ${viewBox.join(" ")}, ${Math.round(onLight.length / 1024)} KB SVG → ${OUT}`,
+)

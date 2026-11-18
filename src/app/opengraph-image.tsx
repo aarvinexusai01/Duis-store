@@ -12,7 +12,7 @@ export const contentType = "image/png"
 /** Default social card: the emblem and wordmark on ink with the rust bar. */
 export default async function OpengraphImage() {
   const emblem = await readFile(
-    path.join(process.cwd(), "public/brand/emblem-512.png"),
+    path.join(process.cwd(), "public/brand/logo-on-dark-512.png"),
   )
   const emblemSrc = `data:image/png;base64,${emblem.toString("base64")}`
   return new ImageResponse(

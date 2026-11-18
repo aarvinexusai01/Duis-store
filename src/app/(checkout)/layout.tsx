@@ -16,7 +16,7 @@ export default function CheckoutLayout({ children }: LayoutProps<"/">) {
     <>
       <header className="bg-ink text-paper">
         <div className="page-container flex h-16 items-center justify-between">
-          <Wordmark />
+          <Wordmark tone="dark" />
           <p className="flex items-center gap-2 text-xs tracking-wider uppercase">
             <LockIcon className="size-4" aria-hidden /> Secure checkout
           </p>

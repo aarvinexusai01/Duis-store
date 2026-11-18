@@ -26,10 +26,14 @@ export const metadata: Metadata = {
   applicationName: SITE.name,
   formatDetection: { telephone: false, email: false, address: false },
   openGraph: { siteName: SITE.name, locale: "en_IN", type: "website" },
-  // Served from site settings (or the emblem), so staff can change it. The
-  // home-screen icon is the emblem on ink (scripts/make-brand-assets.mjs).
+  // Served from site settings (or the logo), so staff can change it; the PNG
+  // is for browsers without SVG icons. The home-screen icon is the logo on
+  // ink (scripts/make-brand-assets.mjs).
   icons: {
-    icon: "/brand/icon",
+    icon: [
+      { url: "/brand/icon" },
+      { url: "/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
     apple: "/brand/apple-touch-icon.png",
   },
 }

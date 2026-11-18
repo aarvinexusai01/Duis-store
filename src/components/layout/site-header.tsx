@@ -55,7 +55,9 @@ export function SiteHeader({ draft }: { draft?: ChromeDraft } = {}) {
           <Suspense fallback={<span className="size-9 lg:hidden" />}>
             <NavLoader kind="mobile" draft={draft} />
           </Suspense>
-          <Suspense fallback={<Wordmark className="mr-auto lg:mr-0" />}>
+          <Suspense
+            fallback={<Wordmark className="mr-auto lg:mr-0" tone="dark" />}
+          >
             <BrandMark draft={draft} />
           </Suspense>
           <div className="hidden flex-1 lg:flex">
@@ -114,7 +116,7 @@ async function BrandMark({ draft }: { draft?: ChromeDraft }) {
   const logo = settings?.logoMediaId
     ? (await loadMediaRefs([settings.logoMediaId])).get(settings.logoMediaId)
     : undefined
-  if (!logo) return <Wordmark className="mr-auto lg:mr-0" />
+  if (!logo) return <Wordmark className="mr-auto lg:mr-0" tone="dark" />
   return (
     <Link href="/" className="mr-auto block h-9 lg:mr-0">
       {/* eslint-disable-next-line @next/next/no-img-element -- small stored rendition */}

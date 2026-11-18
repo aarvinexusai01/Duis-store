@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
     <>
       <header className="bg-ink text-paper">
         <div className="page-container flex h-16 items-center justify-between">
-          <Wordmark />
+          <Wordmark tone="dark" />
           <Link href="/" className="text-sm underline underline-offset-4">
             Back to shop
           </Link>

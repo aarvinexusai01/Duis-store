@@ -22,11 +22,12 @@ export async function GET() {
       },
     })
   }
-  // The Duis emblem (scripts/make-brand-assets.mjs).
+  // The Duis logo (scripts/make-brand-assets.mjs), black or light to suit
+  // the browser's tab bar.
   return new Response(null, {
     status: 307,
     headers: {
-      location: "/brand/favicon-64.png",
+      location: "/brand/icon.svg",
       "cache-control": "public, max-age=300",
     },
   })
