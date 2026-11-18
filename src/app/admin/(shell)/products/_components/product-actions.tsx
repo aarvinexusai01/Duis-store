@@ -42,6 +42,7 @@ export function ProductActions({
         <Link
           href={`/products/${slug}` as Route}
           target="_blank"
+          data-tour="view-in-store"
           className={cn(buttonVariants({ variant: "outline" }), "rounded-sm")}
         >
           View in store

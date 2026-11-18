@@ -67,7 +67,7 @@ test("store admin: 2FA, create a product, generate variants, receive stock", asy
     .getByRole("button", { name: /Create up to 1 variants/ })
     .click()
   await expect(
-    page.getByRole("button", { name: "Stock" }).first(),
+    page.getByRole("button", { name: "Stock", exact: true }).first(),
   ).toBeVisible()
   await expect(page.getByText(colourName).first()).toBeVisible()
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
@@ -87,7 +87,7 @@ test("store admin: 2FA, create a product, generate variants, receive stock", asy
     },
   ])
 
-  await page.getByRole("button", { name: "Stock" }).first().click()
+  await page.getByRole("button", { name: "Stock", exact: true }).first().click()
   await page.getByRole("dialog").getByLabel("Quantity").fill("3")
   await page.getByRole("dialog").getByRole("button", { name: "Save" }).click()
   await expect(page.getByText("Stock updated")).toBeVisible()

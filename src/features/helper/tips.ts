@@ -139,6 +139,14 @@ export const PAGE_TIPS: Record<string, PageTips> = {
       "Publish when everything looks right. It goes live in the shop straight away.",
     ],
   },
+  "/admin/help/add-product": {
+    title: "How to add a product",
+    tips: [
+      "Part 1 is done once. Parts 2 to 6 are done for every product.",
+      "Press 'Start the walkthrough' and I'll point at each step on screen.",
+      "Print keeps just the guide: no menu, no cat.",
+    ],
+  },
   "/admin/categories": {
     title: "Categories",
     tips: [

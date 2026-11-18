@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import { Suspense } from "react"
 
 import { AdminPageHeader, NoAccess } from "@/components/admin/page-header"
@@ -15,7 +16,19 @@ export default function NewProductPage() {
     <>
       <AdminPageHeader
         title="New product"
-        description="Save the details first; then add photos and generate variants."
+        description={
+          <>
+            Save the details first; then generate sizes and add photos. New to
+            this?{" "}
+            <Link
+              href="/admin/help/add-product"
+              className="underline underline-offset-2"
+            >
+              Read how to add a product
+            </Link>
+            .
+          </>
+        }
         back={{ href: "/admin/products", label: "Products" }}
       />
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>

@@ -78,4 +78,20 @@ describe("product walkthrough", () => {
       expect(step.body.length, step.title).toBeLessThanOrEqual(160)
     }
   })
+
+  it("generates sizes and colours before photos, so photos can be tagged by colour", () => {
+    const at = (target: string) =>
+      WALKTHROUGH.findIndex((step) => step.target === target)
+    expect(at('[data-tour="generate-variants"]')).toBeGreaterThan(-1)
+    expect(at('[data-tour="generate-variants"]')).toBeLessThan(
+      at('[data-tour="media-upload"]'),
+    )
+    expect(at('[data-tour="media-colour"]')).toBeLessThan(
+      at('[data-tour="media-save"]'),
+    )
+    expect(at('[data-tour="health"]')).toBeLessThan(at('[data-tour="publish"]'))
+    expect(at('[data-tour="publish"]')).toBeLessThan(
+      at('[data-tour="view-in-store"]'),
+    )
+  })
 })

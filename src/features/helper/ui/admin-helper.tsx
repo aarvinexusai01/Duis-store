@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  BookOpenIcon,
   CheckIcon,
   CircleHelpIcon,
   EyeOffIcon,
@@ -39,7 +40,7 @@ import {
   useTargetBox,
 } from "./overlays"
 import { PAGE_TOURS, pageTour } from "./page-tours"
-import { onHelperSay, type Saying } from "./say"
+import { onHelperSay, onStartProductWalkthrough, type Saying } from "./say"
 import { availableSteps, type TourStep } from "./tour-steps"
 import { WALKTHROUGH, WALKTHROUGH_KEY, walkthroughPage } from "./walkthrough"
 
@@ -445,6 +446,14 @@ export function AdminHelper({ initial }: { initial: HelperState }) {
     })
   }
 
+  // "Start the walkthrough" on the written guide (shows the helper if hidden).
+  useEffect(() =>
+    onStartProductWalkthrough(() => {
+      if (hidden) setHiddenSaved(false)
+      startGuide()
+    }),
+  )
+
   if (hidden) {
     return (
       <button
@@ -603,6 +612,22 @@ export function AdminHelper({ initial }: { initial: HelperState }) {
                 >
                   <ShirtIcon aria-hidden />
                   Walk me through adding a product
+                </Button>
+              )}
+              {canAddProducts && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="justify-start"
+                  render={
+                    <Link
+                      href="/admin/help/add-product"
+                      onClick={() => setOpen(false)}
+                    />
+                  }
+                >
+                  <BookOpenIcon aria-hidden />
+                  How to add a product (guide)
                 </Button>
               )}
               <div className="flex flex-wrap justify-between gap-1">

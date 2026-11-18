@@ -29,3 +29,15 @@ export function onHelperSay(listener: (saying: Saying) => void): () => void {
   window.addEventListener(EVENT, handle)
   return () => window.removeEventListener(EVENT, handle)
 }
+
+const START_WALKTHROUGH = "duis:helper-start-walkthrough"
+
+/** Starts the product walkthrough, e.g. from the written guide. */
+export function startProductWalkthrough(): void {
+  window.dispatchEvent(new Event(START_WALKTHROUGH))
+}
+
+export function onStartProductWalkthrough(listener: () => void): () => void {
+  window.addEventListener(START_WALKTHROUGH, listener)
+  return () => window.removeEventListener(START_WALKTHROUGH, listener)
+}

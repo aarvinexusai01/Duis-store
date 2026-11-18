@@ -38,19 +38,19 @@ async function Shell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh">
       <aside
         data-tour="nav"
-        className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto bg-ink p-4 text-paper lg:flex"
+        className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto bg-ink p-4 text-paper lg:flex print:!hidden"
       >
         <Link
           href="/admin"
           className="flex items-center gap-2 font-display text-2xl tracking-wide uppercase"
         >
-          <Emblem className="size-8" />
+          <Emblem tone="dark" className="h-10" />
           Duis <span className="text-sm text-chrome-muted">admin</span>
         </Link>
         <AdminNavLinks groups={groups} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card px-4">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card px-4 print:hidden">
           <AdminMobileNav groups={groups} />
           <p className="min-w-0 truncate text-sm text-muted-foreground">
             <span className="hidden sm:inline">Signed in as </span>
@@ -81,7 +81,10 @@ async function Shell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-      <AdminHelper initial={helper} />
+      {/* The cat stays off printed pages, like the menu. */}
+      <div className="print:hidden">
+        <AdminHelper initial={helper} />
+      </div>
     </div>
   )
 }

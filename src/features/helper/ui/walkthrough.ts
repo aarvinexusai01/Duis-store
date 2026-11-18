@@ -48,12 +48,20 @@ const selected = (selector: string) => () =>
 const exists = (selector: string) => () => !!el(selector)
 
 export const WALKTHROUGH: GuideStep[] = [
+  // ── New product ──────────────────────────────────────────────────────────
+  {
+    page: "new",
+    target: '[data-tour="page-title"]',
+    title: "Before you start",
+    body: "The category, its size chart and your colours and sizes should exist first. The full guide is under 'How to add a product'.",
+    mood: "delighted",
+  },
   {
     page: "new",
     target: "#pf-title",
     title: "Name it",
     body: "Type the product's name, like 'Samurai Spirit Graphic Hoodie – Beige'. The web address fills itself in.",
-    mood: "delighted",
+    mood: "sparkle",
     done: filledAndLeft("#pf-title", 3),
   },
   {
@@ -90,25 +98,57 @@ export const WALKTHROUGH: GuideStep[] = [
     page: "new",
     target: '[data-tour="save-product"]',
     title: "Create it",
-    body: "Press Create product. Next we'll add photos, sizes and stock.",
+    body: "Fill in the manufacturer if it's empty, then press Create product. Sizes, stock and photos come next.",
     mood: "sparkle",
     done: (path) => PRODUCT.test(path),
   },
+  // ── Sizes, prices and stock first: photos are tagged with these colours ──
+  {
+    page: "edit",
+    target: '[data-tour="tab-variants"]',
+    title: "Sizes and colours",
+    body: "Saved! Open Variants & stock. Sizes and colours come before photos, so photos can be tagged by colour.",
+    mood: "delighted",
+    done: selected('[data-tour="tab-variants"]'),
+  },
+  {
+    page: "edit",
+    target: '[data-tour="generate-variants"]',
+    title: "Generate variants",
+    body: "Tick the colours and sizes you sell (missing one? use '+ Add new'), enter price, MRP and starting stock, then press Generate.",
+    mood: "surprised",
+    done: exists('[data-tour="variant-row"]'),
+  },
+  {
+    page: "edit",
+    target: '[data-tour="adjust-stock"]',
+    title: "Check the stock",
+    body: "Each size starts with the stock you entered. To change one, press Stock on its row. Press Next when it's right.",
+    mood: "sparkle",
+  },
+  // ── Photos ───────────────────────────────────────────────────────────────
   {
     page: "edit",
     target: '[data-tour="tab-media"]',
     title: "Photos next",
-    body: "Saved! Open the Photos tab.",
-    mood: "delighted",
+    body: "Open the Photos tab.",
+    mood: "wink",
     done: selected('[data-tour="tab-media"]'),
   },
   {
     page: "edit",
     target: '[data-tour="media-upload"]',
     title: "Upload photos",
-    body: "Choose the photos. With more than one colour, tag each photo with its colour.",
+    body: "Choose the photos. The first one is the main photo; use the arrows to change the order.",
     mood: "heart",
     done: exists('[data-tour="media-item"]'),
+  },
+  {
+    page: "edit",
+    target: '[data-tour="media-colour"]',
+    title: "Tag the colours",
+    body: "Pick each photo's colour, so customers see the right one. Leave 'All colours' for photos of every colour. Press Next.",
+    mood: "surprised",
   },
   {
     page: "edit",
@@ -119,36 +159,35 @@ export const WALKTHROUGH: GuideStep[] = [
     // The health check stops asking for photos once they're saved.
     done: () => !!el('[data-tour="health"]') && !el('[data-health="photos"]'),
   },
+  // ── Check, publish, and after ────────────────────────────────────────────
   {
     page: "edit",
-    target: '[data-tour="tab-variants"]',
-    title: "Sizes and colours",
-    body: "Now open Variants & stock.",
-    mood: "wink",
-    done: selected('[data-tour="tab-variants"]'),
-  },
-  {
-    page: "edit",
-    target: '[data-tour="generate-variants"]',
-    title: "Generate variants",
-    body: "Tick the colours and sizes you sell, enter the price, MRP and starting stock, then press Generate.",
+    target: '[data-tour="health"]',
+    title: "Ready to sell?",
+    body: "I check the product here. Fix anything marked 'Must fix'; suggestions are up to you. Press Next.",
     mood: "surprised",
-    done: exists('[data-tour="variant-row"]'),
-  },
-  {
-    page: "edit",
-    target: '[data-tour="adjust-stock"]',
-    title: "Check the stock",
-    body: "Each size starts with the stock you entered. To change one, press Stock on its row and choose 'Received new stock'. Press Next when it's right.",
-    mood: "sparkle",
   },
   {
     page: "edit",
     target: '[data-tour="publish"]',
     title: "Publish",
-    body: "Check the 'Ready to sell?' list, then press Publish to put it in the shop.",
+    body: "Press Publish to put it in the shop.",
     mood: "delighted",
     done: () => !el('[data-tour="publish"]'),
+  },
+  {
+    page: "edit",
+    target: '[data-tour="view-in-store"]',
+    title: "See it in the shop",
+    body: "It's live! View in store opens it as customers see it, in a new tab. Press Next.",
+    mood: "heart",
+  },
+  {
+    page: "edit",
+    target: '[data-tour="nav"] a[href="/admin/collections"]',
+    title: "Put it in a collection",
+    body: "Optional: add it to a collection, like New Arrivals, so it shows on the home page. That's in Collections.",
+    mood: "wink",
   },
 ]
 

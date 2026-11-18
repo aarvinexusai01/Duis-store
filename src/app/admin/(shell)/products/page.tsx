@@ -126,14 +126,25 @@ async function Products({
         title="Products"
         description={`${list.total} products`}
         actions={
-          canCreate && (
+          <>
             <Link
-              href="/admin/products/new"
-              className={cn(buttonVariants(), "rounded-sm")}
+              href="/admin/help/add-product"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "rounded-sm",
+              )}
             >
-              New product
+              How to add a product
             </Link>
-          )
+            {canCreate && (
+              <Link
+                href="/admin/products/new"
+                className={cn(buttonVariants(), "rounded-sm")}
+              >
+                New product
+              </Link>
+            )}
+          </>
         }
       />
       <DataTable

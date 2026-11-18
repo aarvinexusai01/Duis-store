@@ -121,7 +121,7 @@ test("the helper cheers when something is saved", async ({ page }) => {
   )
 })
 
-test("product walkthrough: the helper guides a new product from its name to publishing", async ({
+test("product walkthrough: the helper guides a new product from its name to the shop", async ({
   page,
   isMobile,
 }) => {
@@ -136,6 +136,12 @@ test("product walkthrough: the helper guides a new product from its name to publ
   await says(page).getByRole("button", { name: "Walk me through" }).click()
 
   const step = (name: string) => page.getByRole("dialog", { name })
+  const next = (name: string) =>
+    step(name)
+      .getByRole("button", { name: /^(Next|Finish)$/ })
+      .click()
+  await expect(step("Before you start")).toBeVisible()
+  await next("Before you start")
   await expect(step("Name it")).toBeVisible()
   const title = `E2E Walkthrough Hoodie ${Date.now()}`
   await page.getByLabel("Title", { exact: true }).fill(title)
@@ -152,8 +158,8 @@ test("product walkthrough: the helper guides a new product from its name to publ
   await page.getByRole("checkbox", { name: "Colour", exact: true }).check()
   await page.getByRole("checkbox", { name: "Size", exact: true }).check()
   await expect(step("Describe it")).toBeVisible()
-  await step("Describe it").getByRole("button", { name: "Next" }).click()
-  await step("Packed weight").getByRole("button", { name: "Next" }).click()
+  await next("Describe it")
+  await next("Packed weight")
   await expect(step("Create it")).toBeVisible()
   await page
     .getByLabel("Manufacturer / packer")
@@ -166,18 +172,7 @@ test("product walkthrough: the helper guides a new product from its name to publ
   await expect(health).toContainText("No photos yet")
   await expect(health).toContainText("Must fix")
 
-  await expect(step("Photos next")).toBeVisible()
-  await page.getByRole("tab", { name: "Photos" }).click()
-  await expect(step("Upload photos")).toBeVisible()
-  await page.waitForLoadState("networkidle")
-  await page.locator("#media-upload").setInputFiles({
-    name: `walkthrough-${Date.now()}.png`,
-    mimeType: "image/png",
-    buffer: await makeUniqueImage(800, 1000),
-  })
-  await expect(step("Save the photos")).toBeVisible({ timeout: 20_000 })
-  await page.getByRole("button", { name: "Save photos" }).click()
-  await expect(health).not.toContainText("No photos yet")
+  // Sizes and stock first, so the photos can be tagged by colour.
   await expect(step("Sizes and colours")).toBeVisible()
   await page.getByRole("tab", { name: "Variants & stock" }).click()
   await expect(step("Generate variants")).toBeVisible()
@@ -201,22 +196,91 @@ test("product walkthrough: the helper guides a new product from its name to publ
     .getByRole("button", { name: /Create up to \d+ variants/ })
     .click()
   await expect(step("Check the stock")).toBeVisible()
-  await step("Check the stock").getByRole("button", { name: "Next" }).click()
-  await expect(step("Publish")).toBeVisible()
+  await next("Check the stock")
+
+  await expect(step("Photos next")).toBeVisible()
+  await page.getByRole("tab", { name: "Photos" }).click()
+  await expect(step("Upload photos")).toBeVisible()
+  await page.waitForLoadState("networkidle")
+  await page.locator("#media-upload").setInputFiles({
+    name: `walkthrough-${Date.now()}.png`,
+    mimeType: "image/png",
+    buffer: await makeUniqueImage(800, 1000),
+  })
+  await expect(step("Tag the colours")).toBeVisible({ timeout: 20_000 })
+  // The photo can be tagged with the colour just generated.
+  await page
+    .locator('[data-tour="media-colour"] select')
+    .first()
+    .selectOption({ index: 1 })
+  await next("Tag the colours")
+  await expect(step("Save the photos")).toBeVisible()
+  await page.getByRole("button", { name: "Save photos" }).click()
   await expect(health).not.toContainText("Must fix")
 
+  await expect(step("Ready to sell?")).toBeVisible()
+  await next("Ready to sell?")
+  await expect(step("Publish")).toBeVisible()
   await page.getByRole("button", { name: "Publish", exact: true }).click()
+  await expect(step("See it in the shop")).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "View in store" }),
+  ).toHaveAttribute("href", /^\/products\//)
+  await next("See it in the shop")
+  await expect(step("Put it in a collection")).toBeVisible()
+  await next("Put it in a collection")
   await expect(says(page)).toContainText("ready to sell")
-  const [saved] = await query<{ status: string; seen: string[] }>(
-    `select p.status::text, sp.seen_guides as seen from products p, staff_preferences sp
+
+  const [row] = await query<{ status: string; tagged: number; seen: string[] }>(
+    `select p.status::text,
+       (select count(*)::int from product_media pm
+        where pm.product_id = p.id and pm.color_value_id is not null) as tagged,
+       sp.seen_guides as seen
+     from products p, staff_preferences sp
      join users u on u.id = sp.user_id
      where p.title = $1 and u.email = $2`,
     [title, admin.email],
   )
-  expect(saved).toEqual({
+  expect(row).toEqual({
     status: "active",
+    tagged: 1,
     seen: expect.arrayContaining(["product-walkthrough"]),
   })
+})
+
+test("the written guide opens from Products, and starts the walkthrough", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "admin flows are covered on desktop")
+  await page.goto("/")
+  const admin = await createStaff(page, "store_admin")
+  await signInAndSetUpTwoFactor(page, admin)
+
+  await page.goto("/admin/products")
+  await page.getByRole("link", { name: "How to add a product" }).click()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "How to add a product" }),
+  ).toBeVisible()
+  for (const heading of [
+    "1. Before your first product",
+    "3. Sizes, prices and stock",
+    "4. Photos",
+    "6. After publishing",
+  ]) {
+    await expect(
+      page.getByRole("heading", { level: 2, name: heading }),
+    ).toBeVisible()
+  }
+  await page.getByRole("link", { name: "Open Size charts →" }).click()
+  await expect(page).toHaveURL(/\/admin\/size-charts$/)
+  await page.goBack()
+
+  await page.getByRole("button", { name: "Start the walkthrough" }).click()
+  await page.waitForURL(/\/admin\/products\/new$/)
+  await expect(
+    page.getByRole("dialog", { name: "Before you start" }),
+  ).toBeVisible()
 })
 
 test("the dashboard and the cat show today's to-do list", async ({ page }) => {

@@ -109,7 +109,10 @@ export function MediaManager({
               <span className="text-xs text-muted-foreground">
                 {index === 0 ? "Main photo" : `Photo ${index + 1}`}
               </span>
-              <label className="flex flex-col gap-0.5 text-xs">
+              <label
+                className="flex flex-col gap-0.5 text-xs"
+                data-tour="media-colour"
+              >
                 Colour
                 <select
                   value={item.colorValueId ?? ""}
